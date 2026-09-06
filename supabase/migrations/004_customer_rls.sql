@@ -14,12 +14,15 @@
 -- profiles
 -- =========================================================================
 
--- A customer may read their own profile only.
+-- A customer may read their own profile only. auth.uid() is wrapped in a
+-- subselect so Postgres evaluates it once per query instead of once per
+-- row (see the Supabase RLS performance guide) -- a plain query-plan
+-- optimization, not a behavior change.
 create policy "profiles_select_own"
   on public.profiles
   for select
   to authenticated
-  using (auth.uid() = id);
+  using ((select auth.uid()) = id);
 
 -- A customer may update their own profile only. There is deliberately no
 -- INSERT policy: rows are created exclusively by handle_new_user()
@@ -30,8 +33,8 @@ create policy "profiles_update_own"
   on public.profiles
   for update
   to authenticated
-  using (auth.uid() = id)
-  with check (auth.uid() = id);
+  using ((select auth.uid()) = id)
+  with check ((select auth.uid()) = id);
 
 -- Column-level privileges: authenticated users may read every column of
 -- their own row (enforced above by the row policy) but may only WRITE the
@@ -84,7 +87,7 @@ create policy "customer_profiles_select_own"
   on public.customer_profiles
   for select
   to authenticated
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 
 -- A customer may create their OWN customer_profiles row (once -- the
 -- unique constraint on user_id makes a second insert fail at the database
@@ -93,14 +96,14 @@ create policy "customer_profiles_insert_own"
   on public.customer_profiles
   for insert
   to authenticated
-  with check (auth.uid() = user_id);
+  with check ((select auth.uid()) = user_id);
 
 create policy "customer_profiles_update_own"
   on public.customer_profiles
   for update
   to authenticated
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 
 -- Same load-bearing ordering as profiles above: revoke the default
 -- table-level grants first, then grant back only the specific columns.

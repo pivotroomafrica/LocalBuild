@@ -65,6 +65,7 @@ comment on table public.customer_profiles is
 
 -- user_id already has a unique index from the constraint above, which also
 -- serves as the lookup index for "load the current customer's profile".
+create index customer_profiles_industry_id_idx on public.customer_profiles (industry_id);
 
 alter table public.customer_profiles enable row level security;
 -- Policies live in 004_customer_rls.sql.
