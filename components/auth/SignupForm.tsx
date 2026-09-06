@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { signUpAction, type AuthActionState } from "@/lib/auth/actions";
 import { TextField } from "@/components/ui/TextField";
 import { Button } from "@/components/ui/Button";
@@ -10,6 +11,9 @@ import { FormMessage } from "@/components/ui/FormMessage";
 const initialState: AuthActionState = {};
 
 export function SignupForm() {
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next") ?? "/dashboard/profile";
+
   const [state, formAction, isPending] = useActionState(signUpAction, initialState);
 
   if (state.status === "check-email") {
@@ -20,9 +24,13 @@ export function SignupForm() {
     );
   }
 
+  const loginHref = next !== "/dashboard/profile" ? `/auth/login?next=${encodeURIComponent(next)}` : "/auth/login";
+
   return (
     <form action={formAction} className="flex flex-col gap-4">
       {state.error ? <FormMessage variant="error">{state.error}</FormMessage> : null}
+
+      <input type="hidden" name="next" value={next} />
 
       <TextField
         label="Full Name"
@@ -62,7 +70,7 @@ export function SignupForm() {
 
       <p className="text-center text-sm text-[var(--color-text-muted)]">
         Already have an account?{" "}
-        <Link href="/auth/login" className="font-medium text-[var(--color-brand)] hover:underline">
+        <Link href={loginHref} className="font-medium text-[var(--color-brand)] hover:underline">
           Log in
         </Link>
       </p>

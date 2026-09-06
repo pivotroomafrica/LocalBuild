@@ -37,6 +37,9 @@ export async function signUpAction(
   const passwordResult = validatePassword(password);
   if (!passwordResult.valid) return { error: passwordResult.error };
 
+  const rawNext = String(formData.get("next") ?? "/dashboard/profile");
+  const next = rawNext.startsWith("/") ? rawNext : "/dashboard/profile";
+
   const supabase = await createClient();
   const origin = await siteOrigin();
 
@@ -47,7 +50,10 @@ export async function signUpAction(
       // Read by the handle_new_user() database trigger to populate the
       // new profiles row (see supabase/migrations/001_profiles.sql).
       data: { full_name: fullNameResult.value, phone: phoneResult.value },
-      emailRedirectTo: `${origin}/auth/callback?next=/dashboard/profile`,
+      // Preserves the intended destination (e.g. /expert/application when
+      // signup was reached via /become-an-expert) through the email
+      // confirmation round-trip -- see app/auth/callback/route.ts.
+      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
     },
   });
 
@@ -60,7 +66,7 @@ export async function signUpAction(
     return { status: "check-email" };
   }
 
-  redirect("/dashboard/profile");
+  redirect(next);
 }
 
 export async function signInAction(

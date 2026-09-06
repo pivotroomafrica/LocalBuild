@@ -17,6 +17,9 @@ export function LoginForm() {
 
   const [state, formAction, isPending] = useActionState(signInAction, initialState);
 
+  const signupHref =
+    next !== "/dashboard/profile" ? `/auth/signup?next=${encodeURIComponent(next)}` : "/auth/signup";
+
   return (
     <form action={formAction} className="flex flex-col gap-4">
       {justReset ? (
@@ -50,7 +53,7 @@ export function LoginForm() {
 
       <p className="text-center text-sm text-[var(--color-text-muted)]">
         Don&apos;t have an account?{" "}
-        <Link href="/auth/signup" className="font-medium text-[var(--color-brand)] hover:underline">
+        <Link href={signupHref} className="font-medium text-[var(--color-brand)] hover:underline">
           Sign up
         </Link>
       </p>
