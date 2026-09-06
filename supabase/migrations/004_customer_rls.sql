@@ -35,8 +35,17 @@ create policy "profiles_update_own"
 
 -- Column-level privileges: authenticated users may read every column of
 -- their own row (enforced above by the row policy) but may only WRITE the
--- personal-information columns. role and account_status are intentionally
--- left out of this grant.
+-- personal-information columns.
+--
+-- Supabase grants INSERT/UPDATE/DELETE on every table to authenticated/anon
+-- by default (ALTER DEFAULT PRIVILEGES), so REVOKE must run BEFORE the
+-- narrower column GRANT -- a table-level REVOKE of a privilege removes it
+-- everywhere, including any column-level grants, so revoking afterward
+-- would silently wipe out the columns we just re-granted. Order here is
+-- load-bearing, not stylistic. protect_privileged_profile_fields() further
+-- down is a second, independent layer in case a future migration re-grants
+-- column access by accident.
+revoke insert, update, delete on public.profiles from authenticated;
 grant select on public.profiles to authenticated;
 grant update (full_name, phone, country, city) on public.profiles to authenticated;
 
@@ -93,17 +102,20 @@ create policy "customer_profiles_update_own"
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
-grant select on public.customer_profiles to authenticated;
--- user_id is excluded from both grants below: a customer can create their
+-- Same load-bearing ordering as profiles above: revoke the default
+-- table-level grants first, then grant back only the specific columns.
+-- user_id is excluded from the UPDATE grant: a customer can create their
 -- own row (user_id is supplied once, checked by the INSERT policy above
 -- against auth.uid()) but can never move an existing row to a different
 -- owner.
-grant insert (
-  user_id, "current_role", employment_type, company_name,
-  industry_id, years_experience_range, linkedin_url
-) on public.customer_profiles to authenticated;
+revoke insert, update, delete on public.customer_profiles from authenticated;
+grant select on public.customer_profiles to authenticated;
 grant update (
   "current_role", employment_type, company_name,
+  industry_id, years_experience_range, linkedin_url
+) on public.customer_profiles to authenticated;
+grant insert (
+  user_id, "current_role", employment_type, company_name,
   industry_id, years_experience_range, linkedin_url
 ) on public.customer_profiles to authenticated;
 
@@ -121,4 +133,5 @@ create policy "industries_select_active"
   to authenticated
   using (is_active = true);
 
+revoke insert, update, delete on public.industries from authenticated;
 grant select on public.industries to authenticated;
