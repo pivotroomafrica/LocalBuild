@@ -3,7 +3,8 @@
 //   Supabase Dashboard -> Project -> API Docs -> "Generate types", or the
 //   Supabase MCP `generate_typescript_types` tool, or:
 //   npx supabase gen types typescript --project-id <project-id> > types/database.ts
-// Do not hand-edit — hand-written domain types live in types/profile.ts.
+// Do not hand-edit — hand-written domain types live in types/profile.ts
+// and types/expert.ts.
 
 export type Json =
   | string
@@ -71,6 +72,196 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expert_categories: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      expert_profile_categories: {
+        Row: {
+          category_id: string
+          created_at: string
+          expert_profile_id: string
+          id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          expert_profile_id: string
+          id?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          expert_profile_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expert_profile_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expert_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expert_profile_categories_expert_profile_id_fkey"
+            columns: ["expert_profile_id"]
+            isOneToOne: false
+            referencedRelation: "expert_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expert_profiles: {
+        Row: {
+          application_status: string
+          career_highlights: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          current_company: string | null
+          current_position: string | null
+          expertise_summary: string | null
+          headline: string | null
+          id: string
+          linkedin_url: string | null
+          problems_help_with: string | null
+          profile_image_path: string | null
+          profile_status: string
+          short_bio: string | null
+          slug: string
+          submitted_at: string | null
+          updated_at: string
+          user_id: string
+          who_i_help: string | null
+          years_experience_range: string | null
+        }
+        Insert: {
+          application_status?: string
+          career_highlights?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          current_company?: string | null
+          current_position?: string | null
+          expertise_summary?: string | null
+          headline?: string | null
+          id?: string
+          linkedin_url?: string | null
+          problems_help_with?: string | null
+          profile_image_path?: string | null
+          profile_status?: string
+          short_bio?: string | null
+          slug: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id: string
+          who_i_help?: string | null
+          years_experience_range?: string | null
+        }
+        Update: {
+          application_status?: string
+          career_highlights?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          current_company?: string | null
+          current_position?: string | null
+          expertise_summary?: string | null
+          headline?: string | null
+          id?: string
+          linkedin_url?: string | null
+          problems_help_with?: string | null
+          profile_image_path?: string | null
+          profile_status?: string
+          short_bio?: string | null
+          slug?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id?: string
+          who_i_help?: string | null
+          years_experience_range?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expert_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expert_session_types: {
+        Row: {
+          base_price: number
+          created_at: string
+          currency: string
+          duration_minutes: number
+          expert_profile_id: string
+          id: string
+          in_person_enabled: boolean
+          is_active: boolean
+          online_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          base_price: number
+          created_at?: string
+          currency?: string
+          duration_minutes: number
+          expert_profile_id: string
+          id?: string
+          in_person_enabled?: boolean
+          is_active?: boolean
+          online_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          base_price?: number
+          created_at?: string
+          currency?: string
+          duration_minutes?: number
+          expert_profile_id?: string
+          id?: string
+          in_person_enabled?: boolean
+          is_active?: boolean
+          online_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expert_session_types_expert_profile_id_fkey"
+            columns: ["expert_profile_id"]
+            isOneToOne: false
+            referencedRelation: "expert_profiles"
             referencedColumns: ["id"]
           },
         ]
