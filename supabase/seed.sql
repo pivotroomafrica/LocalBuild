@@ -28,3 +28,16 @@ insert into public.industries (name, slug) values
   ('Energy', 'energy'),
   ('Other', 'other')
 on conflict (slug) do nothing;
+
+-- Phase 2: expertise categories (distinct concept from industries above --
+-- an expert's industry background vs. what they offer to advise on).
+insert into public.expert_categories (name, slug, sort_order) values
+  ('Career & Professional', 'career-professional', 1),
+  ('Funding, Investment & Finance', 'funding-investment-finance', 2),
+  ('Industry & Specialized Expertise', 'industry-specialized-expertise', 3),
+  ('Leadership, Management & Operations', 'leadership-management-operations', 4),
+  ('Marketing, Brand & Growth', 'marketing-brand-growth', 5),
+  ('Product, Technology & AI', 'product-technology-ai', 6),
+  ('Sales, Partnership & Expansion', 'sales-partnership-expansion', 7),
+  ('Starting & Building a Business', 'starting-building-a-business', 8)
+on conflict (slug) do nothing;
