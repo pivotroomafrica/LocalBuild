@@ -3,13 +3,13 @@
 Expert marketplace where customers book paid one-to-one consultations with
 experienced professionals.
 
-**Current implemented milestone: Pivotroom V1 Phase 3 — Admin Expert
-Review, Approval, Publishing & Public Expert Profiles.** Customers can
-apply to become experts (Phase 2); an admin can review, request changes,
-reject, approve, and publish an application; published experts appear in a
-public directory and public profile page. Availability, bookings, and
-payments are still not implemented — see "Explicitly not implemented"
-below.
+**Current implemented milestone: Pivotroom V1 Phase 4 — Expert
+Availability Engine.** Customers can apply to become experts (Phase 2); an
+admin can review and publish an application (Phase 3); an approved expert
+can now define a recurring weekly schedule (timezone + working hours) and
+block specific full-day exceptions, for a future booking engine to
+consume. Bookings and payments are still not implemented — see
+"Explicitly not implemented" below.
 
 ## Stack
 
@@ -167,6 +167,31 @@ replaces them.
   view any applicant's photo during review, before it is ever published
   (neither the owner-only nor the published-only policy covered this).
 
+**Phase 4:**
+- `019_expert_availability_tables.sql` — the three availability tables:
+  `expert_availability_settings` (one row per expert: IANA timezone),
+  `expert_availability_windows` (recurring weekly schedule, local
+  wall-clock time), `expert_unavailable_dates` (full-day exceptions).
+  Table-level CHECK constraints enforce the 15-minute grid and
+  `end_time > start_time`; a trigger validates the timezone against
+  `pg_timezone_names`; another trigger blocks overlapping windows for the
+  same expert/day. No RLS policies or write access yet — those are 020
+  and 021.
+- `020_expert_availability_rls.sql` — RLS: an owner may `SELECT` their own
+  rows only while `application_status = 'approved'`; an admin may
+  `SELECT` any expert's rows (read-only, no admin write policy exists).
+  `INSERT`/`UPDATE`/`DELETE` are revoked from `authenticated` on all
+  three tables — there is no direct write path at all; every write goes
+  through the RPCs in `021`.
+- `021_expert_availability_functions.sql` — `resolve_own_approved_expert_
+  profile_id()` (internal only, not exposed as an RPC — every function
+  below calls it instead of accepting an expert id as a parameter);
+  `save_expert_availability_schedule(timezone, windows)` (atomic replace
+  of the whole weekly schedule, full server-side validation before any
+  write); `add_expert_unavailable_date(date)` /
+  `remove_expert_unavailable_date(date)`. All `SECURITY DEFINER`,
+  `authenticated`-only, `anon` revoked.
+
 `supabase/seed.sql` seeds the 17 industries and the 8 expertise categories.
 It's separate from the migrations on purpose — schema vs. seed/demo data are
 never mixed. Fake customer/applicant accounts are **not** seeded there
@@ -178,26 +203,35 @@ Apply migrations and seed via the Supabase Dashboard SQL editor, the
 Supabase CLI (`supabase db push`), or the Supabase MCP tools, in the order
 listed above.
 
-Public application tables (7 total, unchanged since Phase 2 — Phase 3 adds
-columns and views, not new tables): `profiles`, `industries`,
-`customer_profiles`, `expert_profiles`, `expert_categories`,
-`expert_profile_categories`, `expert_session_types`. Plus 3 views
-(`expert_directory_public`, `expert_profile_public`,
-`expert_session_types_public` — safe public projections, not independent
-data). Supabase Auth's own `auth.users` is the root identity; nothing here
-duplicates it. There is no separate expert authentication system — an
-expert application is just another row owned by an existing
-`auth.users`/`profiles` identity, and there is no separate admin
-authentication system either — an admin is just a `profiles` row with
-`role = 'admin'`.
+Public application tables (10 total — Phase 3 added columns/views to the
+Phase 2 set of 7, not new tables; Phase 4 adds 3 genuinely new ones):
+`profiles`, `industries`, `customer_profiles`, `expert_profiles`,
+`expert_categories`, `expert_profile_categories`, `expert_session_types`,
+`expert_availability_settings`, `expert_availability_windows`,
+`expert_unavailable_dates`. Plus 3 views (`expert_directory_public`,
+`expert_profile_public`, `expert_session_types_public` — safe public
+projections, not independent data). Supabase Auth's own `auth.users` is
+the root identity; nothing here duplicates it. There is no separate
+expert authentication system — an expert application is just another row
+owned by an existing `auth.users`/`profiles` identity, and there is no
+separate admin authentication system either — an admin is just a
+`profiles` row with `role = 'admin'`.
 
-No new table was added for the review/publish workflow. A review-events/
-history table was considered and deliberately rejected: the spec this
-phase was built against explicitly sanctions keeping only the *current*
-review message (overwritten by each new admin action, no history), so a
-handful of columns on `expert_profiles` (`012_expert_review_fields.sql`)
-covers it without a second table whose only job would be redundant
-audit rows.
+No new table was added for the Phase 3 review/publish workflow. A
+review-events/history table was considered and deliberately rejected: the
+spec explicitly sanctions keeping only the *current* review message
+(overwritten by each new admin action, no history), so a handful of
+columns on `expert_profiles` (`012_expert_review_fields.sql`) covers it
+without a second table whose only job would be redundant audit rows.
+
+Phase 4's three availability tables ARE three genuinely separate
+responsibilities (timezone / recurring rule / date exception — spec
+section 22) and are deliberately NOT collapsed into one JSON blob column:
+future booking queries need predictable, indexable, constraint-enforced
+schedule data, which a JSON configuration column can't give at the
+database level. No pre-generated future time-slot table exists anywhere —
+availability stays rule-based (recurring weekly windows + date
+exceptions), never a row per possible future appointment time.
 
 ## Storage
 
@@ -337,6 +371,109 @@ exactly this use case, and switching to `security_invoker` would require
 granting `anon` much broader, riskier direct RLS access to the base
 tables instead.
 
+## Expert Availability (Phase 4)
+
+Answers only "WHEN is this expert generally available?" — separate from
+session pricing (Phase 2: what/how much) and a future booking phase
+(which exact appointment times are currently bookable, after subtracting
+real bookings). `/expert/availability` is expert-only, not part of the
+Phase 2/3 application flow — it does not appear in `ExpertApplicationNav`
+and is not part of application completeness, submission, approval, or
+publishing validation. It is reachable from the Overview page once an
+expert is approved, published, or suspended (all three keep
+`application_status = 'approved'`).
+
+**Authorization** (two layers, same pattern as Phase 3's admin
+authorization): `requireApprovedExpertPage()` (`lib/availability/data.ts`)
+redirects an unauthenticated visitor to login and anyone whose own
+`expert_profiles.application_status` isn't `'approved'` to
+`/expert/application` — draft/submitted/changes_requested/rejected never
+see any availability UI or error detail. RLS
+(`020_expert_availability_rls.sql`) holds even if that check had a bug:
+every row is additionally scoped to `ep.user_id = auth.uid() and
+ep.application_status = 'approved'` at the database level, confirmed live
+by disabling the approved-only redirect mentally and testing the raw SQL
+directly as a non-approved user.
+
+**Ownership without a client-supplied ID:** every write (schedule save,
+add/remove a blocked date) goes through a `SECURITY DEFINER` RPC that
+resolves the caller's own approved `expert_profile_id` from `auth.uid()`
+internally (`resolve_own_approved_expert_profile_id()`, not itself
+exposed as a callable RPC). The client never sends an `expert_profile_id`
+or `user_id` — there is nothing to spoof. Confirmed live: calling
+`save_expert_availability_schedule` as an admin account with no expert
+profile of its own fails with "No approved expert profile found," even
+though that account has full read access to every expert's schedule via
+the admin RLS policy.
+
+**Atomic save:** `save_expert_availability_schedule(timezone, windows)`
+validates every window in the incoming batch (day range, 15-minute grid,
+`end > start`, pairwise overlap across the whole batch) *before* writing
+anything, then upserts the timezone and replaces the entire weekly
+window set in the same function call. A PL/pgSQL function body is one
+statement as far as Postgres transactions are concerned, so any
+validation failure — or a table-level constraint/trigger catching
+something the validation missed — rolls back everything: there is no
+state where a timezone change lands but the windows don't, or where half
+a day's windows are deleted and the replacement never arrives. Confirmed
+live: a batch with one valid window and one non-15-minute-aligned window,
+sent after a valid schedule was already saved and committed, left the
+previously-saved schedule completely untouched.
+
+**Timezone:** stored as a full IANA identifier (e.g.
+`Africa/Addis_Ababa`), never a fixed UTC offset — offsets drift under
+DST, IANA zones don't. Validated server-side twice: once inside the RPC
+(`exists (select 1 from pg_timezone_names where name = p_timezone)`) and
+again by a table-level trigger (`validate_iana_timezone()`) as a backstop
+independent of the RPC. First-time UX tries
+`Intl.DateTimeFormat().resolvedOptions().timeZone` in the browser, falling
+back to `Africa/Addis_Ababa` if detection fails — never inferred from
+country/city, no geocoding, and always changeable.
+
+**Weekly availability:** ISO-style `day_of_week` (1 = Monday … 7 =
+Sunday). Multiple windows per day are stored as separate rows, not forced
+into one continuous block. `start_time`/`end_time` are local wall-clock
+`time` values interpreted in the expert's saved timezone — never
+converted to or stored as UTC, because a fixed UTC instant would silently
+break a recurring rule across a DST transition. Overlap prevention exists
+at three layers: the RPC's pairwise check across the whole incoming
+batch, a `BEFORE INSERT OR UPDATE` trigger on the table itself
+(`prevent_expert_availability_window_overlap()`) as a backstop, and the
+15-minute-grid + `end_time > start_time` CHECK constraints, which also
+happen to guarantee a 15-minute minimum window length without a separate
+redundant constraint. Adjacent windows (`09:00–12:00` next to
+`12:00–15:00`) are allowed; genuine overlaps are not. All three layers
+were live-tested independently.
+
+**Unavailable dates:** full-day exceptions only in V1 (no partial-day
+time off, no date-specific extra hours) — `UNIQUE(expert_profile_id,
+unavailable_date)` prevents duplicates at the database level, and
+`add_expert_unavailable_date` additionally no-ops on a duplicate rather
+than erroring. An unavailable date always overrides the recurring weekly
+schedule for that date, confirmed by the pure `getAvailabilityForLocalDate()`
+function (`lib/availability/engine.ts`) and live-tested against the
+spec's own worked example (Monday 09:00–12:00 + 14:00–17:00, with
+2026-09-28 blocked): a normal Monday returns both windows, the blocked
+Monday returns none.
+
+**Storage efficiency:** no future appointment-slot rows are ever
+generated or stored anywhere in this codebase. Availability stays purely
+rule-based — a handful of weekly-window rows and date-exception rows per
+expert, regardless of how far into the future a booking engine eventually
+needs to look.
+
+**Future booking-engine compatibility:** `getAvailabilityForLocalDate(windows,
+unavailableDates, localDate)` (`lib/availability/engine.ts`) is a pure
+function — no I/O, no React, no Supabase client — deliberately kept
+separate from both the database layer and UI components so a future
+booking phase can call it directly once it also has confirmed-booking
+data to subtract. It takes a plain `"YYYY-MM-DD"` calendar-date string and
+computes the ISO weekday via `Date.UTC(...).getUTCDay()`, never a
+timezone-sensitive `Date` method — the caller is responsible for already
+having resolved which local calendar date (in the expert's timezone) it's
+asking about; the function itself has no timezone ambiguity once given a
+calendar-date string.
+
 ## Development-only test routes
 
 Two routes exist purely to manually verify RLS with a real logged-in
@@ -366,6 +503,7 @@ app/
       expertise/page.tsx                         category picker
       sessions/page.tsx                          session offerings CRUD
       preview/page.tsx                           owner-only public-profile preview (Phase 3)
+    availability/page.tsx                         weekly schedule + blocked dates (Phase 4, approved-expert-only)
   admin/                                         admin-only, Phase 3
     layout.tsx                                   requireAdminPage() + AdminHeader
     page.tsx                                     redirects to /admin/experts
@@ -395,6 +533,9 @@ lib/
                detail reads), actions.ts (review + publish server actions)
   public/      data.ts (public directory/profile reads through the 3 views,
                plus the owner-preview data converter)
+  availability/  data.ts (requireApprovedExpertPage + reads), actions.ts
+                  (RPC wrappers), engine.ts (pure calculation logic --
+                  Phase 4, no I/O, no React)
   validation/  shared field validators (profile.ts, expert.ts)
   utils/       phone normalization
 types/
@@ -402,8 +543,10 @@ types/
   profile.ts   customer domain types
   expert.ts    expert domain types (experience ranges, session durations,
                application/profile status labels, public view row types)
+  availability.ts  weekday numbering/labels, default timezone, window shape
 supabase/
-  migrations/  schema, in order (001-004 Phase 1, 005-011 Phase 2, 012-018 Phase 3)
+  migrations/  schema, in order (001-004 Phase 1, 005-011 Phase 2,
+               012-018 Phase 3, 019-021 Phase 4)
   seed.sql     industries + expertise categories
 proxy.ts       Next.js 16's renamed middleware convention (route protection
                + session refresh) — protects /dashboard, /expert, /dev,
@@ -446,15 +589,49 @@ suspended) / Restore (suspended -> ready) -- minimal operational controls,
 all reversible except Reject.
 ```
 
+## Expert Availability engine + review flow (Phase 4)
+
+```
+approved/published/suspended expert -> Overview -> "Set Availability" /
+"Manage Availability" -> /expert/availability
+    -> choose timezone (IANA identifier; browser-detected default,
+       Africa/Addis_Ababa fallback)
+    -> set weekly working hours, any number of windows per day, on a
+       15-minute grid, no overlaps
+    -> Save Availability -> save_expert_availability_schedule() RPC ->
+       atomic: timezone + entire weekly window set replaced together, or
+       nothing changes at all
+    -> add/remove specific full-day unavailable dates -> add/remove_
+       expert_unavailable_date() RPCs
+    -> schedule persists across refresh/logout/login (it's just rows,
+       read back through RLS-scoped SELECTs)
+    -> still profiles.role = customer, still application_status =
+       approved, still profile_status whatever it already was --
+       availability never touches any of the three
+```
+
+No booking calendar, no customer-facing time picker, no pre-generated
+slot rows, no bookings table anywhere in this codebase yet -- see
+"Explicitly not implemented" below.
+
 ## Explicitly not implemented (future phases)
 
-Availability, calendars, bookings, booking intake/reschedule/cancel,
-booking dashboard, Chapa or manual payments, payment tables, tax/VAT
-calculation, commission, fees, payouts, earnings, Google Meet/Calendar
-integration, notifications (email/WhatsApp), reviews, ratings, testimonials,
-session/booking counts, badges, referrals, gift-a-session, AI matching/
-generation/recommendations/search/chatbot, community/messaging, analytics
-dashboards, CV/certificate uploads, a review-events/history table (see
-"Database" above for why), an "Unsuspend" step distinct from Restore, and
-an internal admin-notes system separate from the one applicant-visible
-review message. Do not assume any of this exists.
+Bookings, booking intake/reschedule/cancel, booking dashboard, a
+customer-facing date/time picker or calendar on the public expert profile
+(still "Booking coming soon"), pre-generated future appointment-slot rows
+(availability stays rule-based, never one row per possible time), booking
+conflict/subtraction logic (nothing to subtract yet -- no bookings
+exist), per-expert minimum notice or booking-horizon settings, buffer
+times, partial-day date exceptions or date-specific extra hours (V1
+unavailable dates are full-day only), overnight availability windows
+(configure day-separated windows instead), an "accepting bookings"
+toggle, Chapa or manual payments, payment tables, tax/VAT calculation,
+commission, fees, payouts, earnings, Google Calendar/Outlook/Calendly/
+Cal.com/Google Meet integration, notifications (email/WhatsApp), reviews,
+ratings, testimonials, session/booking counts, badges, referrals,
+gift-a-session, AI matching/generation/recommendations/search/chatbot,
+community/messaging, analytics dashboards, CV/certificate uploads, a
+review-events/history table (see "Database" above for why), an
+"Unsuspend" step distinct from Restore, and an internal admin-notes
+system separate from the one applicant-visible review message. Do not
+assume any of this exists.

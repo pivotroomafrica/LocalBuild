@@ -76,6 +76,73 @@ export type Database = {
           },
         ]
       }
+      expert_availability_settings: {
+        Row: {
+          created_at: string
+          expert_profile_id: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expert_profile_id: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expert_profile_id?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expert_availability_settings_expert_profile_id_fkey"
+            columns: ["expert_profile_id"]
+            isOneToOne: true
+            referencedRelation: "expert_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expert_availability_windows: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          end_time: string
+          expert_profile_id: string
+          id: string
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          expert_profile_id: string
+          id?: string
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          expert_profile_id?: string
+          id?: string
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expert_availability_windows_expert_profile_id_fkey"
+            columns: ["expert_profile_id"]
+            isOneToOne: false
+            referencedRelation: "expert_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expert_categories: {
         Row: {
           created_at: string
@@ -317,6 +384,35 @@ export type Database = {
           },
         ]
       }
+      expert_unavailable_dates: {
+        Row: {
+          created_at: string
+          expert_profile_id: string
+          id: string
+          unavailable_date: string
+        }
+        Insert: {
+          created_at?: string
+          expert_profile_id: string
+          id?: string
+          unavailable_date: string
+        }
+        Update: {
+          created_at?: string
+          expert_profile_id?: string
+          id?: string
+          unavailable_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expert_unavailable_dates_expert_profile_id_fkey"
+            columns: ["expert_profile_id"]
+            isOneToOne: false
+            referencedRelation: "expert_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       industries: {
         Row: {
           created_at: string
@@ -430,10 +526,23 @@ export type Database = {
       }
     }
     Functions: {
+      add_expert_unavailable_date: {
+        Args: { p_date: string }
+        Returns: undefined
+      }
       is_admin: { Args: never; Returns: boolean }
       is_published_expert_photo: {
         Args: { object_name: string }
         Returns: boolean
+      }
+      remove_expert_unavailable_date: {
+        Args: { p_date: string }
+        Returns: undefined
+      }
+      resolve_own_approved_expert_profile_id: { Args: never; Returns: string }
+      save_expert_availability_schedule: {
+        Args: { p_timezone: string; p_windows: Json }
+        Returns: undefined
       }
     }
     Enums: {

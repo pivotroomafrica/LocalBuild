@@ -203,17 +203,27 @@ export default async function ExpertApplicationPage() {
               <p className="mt-1">
                 Your application has been approved. An admin will publish your profile soon.
               </p>
-              <Link href="/expert/application/preview" className="mt-2 inline-block font-medium underline">
-                Preview your public profile
-              </Link>
+              <div className="mt-2 flex flex-col gap-1">
+                <Link href="/expert/application/preview" className="inline-block font-medium underline">
+                  Preview your public profile
+                </Link>
+                <Link href="/expert/availability" className="inline-block font-medium underline">
+                  Set Availability
+                </Link>
+              </div>
             </div>
           ) : primaryCta.kind === "published" ? (
             <div className="rounded-md bg-[var(--color-success-bg)] px-4 py-3 text-sm text-[var(--color-success)]">
               <p className="font-medium">Your Profile Is Live</p>
               <p className="mt-1">Customers can now find and view your expert profile.</p>
-              <Link href={`/experts/${expertProfile.slug}`} className="mt-2 inline-block font-medium underline">
-                View your public profile
-              </Link>
+              <div className="mt-2 flex flex-col gap-1">
+                <Link href={`/experts/${expertProfile.slug}`} className="inline-block font-medium underline">
+                  View your public profile
+                </Link>
+                <Link href="/expert/availability" className="inline-block font-medium underline">
+                  Manage Availability
+                </Link>
+              </div>
             </div>
           ) : primaryCta.kind === "suspended" ? (
             <div className="rounded-md bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger)]">
@@ -221,6 +231,9 @@ export default async function ExpertApplicationPage() {
               <p className="mt-1">
                 Your profile is temporarily suspended and is not visible in the public directory.
               </p>
+              <Link href="/expert/availability" className="mt-2 inline-block font-medium underline">
+                Manage Availability
+              </Link>
             </div>
           ) : primaryCta.kind === "continue" ? (
             <Link href={primaryCta.href} className={PRIMARY_CTA_CLASSES}>
