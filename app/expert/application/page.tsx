@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ensureExpertProfileDraft } from "@/lib/expert/actions";
-import { getExpertApplicationData, getCompletionChecklist } from "@/lib/expert/data";
+import { getExpertApplicationData, getSectionCompletion } from "@/lib/expert/data";
 import { ExpertApplicationNav } from "@/components/layout/ExpertApplicationNav";
 import { SubmitApplicationPanel } from "@/components/expert/SubmitApplicationPanel";
+
+const PRIMARY_CTA_CLASSES =
+  "inline-flex w-full items-center justify-center rounded-md bg-[var(--color-brand)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--color-brand-hover)]";
 
 export default async function ExpertApplicationPage() {
   await ensureExpertProfileDraft();
@@ -19,9 +22,33 @@ export default async function ExpertApplicationPage() {
   }
 
   const { expertProfile } = data;
-  const checklist = getCompletionChecklist(data);
-  const allComplete = checklist.every((item) => item.complete);
   const isSubmitted = expertProfile.application_status === "submitted";
+
+  // Single source of truth for completeness -- the same checklist items
+  // that gate submission server-side (getMissingRequiredFields), grouped
+  // by section. The checklist below and the primary CTA can never
+  // disagree, because both read from this one call.
+  const sections = getSectionCompletion(data);
+  const sectionRows: { label: string; complete: boolean }[] = [
+    { label: "Profile", complete: sections.profile },
+    { label: "Expertise", complete: sections.expertise },
+    { label: "Sessions", complete: sections.sessions },
+  ];
+
+  // Priority order per spec: submitted is terminal (always show
+  // "Application Submitted" regardless of section state, since editing
+  // after submission is allowed but must never imply resubmission); the
+  // first incomplete section in Profile -> Expertise -> Sessions order
+  // otherwise; Submit Application only once every section is complete.
+  const primaryCta = isSubmitted
+    ? ({ kind: "submitted" } as const)
+    : !sections.profile
+      ? ({ kind: "continue", label: "Continue to Profile", href: "/expert/application/profile" } as const)
+      : !sections.expertise
+        ? ({ kind: "continue", label: "Continue to Expertise", href: "/expert/application/expertise" } as const)
+        : !sections.sessions
+          ? ({ kind: "continue", label: "Continue to Sessions", href: "/expert/application/sessions" } as const)
+          : ({ kind: "submit" } as const);
 
   return (
     <div>
@@ -43,6 +70,9 @@ export default async function ExpertApplicationPage() {
           </p>
         </div>
 
+        {/* Manual navigation into any section, in any order -- the
+            Save & Continue buttons on each section are a recommended
+            path, not the only path (spec section 7). */}
         <section className="grid gap-3 sm:grid-cols-3">
           <Link
             href="/expert/application/profile"
@@ -75,40 +105,39 @@ export default async function ExpertApplicationPage() {
 
         <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
           <h2 className="mb-3 text-sm font-semibold">Application Completion</h2>
-          <ul className="flex flex-col gap-1.5">
-            {checklist.map((item) => (
-              <li key={item.label} className="flex items-center gap-2 text-sm">
+          <ul className="flex flex-col gap-2">
+            {sectionRows.map((row) => (
+              <li key={row.label} className="flex items-center justify-between text-sm">
+                <span className="text-[var(--color-text)]">{row.label}</span>
                 <span
                   className={
-                    item.complete ? "text-[var(--color-success)]" : "text-[var(--color-text-muted)]"
+                    row.complete ? "text-[var(--color-success)]" : "text-[var(--color-text-muted)]"
                   }
-                  aria-hidden
                 >
-                  {item.complete ? "✓" : "○"}
-                </span>
-                <span className={item.complete ? "text-[var(--color-text)]" : "text-[var(--color-text-muted)]"}>
-                  {item.label}
+                  {row.complete ? "Complete" : "Incomplete"}
                 </span>
               </li>
             ))}
           </ul>
         </section>
 
-        {isSubmitted ? (
-          <div className="rounded-md bg-[var(--color-success-bg)] px-4 py-3 text-sm text-[var(--color-success)]">
-            Your application is submitted and ready for review. You can keep editing any
-            section above — your changes are saved, and your application stays submitted.
-          </div>
-        ) : (
-          <section>
-            {!allComplete ? (
-              <p className="mb-3 text-sm text-[var(--color-text-muted)]">
-                Complete every item above before submitting.
+        <section>
+          {primaryCta.kind === "submitted" ? (
+            <div className="rounded-md bg-[var(--color-success-bg)] px-4 py-3 text-sm text-[var(--color-success)]">
+              <p className="font-medium">Application Submitted</p>
+              <p className="mt-1">
+                Your application is ready for review. You can keep editing any section above —
+                your changes are saved, and your application stays submitted.
               </p>
-            ) : null}
-            <SubmitApplicationPanel canSubmit={allComplete} />
-          </section>
-        )}
+            </div>
+          ) : primaryCta.kind === "continue" ? (
+            <Link href={primaryCta.href} className={PRIMARY_CTA_CLASSES}>
+              {primaryCta.label}
+            </Link>
+          ) : (
+            <SubmitApplicationPanel canSubmit />
+          )}
+        </section>
       </div>
     </div>
   );

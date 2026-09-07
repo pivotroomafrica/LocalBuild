@@ -34,7 +34,6 @@ export function CategoryPicker({ categories, selectedIds }: Props) {
   return (
     <form action={formAction} className="flex flex-col gap-4">
       {state.error ? <FormMessage variant="error">{state.error}</FormMessage> : null}
-      {state.success ? <FormMessage variant="success">Categories saved.</FormMessage> : null}
 
       <p className="text-sm text-[var(--color-text-muted)]">
         Select up to {MAX_EXPERT_CATEGORIES} categories ({selected.size}/{MAX_EXPERT_CATEGORIES} selected).
@@ -67,7 +66,7 @@ export function CategoryPicker({ categories, selectedIds }: Props) {
       </div>
 
       <Button type="submit" isLoading={isPending} loadingText="Saving...">
-        Save Categories
+        Save &amp; Continue
       </Button>
     </form>
   );

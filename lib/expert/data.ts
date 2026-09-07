@@ -77,26 +77,57 @@ export async function getActiveExpertCategories(
   return data ?? [];
 }
 
-export type ChecklistItem = { label: string; complete: boolean };
+export type ApplicationSection = "profile" | "expertise" | "sessions";
 
-/** Required for submission per spec section 42. Photo + LinkedIn policy:
- * photo required, LinkedIn strongly encouraged but not gating. */
+export type ChecklistItem = { label: string; complete: boolean; section: ApplicationSection };
+
+/**
+ * Single source of truth for application completeness. Required for
+ * submission per spec section 42. Photo + LinkedIn policy: photo
+ * required, LinkedIn strongly encouraged but not gating.
+ *
+ * Every item is tagged with the /expert/application/* section it belongs
+ * to, so the per-field checklist, the per-section summary
+ * (getSectionCompletion), and the submission gate
+ * (getMissingRequiredFields) can never disagree with each other -- they
+ * all derive from this one array.
+ */
 export function getCompletionChecklist(data: ExpertApplicationData): ChecklistItem[] {
   const { expertProfile, categoryIds, sessionOfferings } = data;
 
   return [
-    { label: "Professional headline", complete: Boolean(expertProfile.headline) },
-    { label: "Current position", complete: Boolean(expertProfile.current_position) },
-    { label: "Years of experience", complete: Boolean(expertProfile.years_experience_range) },
-    { label: "Short bio", complete: Boolean(expertProfile.short_bio) },
-    { label: "Expertise summary", complete: Boolean(expertProfile.expertise_summary) },
-    { label: "Problems you help with", complete: Boolean(expertProfile.problems_help_with) },
-    { label: "Who you help", complete: Boolean(expertProfile.who_i_help) },
-    { label: "Country", complete: Boolean(expertProfile.country) },
-    { label: "City", complete: Boolean(expertProfile.city) },
-    { label: "Profile photo", complete: Boolean(expertProfile.profile_image_path) },
-    { label: "At least 1 expertise category", complete: categoryIds.length > 0 },
-    { label: "At least 1 session offering", complete: sessionOfferings.length > 0 },
+    { label: "Professional headline", complete: Boolean(expertProfile.headline), section: "profile" },
+    { label: "Current position", complete: Boolean(expertProfile.current_position), section: "profile" },
+    {
+      label: "Years of experience",
+      complete: Boolean(expertProfile.years_experience_range),
+      section: "profile",
+    },
+    { label: "Short bio", complete: Boolean(expertProfile.short_bio), section: "profile" },
+    {
+      label: "Expertise summary",
+      complete: Boolean(expertProfile.expertise_summary),
+      section: "profile",
+    },
+    {
+      label: "Problems you help with",
+      complete: Boolean(expertProfile.problems_help_with),
+      section: "profile",
+    },
+    { label: "Who you help", complete: Boolean(expertProfile.who_i_help), section: "profile" },
+    { label: "Country", complete: Boolean(expertProfile.country), section: "profile" },
+    { label: "City", complete: Boolean(expertProfile.city), section: "profile" },
+    { label: "Profile photo", complete: Boolean(expertProfile.profile_image_path), section: "profile" },
+    {
+      label: "At least 1 expertise category",
+      complete: categoryIds.length > 0,
+      section: "expertise",
+    },
+    {
+      label: "At least 1 session offering",
+      complete: sessionOfferings.length > 0,
+      section: "sessions",
+    },
   ];
 }
 
@@ -104,4 +135,22 @@ export function getMissingRequiredFields(data: ExpertApplicationData): string[] 
   return getCompletionChecklist(data)
     .filter((item) => !item.complete)
     .map((item) => item.label);
+}
+
+/** Per-section completeness, built from the exact same checklist items as
+ * getMissingRequiredFields -- never a second, independently-defined
+ * notion of "complete." Drives both the Overview checklist display and
+ * the Overview primary CTA. */
+export function getSectionCompletion(
+  data: ExpertApplicationData,
+): Record<ApplicationSection, boolean> {
+  const checklist = getCompletionChecklist(data);
+  const isSectionComplete = (section: ApplicationSection) =>
+    checklist.filter((item) => item.section === section).every((item) => item.complete);
+
+  return {
+    profile: isSectionComplete("profile"),
+    expertise: isSectionComplete("expertise"),
+    sessions: isSectionComplete("sessions"),
+  };
 }

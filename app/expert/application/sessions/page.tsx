@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ensureExpertProfileDraft } from "@/lib/expert/actions";
 import { getExpertApplicationData } from "@/lib/expert/data";
@@ -37,6 +38,18 @@ export default async function ExpertApplicationSessionsPage() {
         </div>
 
         <AddSessionForm usedDurations={offerings.map((o) => o.duration_minutes)} />
+
+        {/* Each offering above already saves immediately via its own
+            Add/Edit/Remove action -- there is nothing left to persist
+            here. This is the final step of the guided flow, so it reads
+            as "Save & Review" and returns the applicant to the Overview
+            page to check completion status and submit. */}
+        <Link
+          href="/expert/application"
+          className="inline-flex w-full items-center justify-center rounded-md bg-[var(--color-brand)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--color-brand-hover)]"
+        >
+          Save &amp; Review
+        </Link>
       </div>
     </div>
   );

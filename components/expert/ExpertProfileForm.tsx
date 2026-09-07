@@ -21,7 +21,6 @@ export function ExpertProfileForm({ expertProfile }: { expertProfile: ExpertProf
   return (
     <form action={formAction} className="flex flex-col gap-8">
       {state.error ? <FormMessage variant="error">{state.error}</FormMessage> : null}
-      {state.success ? <FormMessage variant="success">Profile updated successfully.</FormMessage> : null}
 
       <section className="flex flex-col gap-4">
         <h2 className="text-base font-semibold text-[var(--color-text)]">Professional Identity</h2>
@@ -119,12 +118,12 @@ export function ExpertProfileForm({ expertProfile }: { expertProfile: ExpertProf
           name="career_highlights"
           defaultValue={expertProfile.career_highlights ?? ""}
           maxLength={1500}
-          hint="Optional. A few concrete highlights, e.g. “Built and led...”, “Served 150+ corporate clients...”"
+          placeholder='Optional. A few concrete highlights, e.g. "Built and led...", "Served 150+ corporate clients..."'
         />
       </section>
 
       <Button type="submit" isLoading={isPending} loadingText="Saving...">
-        Save Changes
+        Save &amp; Continue
       </Button>
     </form>
   );

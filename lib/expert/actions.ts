@@ -176,7 +176,10 @@ export async function updateExpertProfileAction(
 
   revalidatePath("/expert/application");
   revalidatePath("/expert/application/profile");
-  return { success: true };
+  // Save & Continue: only reached once the update above has actually
+  // succeeded -- redirect() never runs on a validation or save failure,
+  // both of which return an error above instead.
+  redirect("/expert/application/expertise");
 }
 
 const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -282,7 +285,14 @@ export async function setExpertCategoriesAction(
 
   revalidatePath("/expert/application");
   revalidatePath("/expert/application/expertise");
-  return { success: true };
+  // Save & Continue: only reached once the save above has actually
+  // succeeded. Category count rules are unchanged -- max 3 is still
+  // enforced above (and by enforce_expert_category_limit() at the
+  // database level); a minimum of 1 is still enforced only at
+  // submission time (getMissingRequiredFields), not here, same as
+  // before -- non-linear navigation (spec section 7) means this page is
+  // allowed to be left incomplete.
+  redirect("/expert/application/sessions");
 }
 
 export async function addSessionOfferingAction(
