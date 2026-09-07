@@ -51,6 +51,53 @@ export async function getExpertApplicationData(
   };
 }
 
+/**
+ * Same shape as getExpertApplicationData, keyed by expert_profiles.id
+ * instead of user_id. Used by the admin detail page and by
+ * approveApplicationAction's server-side re-validation
+ * (lib/admin/actions.ts) -- both need to read an application that does
+ * NOT belong to the caller, which only works because the admin RLS
+ * policies from 013_admin_authorization.sql grant is_admin() callers
+ * read access on expert_profiles/expert_profile_categories/
+ * expert_session_types. For a non-admin caller this returns null, the
+ * same as if the row did not exist -- RLS, not this function, is what
+ * actually prevents cross-applicant reads.
+ */
+export async function getExpertApplicationDataById(
+  supabase: TypedClient,
+  expertProfileId: string,
+): Promise<ExpertApplicationData | null> {
+  const { data: expertProfile, error: expertProfileError } = await supabase
+    .from("expert_profiles")
+    .select("*")
+    .eq("id", expertProfileId)
+    .maybeSingle();
+
+  if (expertProfileError) {
+    console.error("getExpertApplicationDataById: failed to load expert_profiles", expertProfileError);
+  }
+
+  if (!expertProfile) return null;
+
+  const [{ data: categoryLinks }, { data: sessionOfferings }] = await Promise.all([
+    supabase
+      .from("expert_profile_categories")
+      .select("category_id")
+      .eq("expert_profile_id", expertProfile.id),
+    supabase
+      .from("expert_session_types")
+      .select("*")
+      .eq("expert_profile_id", expertProfile.id)
+      .order("duration_minutes"),
+  ]);
+
+  return {
+    expertProfile,
+    categoryIds: (categoryLinks ?? []).map((row) => row.category_id),
+    sessionOfferings: sessionOfferings ?? [],
+  };
+}
+
 /** The bucket is private (experts aren't public in Phase 2), so the photo
  * is only ever reachable via a short-lived signed URL, generated fresh on
  * each server render -- never a public/permanent URL. */

@@ -7,15 +7,24 @@ import { FormMessage } from "@/components/ui/FormMessage";
 
 const initialState: ExpertActionState = {};
 
-export function SubmitApplicationPanel({ canSubmit }: { canSubmit: boolean }) {
+type Props = {
+  canSubmit: boolean;
+  /** Same action (submitApplicationAction handles both draft -> submitted
+   * and changes_requested -> submitted), different label/copy depending
+   * on which state the applicant is resubmitting from. */
+  label?: string;
+  successMessage?: string;
+};
+
+export function SubmitApplicationPanel({
+  canSubmit,
+  label = "Submit Application",
+  successMessage = "Application submitted. Your application is now ready for review.",
+}: Props) {
   const [state, formAction, isPending] = useActionState(submitApplicationAction, initialState);
 
   if (state.success) {
-    return (
-      <FormMessage variant="success">
-        Application submitted. Your application is now ready for review.
-      </FormMessage>
-    );
+    return <FormMessage variant="success">{successMessage}</FormMessage>;
   }
 
   return (
@@ -34,7 +43,7 @@ export function SubmitApplicationPanel({ canSubmit }: { canSubmit: boolean }) {
       ) : null}
 
       <Button type="submit" isLoading={isPending} loadingText="Submitting..." disabled={!canSubmit}>
-        Submit Application
+        {label}
       </Button>
     </form>
   );

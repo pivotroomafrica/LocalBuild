@@ -22,7 +22,9 @@ export default async function ExpertApplicationPage() {
   }
 
   const { expertProfile } = data;
-  const isSubmitted = expertProfile.application_status === "submitted";
+  const applicationStatus = expertProfile.application_status;
+  const profileStatus = expertProfile.profile_status;
+  const isSubmitted = applicationStatus === "submitted";
 
   // Single source of truth for completeness -- the same checklist items
   // that gate submission server-side (getMissingRequiredFields), grouped
@@ -34,6 +36,16 @@ export default async function ExpertApplicationPage() {
     { label: "Expertise", complete: sections.expertise },
     { label: "Session Pricing", complete: sections.sessions },
   ];
+
+  const statusLabel: Record<string, string> = {
+    draft: "Draft",
+    submitted: "Submitted",
+    changes_requested: "Changes Requested",
+    approved: profileStatus === "published" ? "Published" : "Approved",
+    rejected: "Rejected",
+  };
+  const displayStatus =
+    profileStatus === "suspended" ? "Suspended" : statusLabel[applicationStatus] ?? applicationStatus;
 
   // Human-readable summary of the pricing configuration -- not internal
   // database rows, per spec section 15.
@@ -53,20 +65,32 @@ export default async function ExpertApplicationPage() {
       .filter(Boolean)
       .join(" + ") || "Not set";
 
-  // Priority order per spec: submitted is terminal (always show
-  // "Application Submitted" regardless of section state, since editing
-  // after submission is allowed but must never imply resubmission); the
-  // first incomplete section in Profile -> Expertise -> Sessions order
-  // otherwise; Submit Application only once every section is complete.
-  const primaryCta = isSubmitted
-    ? ({ kind: "submitted" } as const)
-    : !sections.profile
-      ? ({ kind: "continue", label: "Continue to Profile", href: "/expert/application/profile" } as const)
-      : !sections.expertise
-        ? ({ kind: "continue", label: "Continue to Expertise", href: "/expert/application/expertise" } as const)
-        : !sections.sessions
-          ? ({ kind: "continue", label: "Continue to Sessions", href: "/expert/application/sessions" } as const)
-          : ({ kind: "submit" } as const);
+  // Priority order: every post-submission lifecycle state (submitted,
+  // changes_requested, approved, published, rejected, suspended) shows
+  // its own fixed status panel regardless of section completeness --
+  // those states are admin-controlled, not something finishing a section
+  // changes. Only in the pre-submission "draft" state does the
+  // first-incomplete-section / submit flow apply.
+  const primaryCta =
+    applicationStatus === "submitted"
+      ? ({ kind: "submitted" } as const)
+      : applicationStatus === "changes_requested"
+        ? ({ kind: "changes_requested" } as const)
+        : applicationStatus === "rejected"
+          ? ({ kind: "rejected" } as const)
+          : applicationStatus === "approved" && profileStatus === "suspended"
+            ? ({ kind: "suspended" } as const)
+            : applicationStatus === "approved" && profileStatus === "published"
+              ? ({ kind: "published" } as const)
+              : applicationStatus === "approved"
+                ? ({ kind: "approved" } as const)
+                : !sections.profile
+                  ? ({ kind: "continue", label: "Continue to Profile", href: "/expert/application/profile" } as const)
+                  : !sections.expertise
+                    ? ({ kind: "continue", label: "Continue to Expertise", href: "/expert/application/expertise" } as const)
+                    : !sections.sessions
+                      ? ({ kind: "continue", label: "Continue to Sessions", href: "/expert/application/sessions" } as const)
+                      : ({ kind: "submit" } as const);
 
   return (
     <div>
@@ -78,11 +102,8 @@ export default async function ExpertApplicationPage() {
             Expert Application
           </h1>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            Status:{" "}
-            <span className="font-medium">
-              {isSubmitted ? "Submitted" : "Draft"}
-            </span>
-            {isSubmitted && expertProfile.submitted_at
+            Status: <span className="font-medium">{displayStatus}</span>
+            {expertProfile.submitted_at && (isSubmitted || applicationStatus === "changes_requested")
               ? ` — ${new Date(expertProfile.submitted_at).toLocaleDateString()}`
               : ""}
           </p>
@@ -152,6 +173,53 @@ export default async function ExpertApplicationPage() {
               <p className="mt-1">
                 Your application is ready for review. You can keep editing any section above —
                 your changes are saved, and your application stays submitted.
+              </p>
+            </div>
+          ) : primaryCta.kind === "changes_requested" ? (
+            <div className="flex flex-col gap-4">
+              <div className="rounded-md bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger)]">
+                <p className="font-medium">Changes Requested</p>
+                <p className="mt-1">
+                  {expertProfile.review_message ??
+                    "An admin has requested changes to your application. Please review and update it below."}
+                </p>
+              </div>
+              <SubmitApplicationPanel
+                canSubmit
+                label="Resubmit Application"
+                successMessage="Application resubmitted. It's back in the review queue."
+              />
+            </div>
+          ) : primaryCta.kind === "rejected" ? (
+            <div className="rounded-md bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger)]">
+              <p className="font-medium">Application Not Approved</p>
+              <p className="mt-1">
+                {expertProfile.review_message ?? "Your application was not approved at this time."}
+              </p>
+            </div>
+          ) : primaryCta.kind === "approved" ? (
+            <div className="rounded-md bg-[var(--color-success-bg)] px-4 py-3 text-sm text-[var(--color-success)]">
+              <p className="font-medium">Application Approved</p>
+              <p className="mt-1">
+                Your application has been approved. An admin will publish your profile soon.
+              </p>
+              <Link href="/expert/application/preview" className="mt-2 inline-block font-medium underline">
+                Preview your public profile
+              </Link>
+            </div>
+          ) : primaryCta.kind === "published" ? (
+            <div className="rounded-md bg-[var(--color-success-bg)] px-4 py-3 text-sm text-[var(--color-success)]">
+              <p className="font-medium">Your Profile Is Live</p>
+              <p className="mt-1">Customers can now find and view your expert profile.</p>
+              <Link href={`/experts/${expertProfile.slug}`} className="mt-2 inline-block font-medium underline">
+                View your public profile
+              </Link>
+            </div>
+          ) : primaryCta.kind === "suspended" ? (
+            <div className="rounded-md bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger)]">
+              <p className="font-medium">Profile Suspended</p>
+              <p className="mt-1">
+                Your profile is temporarily suspended and is not visible in the public directory.
               </p>
             </div>
           ) : primaryCta.kind === "continue" ? (

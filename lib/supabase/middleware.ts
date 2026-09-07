@@ -1,8 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/auth/reset-password", "/dev", "/expert"];
+const PROTECTED_PREFIXES = ["/dashboard", "/auth/reset-password", "/dev", "/expert", "/admin"];
 const AUTH_PREFIXES = ["/auth/login", "/auth/signup"];
+const ADMIN_PREFIX = "/admin";
 
 /**
  * Refreshes the Supabase auth session on every request and enforces route
@@ -53,6 +54,26 @@ export async function updateSession(request: NextRequest) {
     const redirectUrl = new URL("/auth/login", request.url);
     redirectUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(redirectUrl);
+  }
+
+  // Layer 1 of 3 for /admin (spec: "hiding a link is NOT security" — the
+  // router itself must actively check, not just omit a nav link). Layer 2
+  // is requireAdminPage()'s notFound() in every admin Server Component;
+  // layer 3 is is_admin()-gated RLS in the database, which holds even if
+  // both application layers had a bug. A logged-in non-admin is sent home
+  // rather than shown a 404 here — middleware can't render the app's
+  // not-found UI, and a plain redirect reveals no more than "you can't be
+  // here," same as the page-layer notFound() a moment later would.
+  if (user && pathname.startsWith(ADMIN_PREFIX)) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!profile || profile.role !== "admin") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
   }
 
   if (user && isAuthPage) {

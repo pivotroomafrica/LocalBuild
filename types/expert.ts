@@ -5,8 +5,35 @@ export type ExpertCategory = Tables<"expert_categories">;
 export type ExpertProfileCategory = Tables<"expert_profile_categories">;
 export type ExpertSessionType = Tables<"expert_session_types">;
 
-export type ApplicationStatus = "draft" | "submitted" | "approved" | "rejected";
+/** Public, safe projections -- never the base tables -- read by the
+ * public directory (/experts) and public profile (/experts/[slug]).
+ * See supabase/migrations/016_public_expert_views.sql. */
+export type ExpertDirectoryPublicRow = Tables<"expert_directory_public">;
+export type ExpertProfilePublicRow = Tables<"expert_profile_public">;
+export type ExpertSessionTypePublicRow = Tables<"expert_session_types_public">;
+
+export type ApplicationStatus =
+  | "draft"
+  | "submitted"
+  | "changes_requested"
+  | "approved"
+  | "rejected";
 export type ExpertProfileStatus = "draft" | "ready" | "published" | "suspended";
+
+export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
+  draft: "Draft",
+  submitted: "Submitted",
+  changes_requested: "Changes Requested",
+  approved: "Approved",
+  rejected: "Rejected",
+};
+
+export const PROFILE_STATUS_LABELS: Record<ExpertProfileStatus, string> = {
+  draft: "Draft",
+  ready: "Ready",
+  published: "Published",
+  suspended: "Suspended",
+};
 
 export const EXPERT_EXPERIENCE_RANGES = [
   "lt_5",

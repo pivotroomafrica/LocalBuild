@@ -142,6 +142,8 @@ export type Database = {
       expert_profiles: {
         Row: {
           application_status: string
+          approved_at: string | null
+          approved_by: string | null
           base_hourly_price: number | null
           career_highlights: string | null
           city: string | null
@@ -158,6 +160,11 @@ export type Database = {
           problems_help_with: string | null
           profile_image_path: string | null
           profile_status: string
+          published_at: string | null
+          published_by: string | null
+          review_message: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           short_bio: string | null
           slug: string
           submitted_at: string | null
@@ -168,6 +175,8 @@ export type Database = {
         }
         Insert: {
           application_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           base_hourly_price?: number | null
           career_highlights?: string | null
           city?: string | null
@@ -184,6 +193,11 @@ export type Database = {
           problems_help_with?: string | null
           profile_image_path?: string | null
           profile_status?: string
+          published_at?: string | null
+          published_by?: string | null
+          review_message?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           short_bio?: string | null
           slug: string
           submitted_at?: string | null
@@ -194,6 +208,8 @@ export type Database = {
         }
         Update: {
           application_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           base_hourly_price?: number | null
           career_highlights?: string | null
           city?: string | null
@@ -210,6 +226,11 @@ export type Database = {
           problems_help_with?: string | null
           profile_image_path?: string | null
           profile_status?: string
+          published_at?: string | null
+          published_by?: string | null
+          review_message?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           short_bio?: string | null
           slug?: string
           submitted_at?: string | null
@@ -219,6 +240,27 @@ export type Database = {
           years_experience_range?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "expert_profiles_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expert_profiles_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expert_profiles_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "expert_profiles_user_id_fkey"
             columns: ["user_id"]
@@ -337,10 +379,62 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      expert_directory_public: {
+        Row: {
+          category_names: string[] | null
+          current_company: string | null
+          current_position: string | null
+          full_name: string | null
+          headline: string | null
+          in_person_enabled: boolean | null
+          online_enabled: boolean | null
+          profile_image_path: string | null
+          slug: string | null
+          starting_price: number | null
+        }
+        Relationships: []
+      }
+      expert_profile_public: {
+        Row: {
+          career_highlights: string | null
+          category_names: string[] | null
+          city: string | null
+          country: string | null
+          current_company: string | null
+          current_position: string | null
+          expertise_summary: string | null
+          full_name: string | null
+          headline: string | null
+          in_person_enabled: boolean | null
+          linkedin_url: string | null
+          online_enabled: boolean | null
+          problems_help_with: string | null
+          profile_image_path: string | null
+          short_bio: string | null
+          slug: string | null
+          who_i_help: string | null
+          years_experience_range: string | null
+        }
+        Relationships: []
+      }
+      expert_session_types_public: {
+        Row: {
+          base_price: number | null
+          currency: string | null
+          duration_minutes: number | null
+          in_person_enabled: boolean | null
+          online_enabled: boolean | null
+          slug: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      is_admin: { Args: never; Returns: boolean }
+      is_published_expert_photo: {
+        Args: { object_name: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

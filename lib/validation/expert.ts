@@ -15,6 +15,19 @@ const err = (error: string): FieldResult<never> => ({ valid: false, error });
 export { validateCountry as validateExpertCountry, validateCity as validateExpertCity };
 export const validateExpertLinkedinUrl = validateLinkedinUrl;
 
+/** Admin review message (Request Changes reason / rejection reason).
+ * Required and non-empty -- unlike every other field here, an empty
+ * result is not valid: 013_admin_authorization.sql's
+ * expert_review_message_required_check enforces the same rule at the
+ * database level, so this is the application-layer half of one rule, not
+ * two independent ones. */
+export function validateReviewMessage(input: string): FieldResult<string> {
+  const value = input.trim();
+  if (!value) return err("Please explain what needs to change or why the application was rejected.");
+  if (value.length > 2000) return err("Message must be 2000 characters or fewer.");
+  return ok(value);
+}
+
 export function validateHeadline(input: string): FieldResult<string | null> {
   const value = input.trim();
   if (!value) return ok(null);
