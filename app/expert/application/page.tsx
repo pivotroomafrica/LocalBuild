@@ -32,8 +32,26 @@ export default async function ExpertApplicationPage() {
   const sectionRows: { label: string; complete: boolean }[] = [
     { label: "Profile", complete: sections.profile },
     { label: "Expertise", complete: sections.expertise },
-    { label: "Sessions", complete: sections.sessions },
+    { label: "Session Pricing", complete: sections.sessions },
   ];
+
+  // Human-readable summary of the pricing configuration -- not internal
+  // database rows, per spec section 15.
+  const baseRateLabel =
+    expertProfile.base_hourly_price != null
+      ? `${Number(expertProfile.base_hourly_price).toLocaleString()} ETB`
+      : "Not set";
+  const durationsLabel =
+    data.sessionOfferings.length > 0
+      ? `${data.sessionOfferings
+          .map((o) => o.duration_minutes)
+          .sort((a, b) => a - b)
+          .join(", ")} minutes`
+      : "None selected";
+  const formatLabel =
+    [expertProfile.online_enabled ? "Online" : null, expertProfile.in_person_enabled ? "In Person" : null]
+      .filter(Boolean)
+      .join(" + ") || "Not set";
 
   // Priority order per spec: submitted is terminal (always show
   // "Application Submitted" regardless of section state, since editing
@@ -96,9 +114,9 @@ export default async function ExpertApplicationPage() {
             href="/expert/application/sessions"
             className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4 hover:border-[var(--color-brand)]"
           >
-            <h2 className="text-sm font-semibold">Session Offerings</h2>
+            <h2 className="text-sm font-semibold">Session Pricing</h2>
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-              {data.sessionOfferings.length} offering{data.sessionOfferings.length === 1 ? "" : "s"}
+              {baseRateLabel} · {durationsLabel} · {formatLabel}
             </p>
           </Link>
         </section>

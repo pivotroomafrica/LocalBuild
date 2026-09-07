@@ -124,8 +124,18 @@ export function getCompletionChecklist(data: ExpertApplicationData): ChecklistIt
       section: "expertise",
     },
     {
-      label: "At least 1 session offering",
-      complete: sessionOfferings.length > 0,
+      // A single item covering all three pricing requirements (valid
+      // 60-minute base price, at least one enabled duration, at least one
+      // format) rather than three separate rows -- Session Pricing is one
+      // configuration, not a checklist of sub-fields, and this is the
+      // exact same condition set saveSessionPricingAction enforces before
+      // it writes anything.
+      label: "Session pricing",
+      complete:
+        expertProfile.base_hourly_price != null &&
+        Number(expertProfile.base_hourly_price) > 0 &&
+        sessionOfferings.length > 0 &&
+        (expertProfile.online_enabled || expertProfile.in_person_enabled),
       section: "sessions",
     },
   ];

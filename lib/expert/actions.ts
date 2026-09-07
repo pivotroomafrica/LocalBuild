@@ -19,9 +19,10 @@ import {
   validateShortBio,
   validateWhoIHelp,
   validateBasePrice,
-  validateSessionDuration,
+  validateDurations,
   validateSessionFormat,
 } from "@/lib/validation/expert";
+import { calculateDurationPrice } from "@/lib/expert/pricing";
 import { MAX_EXPERT_CATEGORIES } from "@/types/expert";
 import type { ExpertProfile } from "@/types/expert";
 
@@ -295,7 +296,25 @@ export async function setExpertCategoriesAction(
   redirect("/expert/application/sessions");
 }
 
-export async function addSessionOfferingAction(
+/**
+ * Replaces the old one-row-at-a-time Add/Edit/Remove session actions.
+ * The applicant sets a single 60-minute base rate, which durations are
+ * enabled, and which formats are supported; every enabled duration's
+ * price is derived server-side from calculateDurationPrice() (the same
+ * function the client uses for its live preview) -- the price the
+ * browser displays is never trusted as authoritative, only ever
+ * recomputed here from the base rate.
+ *
+ * expert_session_types stays exactly the shape Phase 2 gave it (one row
+ * per duration, unique per expert_profile_id); this action just derives
+ * and synchronizes those rows instead of the applicant creating them by
+ * hand. Update-then-insert-if-none per duration (not .upsert()) so this
+ * never needs to touch expert_profile_id in an UPDATE's SET clause --
+ * that column is deliberately outside the UPDATE grant in
+ * 010_expert_rls.sql, and RLS already restricts every row here to ones
+ * owned by the caller regardless.
+ */
+export async function saveSessionPricingAction(
   _prevState: ExpertActionState,
   formData: FormData,
 ): Promise<ExpertActionState> {
@@ -305,11 +324,12 @@ export async function addSessionOfferingAction(
   } = await supabase.auth.getUser();
   if (!user) return { error: "You must be logged in to do that." };
 
-  const duration = validateSessionDuration(Number(formData.get("duration_minutes")));
-  if (!duration.valid) return { error: duration.error };
-
-  const price = validateBasePrice(String(formData.get("base_price") ?? ""));
+  const price = validateBasePrice(String(formData.get("base_hourly_price") ?? ""));
   if (!price.valid) return { error: price.error };
+
+  const selectedDurations = formData.getAll("durations").map(Number);
+  const durations = validateDurations(selectedDurations);
+  if (!durations.valid) return { error: durations.error };
 
   const onlineEnabled = formData.get("online_enabled") === "on";
   const inPersonEnabled = formData.get("in_person_enabled") === "on";
@@ -323,87 +343,66 @@ export async function addSessionOfferingAction(
     .single();
   if (!expertProfile) return { error: GENERIC_ERROR };
 
-  const { error } = await supabase.from("expert_session_types").insert({
-    expert_profile_id: expertProfile.id,
-    duration_minutes: duration.value,
-    base_price: price.value,
-    currency: "ETB",
-    online_enabled: onlineEnabled,
-    in_person_enabled: inPersonEnabled,
-  });
-
-  if (error) {
-    if (error.code === "23505") {
-      return { error: `You already have a ${duration.value}-minute offering.` };
-    }
-    return { error: GENERIC_ERROR };
-  }
-
-  revalidatePath("/expert/application");
-  revalidatePath("/expert/application/sessions");
-  return { success: true };
-}
-
-export async function updateSessionOfferingAction(
-  _prevState: ExpertActionState,
-  formData: FormData,
-): Promise<ExpertActionState> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "You must be logged in to do that." };
-
-  const offeringId = String(formData.get("offering_id") ?? "");
-  if (!offeringId) return { error: GENERIC_ERROR };
-
-  const price = validateBasePrice(String(formData.get("base_price") ?? ""));
-  if (!price.valid) return { error: price.error };
-
-  const onlineEnabled = formData.get("online_enabled") === "on";
-  const inPersonEnabled = formData.get("in_person_enabled") === "on";
-  const format = validateSessionFormat(onlineEnabled, inPersonEnabled);
-  if (!format.valid) return { error: format.error };
-
-  // RLS (expert_session_types_update_own) already restricts this to rows
-  // whose expert_profile belongs to the caller -- no need to re-derive
-  // and filter by expert_profile_id, ownership is enforced at the
-  // database, not just by omission from the UI.
-  const { error } = await supabase
-    .from("expert_session_types")
+  // Source of truth for the pricing configuration.
+  const { error: profileError } = await supabase
+    .from("expert_profiles")
     .update({
-      base_price: price.value,
+      base_hourly_price: price.value,
       online_enabled: onlineEnabled,
       in_person_enabled: inPersonEnabled,
     })
-    .eq("id", offeringId);
+    .eq("user_id", user.id);
+  if (profileError) return { error: GENERIC_ERROR };
 
-  if (error) return { error: GENERIC_ERROR };
+  // Derived rows, one per enabled duration -- synchronized, not
+  // accumulated: update the ones that already exist, insert the ones
+  // that don't, remove any duration no longer enabled.
+  for (const duration of durations.value) {
+    const derivedPrice = calculateDurationPrice(price.value, duration);
+
+    const { data: updatedRows, error: updateError } = await supabase
+      .from("expert_session_types")
+      .update({
+        base_price: derivedPrice,
+        currency: "ETB",
+        online_enabled: onlineEnabled,
+        in_person_enabled: inPersonEnabled,
+      })
+      .eq("expert_profile_id", expertProfile.id)
+      .eq("duration_minutes", duration)
+      .select("id");
+
+    if (updateError) return { error: GENERIC_ERROR };
+
+    if (!updatedRows || updatedRows.length === 0) {
+      const { error: insertError } = await supabase.from("expert_session_types").insert({
+        expert_profile_id: expertProfile.id,
+        duration_minutes: duration,
+        base_price: derivedPrice,
+        currency: "ETB",
+        online_enabled: onlineEnabled,
+        in_person_enabled: inPersonEnabled,
+      });
+      // A concurrent duplicate insert would hit the unique constraint on
+      // (expert_profile_id, duration_minutes) -- treat that as the row
+      // already existing (another request's save already covers it)
+      // rather than a failure, same pattern as ensureExpertProfileDraft.
+      if (insertError && insertError.code !== "23505") return { error: GENERIC_ERROR };
+    }
+  }
+
+  const { error: deleteError } = await supabase
+    .from("expert_session_types")
+    .delete()
+    .eq("expert_profile_id", expertProfile.id)
+    .not("duration_minutes", "in", `(${durations.value.join(",")})`);
+  if (deleteError) return { error: GENERIC_ERROR };
 
   revalidatePath("/expert/application");
   revalidatePath("/expert/application/sessions");
-  return { success: true };
-}
-
-export async function deleteSessionOfferingAction(
-  _prevState: ExpertActionState,
-  formData: FormData,
-): Promise<ExpertActionState> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "You must be logged in to do that." };
-
-  const offeringId = String(formData.get("offering_id") ?? "");
-  if (!offeringId) return { error: GENERIC_ERROR };
-
-  const { error } = await supabase.from("expert_session_types").delete().eq("id", offeringId);
-  if (error) return { error: GENERIC_ERROR };
-
-  revalidatePath("/expert/application");
-  revalidatePath("/expert/application/sessions");
-  return { success: true };
+  // Save & Review: only reached once every write above has actually
+  // succeeded.
+  redirect("/expert/application");
 }
 
 // Signature is fixed by useActionState (prevState, formData) even though

@@ -48,10 +48,13 @@ export type ExpertProfileInput = {
   career_highlights: string;
 };
 
-export type SessionOfferingInput = {
-  duration_minutes: SessionDuration;
-  base_price: string;
-  currency: string;
+/** app/expert/application/sessions -- one 60-minute base rate, which
+ * durations are enabled, and which formats are supported. Prices for
+ * every enabled duration are derived from base_hourly_price (see
+ * lib/expert/pricing.ts), never entered individually. */
+export type SessionPricingInput = {
+  base_hourly_price: string;
+  enabled_durations: SessionDuration[];
   online_enabled: boolean;
   in_person_enabled: boolean;
 };

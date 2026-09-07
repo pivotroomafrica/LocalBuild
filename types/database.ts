@@ -142,6 +142,7 @@ export type Database = {
       expert_profiles: {
         Row: {
           application_status: string
+          base_hourly_price: number | null
           career_highlights: string | null
           city: string | null
           country: string | null
@@ -151,7 +152,9 @@ export type Database = {
           expertise_summary: string | null
           headline: string | null
           id: string
+          in_person_enabled: boolean
           linkedin_url: string | null
+          online_enabled: boolean
           problems_help_with: string | null
           profile_image_path: string | null
           profile_status: string
@@ -165,6 +168,7 @@ export type Database = {
         }
         Insert: {
           application_status?: string
+          base_hourly_price?: number | null
           career_highlights?: string | null
           city?: string | null
           country?: string | null
@@ -174,7 +178,9 @@ export type Database = {
           expertise_summary?: string | null
           headline?: string | null
           id?: string
+          in_person_enabled?: boolean
           linkedin_url?: string | null
+          online_enabled?: boolean
           problems_help_with?: string | null
           profile_image_path?: string | null
           profile_status?: string
@@ -188,6 +194,7 @@ export type Database = {
         }
         Update: {
           application_status?: string
+          base_hourly_price?: number | null
           career_highlights?: string | null
           city?: string | null
           country?: string | null
@@ -197,7 +204,9 @@ export type Database = {
           expertise_summary?: string | null
           headline?: string | null
           id?: string
+          in_person_enabled?: boolean
           linkedin_url?: string | null
+          online_enabled?: boolean
           problems_help_with?: string | null
           profile_image_path?: string | null
           profile_status?: string

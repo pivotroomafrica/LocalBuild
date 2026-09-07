@@ -88,6 +88,23 @@ export function validateSessionDuration(input: number): FieldResult<SessionDurat
   return ok(input as SessionDuration);
 }
 
+/** At least one enabled duration is required; every value must be one of
+ * the five supported durations. Used by the Session Pricing save action --
+ * the frontend only ever offers these five as checkboxes, but the server
+ * never trusts that a submitted value actually came from one of them. */
+export function validateDurations(input: number[]): FieldResult<SessionDuration[]> {
+  if (input.length === 0) {
+    return err("Select at least one session duration.");
+  }
+  const uniqueDurations = Array.from(new Set(input));
+  for (const duration of uniqueDurations) {
+    if (!(SESSION_DURATIONS as readonly number[]).includes(duration)) {
+      return err("Select a supported session duration.");
+    }
+  }
+  return ok(uniqueDurations as SessionDuration[]);
+}
+
 export function validateBasePrice(input: string): FieldResult<number> {
   const value = Number(input);
   if (!input.trim() || Number.isNaN(value)) return err("Enter a valid price.");

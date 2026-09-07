@@ -90,6 +90,9 @@ replaces them.
 - `008_expert_session_types.sql` — `expert_session_types`: base session
   offerings (duration/price/format). No commission, VAT, or payout math —
   that belongs to a future payments phase.
+  V1 pricing model (see `011_expert_base_pricing.sql` below): an expert
+  sets one 60-minute rate; every enabled duration's row here is *derived*
+  from it, not entered individually.
 - `009_expert_storage.sql` — creates the `expert-profile-images` Storage
   bucket (private, 3&nbsp;MB cap, image MIME types only).
 - `010_expert_rls.sql` — RLS policies, column grants, and
@@ -97,6 +100,10 @@ replaces them.
   self-rejection, self-publishing, and moving `user_id`) for every Phase 2
   table, plus Storage policies scoping each applicant to their own photo
   path (`<user_id>/profile-photo`).
+- `011_expert_base_pricing.sql` — adds `base_hourly_price`,
+  `online_enabled`, `in_person_enabled` to `expert_profiles`: the source
+  of truth for the V1 base-rate pricing model. Purely additive — does not
+  modify `expert_session_types` or any migration above.
 
 `supabase/seed.sql` seeds the 17 industries and the 8 expertise categories.
 It's separate from the migrations on purpose — schema vs. seed/demo data are
