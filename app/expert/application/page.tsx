@@ -118,6 +118,12 @@ export default async function ExpertApplicationPage() {
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">
               {baseRateLabel} · {durationsLabel} · {formatLabel}
             </p>
+            {expertProfile.base_hourly_price != null ? (
+              <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                Prices shown are base session prices. Applicable government taxes are
+                calculated separately.
+              </p>
+            ) : null}
           </Link>
         </section>
 

@@ -75,6 +75,10 @@ export function SessionPricingForm({
         <p className="text-sm text-[var(--color-text-muted)]">
           Pivotroom uses this rate to automatically calculate your other session prices.
         </p>
+        <p className="text-sm text-[var(--color-text-muted)]">
+          Your session price is the base price. Applicable government taxes will be
+          calculated separately.
+        </p>
       </section>
 
       <section className="flex flex-col gap-3">
@@ -154,6 +158,10 @@ export function SessionPricingForm({
         </ul>
         <p className="text-xs text-[var(--color-text-muted)]">
           Prices are automatically calculated from your 60-minute rate.
+        </p>
+        <p className="text-xs text-[var(--color-text-muted)]">
+          Displayed prices are base session prices. Applicable government taxes will be
+          calculated separately.
         </p>
       </section>
 
