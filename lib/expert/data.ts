@@ -20,11 +20,15 @@ export async function getExpertApplicationData(
   supabase: TypedClient,
   userId: string,
 ): Promise<ExpertApplicationData | null> {
-  const { data: expertProfile } = await supabase
+  const { data: expertProfile, error: expertProfileError } = await supabase
     .from("expert_profiles")
     .select("*")
     .eq("user_id", userId)
     .maybeSingle();
+
+  if (expertProfileError) {
+    console.error("getExpertApplicationData: failed to load expert_profiles", expertProfileError);
+  }
 
   if (!expertProfile) return null;
 
