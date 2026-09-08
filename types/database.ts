@@ -105,44 +105,6 @@ export type Database = {
           },
         ]
       }
-      expert_availability_windows: {
-        Row: {
-          created_at: string
-          day_of_week: number
-          end_time: string
-          expert_profile_id: string
-          id: string
-          start_time: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          day_of_week: number
-          end_time: string
-          expert_profile_id: string
-          id?: string
-          start_time: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          day_of_week?: number
-          end_time?: string
-          expert_profile_id?: string
-          id?: string
-          start_time?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "expert_availability_windows_expert_profile_id_fkey"
-            columns: ["expert_profile_id"]
-            isOneToOne: false
-            referencedRelation: "expert_profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       expert_categories: {
         Row: {
           created_at: string
@@ -169,6 +131,85 @@ export type Database = {
           sort_order?: number
         }
         Relationships: []
+      }
+      expert_monthly_availability_rules: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          end_time: string
+          expert_profile_id: string
+          id: string
+          start_time: string
+          updated_at: string
+          week_of_month: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          expert_profile_id: string
+          id?: string
+          start_time: string
+          updated_at?: string
+          week_of_month: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          expert_profile_id?: string
+          id?: string
+          start_time?: string
+          updated_at?: string
+          week_of_month?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expert_monthly_availability_rules_expert_profile_id_fkey"
+            columns: ["expert_profile_id"]
+            isOneToOne: false
+            referencedRelation: "expert_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expert_one_off_availability: {
+        Row: {
+          available_date: string
+          created_at: string
+          end_time: string
+          expert_profile_id: string
+          id: string
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          available_date: string
+          created_at?: string
+          end_time: string
+          expert_profile_id: string
+          id?: string
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          available_date?: string
+          created_at?: string
+          end_time?: string
+          expert_profile_id?: string
+          id?: string
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expert_one_off_availability_expert_profile_id_fkey"
+            columns: ["expert_profile_id"]
+            isOneToOne: false
+            referencedRelation: "expert_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       expert_profile_categories: {
         Row: {
@@ -526,22 +567,80 @@ export type Database = {
       }
     }
     Functions: {
+      add_expert_monthly_rule: {
+        Args: {
+          p_day_of_week: number
+          p_end_time: string
+          p_start_time: string
+          p_week_of_month: string
+        }
+        Returns: string
+      }
+      add_expert_one_off_availability: {
+        Args: {
+          p_available_date: string
+          p_end_time: string
+          p_start_time: string
+        }
+        Returns: string
+      }
       add_expert_unavailable_date: {
         Args: { p_date: string }
         Returns: undefined
       }
       is_admin: { Args: never; Returns: boolean }
+      is_last_weekday_of_month: { Args: { p_date: string }; Returns: boolean }
       is_published_expert_photo: {
         Args: { object_name: string }
         Returns: boolean
+      }
+      monthly_rule_matches_date: {
+        Args: { p_date: string; p_day_of_week: number; p_week_of_month: string }
+        Returns: boolean
+      }
+      nth_weekday_of_month: { Args: { p_date: string }; Returns: number }
+      remove_expert_monthly_rule: {
+        Args: { p_rule_id: string }
+        Returns: undefined
+      }
+      remove_expert_one_off_availability: {
+        Args: { p_id: string }
+        Returns: undefined
       }
       remove_expert_unavailable_date: {
         Args: { p_date: string }
         Returns: undefined
       }
       resolve_own_approved_expert_profile_id: { Args: never; Returns: string }
-      save_expert_availability_schedule: {
-        Args: { p_timezone: string; p_windows: Json }
+      set_expert_availability_timezone: {
+        Args: { p_timezone: string }
+        Returns: undefined
+      }
+      update_expert_monthly_rule: {
+        Args: {
+          p_day_of_week: number
+          p_end_time: string
+          p_rule_id: string
+          p_start_time: string
+          p_week_of_month: string
+        }
+        Returns: undefined
+      }
+      update_expert_one_off_availability: {
+        Args: {
+          p_available_date: string
+          p_end_time: string
+          p_id: string
+          p_start_time: string
+        }
+        Returns: undefined
+      }
+      validate_availability_time_range: {
+        Args: { p_end_time: string; p_start_time: string }
+        Returns: undefined
+      }
+      validate_monthly_rule_fields: {
+        Args: { p_day_of_week: number; p_week_of_month: string }
         Returns: undefined
       }
     }

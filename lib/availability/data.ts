@@ -3,28 +3,28 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type {
   ExpertAvailabilitySettings,
-  ExpertAvailabilityWindow,
+  ExpertMonthlyAvailabilityRule,
+  ExpertOneOffAvailability,
   ExpertUnavailableDate,
 } from "@/types/availability";
 
 type TypedClient = SupabaseClient<Database>;
 
 /**
- * Server-side authorization for /expert/availability -- layer 1 of the 2
- * that matter here (proxy.ts already requires a session for every
- * /expert/* path; this is the "and application_status = approved" half,
- * spec section 5). RLS (020_expert_availability_rls.sql) is the layer
+ * Server-side authorization for /expert/availability. proxy.ts already
+ * requires a session for every /expert/* path; this is the "and
+ * application_status = approved" half (spec section 37, unchanged from
+ * the original Phase 4 authorization model). RLS
+ * (024_expert_monthly_availability_rls.sql, and 020_expert_availability_
+ * rls.sql for the reused settings/unavailable-dates tables) is the layer
  * that holds even if this check had a bug: every read/write below is
  * additionally scoped to the same approved-owner condition at the
  * database level.
  *
  * Not approved (draft/submitted/changes_requested/rejected) -> redirect
- * to /expert/application rather than expose any availability UI or
- * error detail (spec section 5: "redirect them safely ... do not expose
- * privileged information"). ready/published/suspended are all fine, as
- * long as application_status is still 'approved' (spec section 5's
- * explicit allowance -- an expert keeps managing their schedule through
- * a temporary unpublish/suspend).
+ * to /expert/application rather than expose any availability UI or error
+ * detail. ready/published/suspended are all fine, as long as
+ * application_status is still 'approved.'
  */
 export async function requireApprovedExpertPage(
   supabase: TypedClient,
@@ -47,10 +47,10 @@ export async function requireApprovedExpertPage(
   return { expertProfileId: expertProfile.id };
 }
 
-/** All three reads rely entirely on RLS to scope rows to the caller's own
- * approved expert profile (020_expert_availability_rls.sql) -- there is
- * no `.eq("expert_profile_id", ...)` filter here because none is needed:
- * a plain select can only ever return what RLS allows. */
+/** Every read below relies entirely on RLS to scope rows to the caller's
+ * own approved expert profile -- there is no `.eq("expert_profile_id",
+ * ...)` filter because none is needed: a plain select can only ever
+ * return what RLS allows. */
 
 export async function getExpertAvailabilitySettings(
   supabase: TypedClient,
@@ -59,13 +59,24 @@ export async function getExpertAvailabilitySettings(
   return data;
 }
 
-export async function getExpertAvailabilityWindows(
+export async function getExpertMonthlyAvailabilityRules(
   supabase: TypedClient,
-): Promise<ExpertAvailabilityWindow[]> {
+): Promise<ExpertMonthlyAvailabilityRule[]> {
   const { data } = await supabase
-    .from("expert_availability_windows")
+    .from("expert_monthly_availability_rules")
     .select("*")
     .order("day_of_week")
+    .order("start_time");
+  return data ?? [];
+}
+
+export async function getExpertOneOffAvailability(
+  supabase: TypedClient,
+): Promise<ExpertOneOffAvailability[]> {
+  const { data } = await supabase
+    .from("expert_one_off_availability")
+    .select("*")
+    .order("available_date")
     .order("start_time");
   return data ?? [];
 }

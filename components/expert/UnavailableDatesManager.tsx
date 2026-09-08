@@ -70,9 +70,10 @@ export function UnavailableDatesManager({ initialDates }: Props) {
   return (
     <section className="flex flex-col gap-3">
       <div>
-        <h2 className="text-sm font-semibold text-[var(--color-text)]">Unavailable Dates</h2>
+        <h2 className="text-sm font-semibold text-[var(--color-text)]">Skip a Date</h2>
         <p className="text-xs text-[var(--color-text-muted)]">
-          Block specific dates when you won&apos;t be available.
+          Block a date completely -- this overrides your monthly availability and any specific-date
+          availability for that day. Your recurring schedule continues normally afterward.
         </p>
       </div>
 
