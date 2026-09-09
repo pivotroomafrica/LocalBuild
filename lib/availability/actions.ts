@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { validateTimeRange } from "@/lib/availability/engine";
-import type { MonthlyRuleInput, OneOffAvailabilityInput } from "@/types/availability";
+import type { MonthlyRuleInput, OneOffAvailabilityInput, OverrideType } from "@/types/availability";
 
 export type AvailabilityActionState = {
   error?: string;
@@ -14,25 +14,26 @@ export type AvailabilityActionState = {
 const GENERIC_ERROR = "We couldn't save your availability. Please try again.";
 
 /**
- * The RPCs (025_expert_monthly_availability_functions.sql,
+ * The RPCs (030_expert_monthly_availability_final_functions.sql,
  * 026_expert_availability_timezone_function.sql) raise clean,
  * safe-to-display messages for every validation failure they know about
- * -- overlap, the 5-hour cap, an invalid timezone, bad increments. Only
+ * -- overlap, the monthly cap, an invalid timezone, bad increments. Only
  * a truly unexpected error (connection issue, a bug) falls back to the
- * generic message, so a raw Postgres error is never shown (spec section
- * 37: "do not expose raw PostgreSQL/Supabase errors").
+ * generic message, so a raw Postgres error is never shown.
  */
 function toSafeError(message: string | undefined): string {
   if (!message) return GENERIC_ERROR;
   const knownFragments = [
     "timezone",
-    "week_of_month",
-    "day_of_week",
+    "day_of_month",
     "start time",
     "end time",
     "overlap",
     "5 hours",
+    "availability limit",
     "date is required",
+    "occurrence does not belong",
+    "override_type",
     "approved expert profile",
     "not found",
   ];
@@ -63,8 +64,8 @@ export async function setTimezoneAction(timezone: string): Promise<AvailabilityA
   return { success: true };
 }
 
-function clientValidateRule(rule: MonthlyRuleInput): string | null {
-  const timeCheck = validateTimeRange(rule.start_time, rule.end_time);
+function clientValidateTimeRange(input: { start_time: string; end_time: string }): string | null {
+  const timeCheck = validateTimeRange(input.start_time, input.end_time);
   return timeCheck.valid ? null : timeCheck.error;
 }
 
@@ -72,12 +73,11 @@ export async function addMonthlyRuleAction(rule: MonthlyRuleInput): Promise<Avai
   const { supabase, user } = await requireUser();
   if (!user) return { error: "You must be logged in to do that." };
 
-  const clientError = clientValidateRule(rule);
+  const clientError = clientValidateTimeRange(rule);
   if (clientError) return { error: clientError };
 
   const { data, error } = await supabase.rpc("add_expert_monthly_rule", {
-    p_week_of_month: rule.week_of_month,
-    p_day_of_week: rule.day_of_week,
+    p_day_of_month: rule.day_of_month,
     p_start_time: rule.start_time,
     p_end_time: rule.end_time,
   });
@@ -94,13 +94,12 @@ export async function updateMonthlyRuleAction(
   const { supabase, user } = await requireUser();
   if (!user) return { error: "You must be logged in to do that." };
 
-  const clientError = clientValidateRule(rule);
+  const clientError = clientValidateTimeRange(rule);
   if (clientError) return { error: clientError };
 
   const { error } = await supabase.rpc("update_expert_monthly_rule", {
     p_rule_id: ruleId,
-    p_week_of_month: rule.week_of_month,
-    p_day_of_week: rule.day_of_week,
+    p_day_of_month: rule.day_of_month,
     p_start_time: rule.start_time,
     p_end_time: rule.end_time,
   });
@@ -121,6 +120,60 @@ export async function removeMonthlyRuleAction(ruleId: string): Promise<Availabil
   return { success: true };
 }
 
+/**
+ * "Edit this month" / "Add extra time" (override_type "modified") or
+ * "Skip this month" (override_type "skipped") for one specific
+ * occurrence of a recurring rule -- the base rule itself is never
+ * touched (set_expert_month_override() upserts on
+ * (recurring_rule_id, original_date)).
+ */
+export async function setMonthOverrideAction(input: {
+  recurringRuleId: string;
+  originalDate: string;
+  overrideType: OverrideType;
+  overrideDate?: string;
+  startTime?: string;
+  endTime?: string;
+}): Promise<AvailabilityActionState> {
+  const { supabase, user } = await requireUser();
+  if (!user) return { error: "You must be logged in to do that." };
+
+  if (input.overrideType === "modified") {
+    if (!input.overrideDate) return { error: "Please choose a date." };
+    const clientError = clientValidateTimeRange({
+      start_time: input.startTime ?? "",
+      end_time: input.endTime ?? "",
+    });
+    if (clientError) return { error: clientError };
+  }
+
+  const { data, error } = await supabase.rpc("set_expert_month_override", {
+    p_recurring_rule_id: input.recurringRuleId,
+    p_original_date: input.originalDate,
+    p_override_type: input.overrideType,
+    p_override_date: input.overrideType === "modified" ? input.overrideDate : undefined,
+    p_start_time: input.overrideType === "modified" ? input.startTime : undefined,
+    p_end_time: input.overrideType === "modified" ? input.endTime : undefined,
+  });
+  if (error) return { error: toSafeError(error.message) };
+
+  revalidateAvailabilityPage();
+  return { success: true, id: data ?? undefined };
+}
+
+/** "Restore Regular Time" -- removes the override for one occurrence so
+ * it reverts to the base rule's natural date/time. */
+export async function removeMonthOverrideAction(overrideId: string): Promise<AvailabilityActionState> {
+  const { supabase, user } = await requireUser();
+  if (!user) return { error: "You must be logged in to do that." };
+
+  const { error } = await supabase.rpc("remove_expert_month_override", { p_override_id: overrideId });
+  if (error) return { error: GENERIC_ERROR };
+
+  revalidateAvailabilityPage();
+  return { success: true };
+}
+
 export async function addOneOffAvailabilityAction(
   input: OneOffAvailabilityInput,
 ): Promise<AvailabilityActionState> {
@@ -128,7 +181,7 @@ export async function addOneOffAvailabilityAction(
   if (!user) return { error: "You must be logged in to do that." };
   if (!input.available_date) return { error: "Please choose a date." };
 
-  const clientError = clientValidateRule({ ...input, week_of_month: "first", day_of_week: 1 });
+  const clientError = clientValidateTimeRange(input);
   if (clientError) return { error: clientError };
 
   const { data, error } = await supabase.rpc("add_expert_one_off_availability", {
@@ -150,7 +203,7 @@ export async function updateOneOffAvailabilityAction(
   if (!user) return { error: "You must be logged in to do that." };
   if (!input.available_date) return { error: "Please choose a date." };
 
-  const clientError = clientValidateRule({ ...input, week_of_month: "first", day_of_week: 1 });
+  const clientError = clientValidateTimeRange(input);
   if (clientError) return { error: clientError };
 
   const { error } = await supabase.rpc("update_expert_one_off_availability", {
@@ -170,29 +223,6 @@ export async function removeOneOffAvailabilityAction(id: string): Promise<Availa
   if (!user) return { error: "You must be logged in to do that." };
 
   const { error } = await supabase.rpc("remove_expert_one_off_availability", { p_id: id });
-  if (error) return { error: GENERIC_ERROR };
-
-  revalidateAvailabilityPage();
-  return { success: true };
-}
-
-export async function addUnavailableDateAction(dateString: string): Promise<AvailabilityActionState> {
-  const { supabase, user } = await requireUser();
-  if (!user) return { error: "You must be logged in to do that." };
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return { error: "Please choose a valid date." };
-
-  const { error } = await supabase.rpc("add_expert_unavailable_date", { p_date: dateString });
-  if (error) return { error: GENERIC_ERROR };
-
-  revalidateAvailabilityPage();
-  return { success: true };
-}
-
-export async function removeUnavailableDateAction(dateString: string): Promise<AvailabilityActionState> {
-  const { supabase, user } = await requireUser();
-  if (!user) return { error: "You must be logged in to do that." };
-
-  const { error } = await supabase.rpc("remove_expert_unavailable_date", { p_date: dateString });
   if (error) return { error: GENERIC_ERROR };
 
   revalidateAvailabilityPage();

@@ -1,11 +1,3 @@
-// Auto-generated from the PIVOTROOM-DEMO Supabase project schema.
-// Regenerate after any migration change:
-//   Supabase Dashboard -> Project -> API Docs -> "Generate types", or the
-//   Supabase MCP `generate_typescript_types` tool, or:
-//   npx supabase gen types typescript --project-id <project-id> > types/database.ts
-// Do not hand-edit — hand-written domain types live in types/profile.ts
-// and types/expert.ts.
-
 export type Json =
   | string
   | number
@@ -76,6 +68,60 @@ export type Database = {
           },
         ]
       }
+      expert_availability_overrides: {
+        Row: {
+          created_at: string
+          end_time: string | null
+          expert_profile_id: string
+          id: string
+          original_date: string
+          override_date: string | null
+          override_type: string
+          recurring_rule_id: string
+          start_time: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_time?: string | null
+          expert_profile_id: string
+          id?: string
+          original_date: string
+          override_date?: string | null
+          override_type: string
+          recurring_rule_id: string
+          start_time?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_time?: string | null
+          expert_profile_id?: string
+          id?: string
+          original_date?: string
+          override_date?: string | null
+          override_type?: string
+          recurring_rule_id?: string
+          start_time?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expert_availability_overrides_expert_profile_id_fkey"
+            columns: ["expert_profile_id"]
+            isOneToOne: false
+            referencedRelation: "expert_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expert_availability_overrides_recurring_rule_id_fkey"
+            columns: ["recurring_rule_id"]
+            isOneToOne: false
+            referencedRelation: "expert_monthly_availability_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expert_availability_settings: {
         Row: {
           created_at: string
@@ -135,33 +181,30 @@ export type Database = {
       expert_monthly_availability_rules: {
         Row: {
           created_at: string
-          day_of_week: number
+          day_of_month: number
           end_time: string
           expert_profile_id: string
           id: string
           start_time: string
           updated_at: string
-          week_of_month: string
         }
         Insert: {
           created_at?: string
-          day_of_week: number
+          day_of_month: number
           end_time: string
           expert_profile_id: string
           id?: string
           start_time: string
           updated_at?: string
-          week_of_month: string
         }
         Update: {
           created_at?: string
-          day_of_week?: number
+          day_of_month?: number
           end_time?: string
           expert_profile_id?: string
           id?: string
           start_time?: string
           updated_at?: string
-          week_of_month?: string
         }
         Relationships: [
           {
@@ -425,35 +468,6 @@ export type Database = {
           },
         ]
       }
-      expert_unavailable_dates: {
-        Row: {
-          created_at: string
-          expert_profile_id: string
-          id: string
-          unavailable_date: string
-        }
-        Insert: {
-          created_at?: string
-          expert_profile_id: string
-          id?: string
-          unavailable_date: string
-        }
-        Update: {
-          created_at?: string
-          expert_profile_id?: string
-          id?: string
-          unavailable_date?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "expert_unavailable_dates_expert_profile_id_fkey"
-            columns: ["expert_profile_id"]
-            isOneToOne: false
-            referencedRelation: "expert_profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       industries: {
         Row: {
           created_at: string
@@ -569,10 +583,9 @@ export type Database = {
     Functions: {
       add_expert_monthly_rule: {
         Args: {
-          p_day_of_week: number
+          p_day_of_month: number
           p_end_time: string
           p_start_time: string
-          p_week_of_month: string
         }
         Returns: string
       }
@@ -584,21 +597,42 @@ export type Database = {
         }
         Returns: string
       }
-      add_expert_unavailable_date: {
-        Args: { p_date: string }
-        Returns: undefined
+      expert_month_total_minutes: {
+        Args: {
+          p_exclude_one_off_id?: string
+          p_exclude_original_date?: string
+          p_exclude_override_id?: string
+          p_exclude_rule_id?: string
+          p_expert_profile_id: string
+          p_month: number
+          p_year: number
+        }
+        Returns: number
+      }
+      expert_recurring_and_override_windows_for_date: {
+        Args: {
+          p_date: string
+          p_exclude_override_id?: string
+          p_expert_profile_id: string
+        }
+        Returns: {
+          end_time: string
+          start_time: string
+        }[]
       }
       is_admin: { Args: never; Returns: boolean }
-      is_last_weekday_of_month: { Args: { p_date: string }; Returns: boolean }
       is_published_expert_photo: {
         Args: { object_name: string }
         Returns: boolean
       }
-      monthly_rule_matches_date: {
-        Args: { p_date: string; p_day_of_week: number; p_week_of_month: string }
-        Returns: boolean
+      max_expert_monthly_availability_minutes: {
+        Args: { p_expert_profile_id?: string }
+        Returns: number
       }
-      nth_weekday_of_month: { Args: { p_date: string }; Returns: number }
+      remove_expert_month_override: {
+        Args: { p_override_id: string }
+        Returns: undefined
+      }
       remove_expert_monthly_rule: {
         Args: { p_rule_id: string }
         Returns: undefined
@@ -607,22 +641,28 @@ export type Database = {
         Args: { p_id: string }
         Returns: undefined
       }
-      remove_expert_unavailable_date: {
-        Args: { p_date: string }
-        Returns: undefined
-      }
       resolve_own_approved_expert_profile_id: { Args: never; Returns: string }
       set_expert_availability_timezone: {
         Args: { p_timezone: string }
         Returns: undefined
       }
+      set_expert_month_override: {
+        Args: {
+          p_end_time?: string
+          p_original_date: string
+          p_override_date?: string
+          p_override_type: string
+          p_recurring_rule_id: string
+          p_start_time?: string
+        }
+        Returns: string
+      }
       update_expert_monthly_rule: {
         Args: {
-          p_day_of_week: number
+          p_day_of_month: number
           p_end_time: string
           p_rule_id: string
           p_start_time: string
-          p_week_of_month: string
         }
         Returns: undefined
       }
@@ -639,8 +679,8 @@ export type Database = {
         Args: { p_end_time: string; p_start_time: string }
         Returns: undefined
       }
-      validate_monthly_rule_fields: {
-        Args: { p_day_of_week: number; p_week_of_month: string }
+      validate_day_of_month: {
+        Args: { p_day_of_month: number }
         Returns: undefined
       }
     }

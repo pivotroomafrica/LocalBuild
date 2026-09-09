@@ -2,10 +2,10 @@ import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type {
+  ExpertAvailabilityOverride,
   ExpertAvailabilitySettings,
   ExpertMonthlyAvailabilityRule,
   ExpertOneOffAvailability,
-  ExpertUnavailableDate,
 } from "@/types/availability";
 
 type TypedClient = SupabaseClient<Database>;
@@ -13,11 +13,10 @@ type TypedClient = SupabaseClient<Database>;
 /**
  * Server-side authorization for /expert/availability. proxy.ts already
  * requires a session for every /expert/* path; this is the "and
- * application_status = approved" half (spec section 37, unchanged from
- * the original Phase 4 authorization model). RLS
- * (024_expert_monthly_availability_rls.sql, and 020_expert_availability_
- * rls.sql for the reused settings/unavailable-dates tables) is the layer
- * that holds even if this check had a bug: every read/write below is
+ * application_status = approved" half. RLS
+ * (029_expert_monthly_availability_final_rls.sql, and 020_expert_
+ * availability_rls.sql for the reused settings table) is the layer that
+ * holds even if this check had a bug: every read/write below is
  * additionally scoped to the same approved-owner condition at the
  * database level.
  *
@@ -65,8 +64,18 @@ export async function getExpertMonthlyAvailabilityRules(
   const { data } = await supabase
     .from("expert_monthly_availability_rules")
     .select("*")
-    .order("day_of_week")
+    .order("day_of_month")
     .order("start_time");
+  return data ?? [];
+}
+
+export async function getExpertAvailabilityOverrides(
+  supabase: TypedClient,
+): Promise<ExpertAvailabilityOverride[]> {
+  const { data } = await supabase
+    .from("expert_availability_overrides")
+    .select("*")
+    .order("original_date");
   return data ?? [];
 }
 
@@ -78,15 +87,5 @@ export async function getExpertOneOffAvailability(
     .select("*")
     .order("available_date")
     .order("start_time");
-  return data ?? [];
-}
-
-export async function getExpertUnavailableDates(
-  supabase: TypedClient,
-): Promise<ExpertUnavailableDate[]> {
-  const { data } = await supabase
-    .from("expert_unavailable_dates")
-    .select("*")
-    .order("unavailable_date");
   return data ?? [];
 }

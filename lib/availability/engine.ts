@@ -1,20 +1,22 @@
 import type {
-  DayOfWeek,
+  ExpertAvailabilityOverride,
+  ExpertMonthlyAvailabilityRule,
+  ExpertOneOffAvailability,
   MonthlyRuleInput,
   OneOffAvailabilityInput,
-  WeekOfMonth,
+  UpcomingMonth,
+  UpcomingOccurrence,
 } from "@/types/availability";
 import { MAX_RECURRING_MONTHLY_MINUTES } from "@/types/availability";
 
 /**
  * Pure availability-calculation logic, deliberately kept out of both React
- * components and Supabase-touching code (spec section 42: "keep
- * recurrence logic centralized and testable," not duplicated across
- * components). Every function here takes already-loaded data and plain
- * values -- no I/O. Mirrors the server-side PL/pgSQL logic in
- * 025_expert_monthly_availability_functions.sql exactly (same nth-weekday
- * math, same overlap rules) so client-side feedback never disagrees with
- * what the RPC will actually enforce.
+ * components and Supabase-touching code -- every function here takes
+ * already-loaded data and plain values, no I/O. Mirrors the server-side
+ * PL/pgSQL logic in 030_expert_monthly_availability_final_functions.sql
+ * (same day-of-month/override precedence, same overlap rules) so
+ * client-side feedback never disagrees with what the RPC will actually
+ * enforce -- the RPC re-validates authoritatively either way.
  */
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):(00|15|30|45)$/;
@@ -48,39 +50,22 @@ export function formatDuration(minutes: number): string {
   return parts.join(" ");
 }
 
-/** "First Monday of every month" */
-export function formatMonthlyRuleLabel(rule: { week_of_month: WeekOfMonth; day_of_week: DayOfWeek }): string {
-  const weekLabel = rule.week_of_month.charAt(0).toUpperCase() + rule.week_of_month.slice(1);
-  const dayLabel = WEEKDAY_NAME[rule.day_of_week];
-  return `${weekLabel} ${dayLabel} of every month`;
+export function ordinal(n: number): string {
+  const suffixes = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return `${n}${suffixes[(v - 20) % 10] ?? suffixes[v] ?? suffixes[0]}`;
 }
 
-const WEEKDAY_NAME: Record<DayOfWeek, string> = {
-  1: "Monday",
-  2: "Tuesday",
-  3: "Wednesday",
-  4: "Thursday",
-  5: "Friday",
-  6: "Saturday",
-  7: "Sunday",
-};
-
-/** "fourth" and "last" can resolve to the same calendar date (a month
- * with exactly 4 occurrences of that weekday) -- treated as the same
- * recurrence bucket for overlap purposes, mirroring
- * prevent_expert_monthly_rule_overlap() /
- * add_expert_monthly_rule()'s overlap check in
- * 023/025_expert_monthly_availability_*.sql. */
-function sameRecurrenceBucket(a: WeekOfMonth, b: WeekOfMonth): boolean {
-  if (a === b) return true;
-  return (a === "fourth" || a === "last") && (b === "fourth" || b === "last");
+/** "The 15th of every month" */
+export function formatMonthlyRuleLabel(rule: { day_of_month: number }): string {
+  return `The ${ordinal(rule.day_of_month)} of every month`;
 }
 
 /**
- * Client-side mirror of add/update_expert_monthly_rule()'s overlap check
- * -- instant feedback only; the RPC re-validates authoritatively.
- * `excludeIndex` lets an edit-in-place check exclude the rule being
- * edited from the comparison.
+ * Client-side mirror of add/update_expert_monthly_rule()'s recurring vs
+ * recurring overlap check -- instant feedback only; the RPC re-validates
+ * authoritatively. `excludeIndex` lets an edit-in-place check exclude the
+ * rule being edited from the comparison.
  */
 export function ruleOverlapsExisting(
   existingRules: MonthlyRuleInput[],
@@ -89,22 +74,22 @@ export function ruleOverlapsExisting(
 ): boolean {
   return existingRules.some((r, i) => {
     if (i === excludeIndex) return false;
-    if (r.day_of_week !== candidate.day_of_week) return false;
-    if (!sameRecurrenceBucket(r.week_of_month, candidate.week_of_month)) return false;
+    if (r.day_of_month !== candidate.day_of_month) return false;
     return r.start_time < candidate.end_time && r.end_time > candidate.start_time;
   });
 }
 
-/** Sum of every recurring rule's duration -- the value the 5-hour cap
- * (spec section 16) is checked against. Deliberately not weighted by
- * how often "fourth"/"last" might collapse into the same date in a given
- * month (spec section 14: prefer a simple derived sum). */
+/** Sum of every recurring rule's duration -- Cap A, the "regular monthly
+ * commitment" checked at rule create/update time. */
 export function getRecurringMonthlyMinutes(rules: MonthlyRuleInput[]): number {
   return rules.reduce((total, r) => total + durationMinutes(r.start_time, r.end_time), 0);
 }
 
-export function wouldExceedMonthlyCap(existingRules: MonthlyRuleInput[], candidate: MonthlyRuleInput): boolean {
-  return getRecurringMonthlyMinutes(existingRules) + durationMinutes(candidate.start_time, candidate.end_time) > MAX_RECURRING_MONTHLY_MINUTES;
+export function wouldExceedRecurringCap(existingRules: MonthlyRuleInput[], candidate: MonthlyRuleInput): boolean {
+  return (
+    getRecurringMonthlyMinutes(existingRules) + durationMinutes(candidate.start_time, candidate.end_time) >
+    MAX_RECURRING_MONTHLY_MINUTES
+  );
 }
 
 /**
@@ -123,106 +108,216 @@ export function oneOffOverlapsExisting(
   });
 }
 
+/** "YYYY-MM-DD" for a rule's natural occurrence in a given calendar
+ * month -- day_of_month is always 1-28, so this is always a real date,
+ * no "no such day" case to handle. */
+export function occurrenceDateForDayOfMonth(year: number, month: number, dayOfMonth: number): string {
+  return `${year}-${String(month).padStart(2, "0")}-${String(dayOfMonth).padStart(2, "0")}`;
+}
+
+export function addMonths(year: number, month: number, delta: number): { year: number; month: number } {
+  const total = year * 12 + (month - 1) + delta;
+  return { year: Math.floor(total / 12), month: (total % 12) + 1 };
+}
+
+export function monthLabel(year: number, month: number): string {
+  return new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    timeZone: "UTC",
+  });
+}
+
+function overrideKey(ruleId: string, originalDate: string): string {
+  return `${ruleId}|${originalDate}`;
+}
+
 /**
- * ISO weekday (1 = Monday ... 7 = Sunday) for a plain "YYYY-MM-DD"
- * calendar-date string. Uses Date.UTC + getUTCDay so the result is pure
- * calendar math, unaffected by the server's own local timezone setting
- * (spec section 55 from the original Phase 4 spec, still true here: never
- * assume server timezone = expert timezone). The caller is responsible
- * for having already resolved which LOCAL calendar date, in the expert's
- * own timezone, it wants -- this function only ever answers "what
- * weekday is this calendar date."
+ * "What's actually available on this one calendar date?" -- client-side
+ * mirror of expert_recurring_and_override_windows_for_date(): a natural
+ * rule occurrence landing on localDate with no override for that exact
+ * occurrence, plus any modified override (from any rule, any original
+ * month) moved TO localDate. Used for one-off and override overlap
+ * feedback.
  */
-export function isoDayOfWeek(localDate: string): DayOfWeek {
-  const [year, month, day] = localDate.split("-").map(Number);
-  const jsDay = new Date(Date.UTC(year, month - 1, day)).getUTCDay(); // 0=Sun..6=Sat
-  return (jsDay === 0 ? 7 : jsDay) as DayOfWeek;
-}
-
-/** Which occurrence of its weekday this date is within its month (1-5).
- * Mirrors nth_weekday_of_month() in 025_expert_monthly_availability_functions.sql. */
-export function getNthWeekdayOfMonth(localDate: string): number {
-  const day = Number(localDate.split("-")[2]);
-  return Math.floor((day - 1) / 7) + 1;
-}
-
-/** Whether this date is the LAST occurrence of its weekday in its month.
- * Mirrors is_last_weekday_of_month() -- computed by checking whether the
- * same weekday 7 days later falls in the next month. */
-export function isLastWeekdayOfMonth(localDate: string): boolean {
-  const [year, month, day] = localDate.split("-").map(Number);
-  const current = new Date(Date.UTC(year, month - 1, day));
-  const sevenDaysLater = new Date(Date.UTC(year, month - 1, day + 7));
-  return current.getUTCMonth() !== sevenDaysLater.getUTCMonth();
-}
-
-/** Does a given local calendar date match a monthly rule's
- * (week_of_month, day_of_week)? Mirrors monthly_rule_matches_date() in
- * 025_expert_monthly_availability_functions.sql exactly. */
-export function doesDateMatchMonthlyRule(
-  rule: { week_of_month: WeekOfMonth; day_of_week: DayOfWeek },
-  localDate: string,
-): boolean {
-  if (isoDayOfWeek(localDate) !== rule.day_of_week) return false;
-
-  if (rule.week_of_month === "last") return isLastWeekdayOfMonth(localDate);
-
-  const nth = getNthWeekdayOfMonth(localDate);
-  const target = { first: 1, second: 2, third: 3, fourth: 4 }[rule.week_of_month as "first" | "second" | "third" | "fourth"];
-  return nth === target;
-}
-
 export type RawAvailabilityWindow = { start_time: string; end_time: string };
 
-/**
- * Future-booking-engine-compatible query (spec section 41): "for expert
- * X, on local date Y, what raw availability exists?" Precedence (spec
- * section 26): an unavailable date wins outright; otherwise, matching
- * recurring rules plus any one-off availability on that exact date are
- * combined. Does not touch bookings (none exist yet) and does not
- * generate or persist anything -- purely a read-time calculation over
- * already-loaded settings/rules/one-offs/unavailable-dates.
- */
-export function getRawAvailabilityForLocalDate(
-  monthlyRules: (MonthlyRuleInput & { week_of_month: WeekOfMonth; day_of_week: DayOfWeek })[],
-  oneOffs: OneOffAvailabilityInput[],
-  unavailableDates: string[],
+export function getEffectiveWindowsForDate(
+  rules: ExpertMonthlyAvailabilityRule[],
+  overrides: ExpertAvailabilityOverride[],
   localDate: string,
+  excludeOverrideId?: string,
 ): RawAvailabilityWindow[] {
-  if (unavailableDates.includes(localDate)) return [];
+  const day = Number(localDate.split("-")[2]);
 
-  const fromRules = monthlyRules
-    .filter((r) => doesDateMatchMonthlyRule(r, localDate))
+  const overrideByKey = new Map<string, ExpertAvailabilityOverride>();
+  for (const o of overrides) {
+    if (excludeOverrideId && o.id === excludeOverrideId) continue;
+    overrideByKey.set(overrideKey(o.recurring_rule_id, o.original_date), o);
+  }
+
+  const natural = rules
+    .filter((r) => r.day_of_month === day && !overrideByKey.has(overrideKey(r.id, localDate)))
     .map((r) => ({ start_time: r.start_time, end_time: r.end_time }));
 
-  const fromOneOffs = oneOffs
-    .filter((o) => o.available_date === localDate)
-    .map((o) => ({ start_time: o.start_time, end_time: o.end_time }));
+  const moved = overrides
+    .filter(
+      (o) =>
+        (!excludeOverrideId || o.id !== excludeOverrideId) &&
+        o.override_type === "modified" &&
+        o.override_date === localDate,
+    )
+    .map((o) => ({ start_time: o.start_time as string, end_time: o.end_time as string }));
 
-  return [...fromRules, ...fromOneOffs].sort((a, b) => a.start_time.localeCompare(b.start_time));
+  return [...natural, ...moved];
 }
 
 /**
- * "Actual availability for a specified month" (spec section 44) --
- * iterates every calendar date in the given month and sums the raw
- * availability duration for each, which naturally folds in recurring
- * occurrences that actually land in that month, one-off windows in that
- * month, and unavailable-date overrides, without duplicating any of that
- * logic. No booking subtraction (none exist yet).
+ * The actual, computed total for one real (year, month) calendar month --
+ * client-side mirror of expert_month_total_minutes(): unoverridden
+ * natural occurrences + modified overrides landing in that month +
+ * one-off availability in that month. The exclude options mirror the
+ * SQL function's own parameters: excludeOverrideId/excludeOneOffId
+ * remove one existing row's own prior contribution (an update replacing
+ * itself); excludeRuleId + excludeOriginalDate additionally remove a
+ * natural occurrence that is about to gain a brand-new override.
  */
-export function getAvailabilityMinutesForMonth(
-  monthlyRules: (MonthlyRuleInput & { week_of_month: WeekOfMonth; day_of_week: DayOfWeek })[],
-  oneOffs: OneOffAvailabilityInput[],
-  unavailableDates: string[],
+export function getMonthTotalMinutes(
+  rules: ExpertMonthlyAvailabilityRule[],
+  overrides: ExpertAvailabilityOverride[],
+  oneOffs: ExpertOneOffAvailability[],
   year: number,
-  month: number, // 1-12
+  month: number,
+  options?: {
+    excludeOverrideId?: string;
+    excludeOneOffId?: string;
+    excludeRuleId?: string;
+    excludeOriginalDate?: string;
+  },
 ): number {
-  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  let total = 0;
-  for (let day = 1; day <= daysInMonth; day += 1) {
-    const localDate = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    const windows = getRawAvailabilityForLocalDate(monthlyRules, oneOffs, unavailableDates, localDate);
-    total += windows.reduce((sum, w) => sum + durationMinutes(w.start_time, w.end_time), 0);
+  const { excludeOverrideId, excludeOneOffId, excludeRuleId, excludeOriginalDate } = options ?? {};
+
+  const overrideByKey = new Map<string, ExpertAvailabilityOverride>();
+  for (const o of overrides) {
+    if (excludeOverrideId && o.id === excludeOverrideId) continue;
+    overrideByKey.set(overrideKey(o.recurring_rule_id, o.original_date), o);
   }
+
+  let total = 0;
+
+  for (const rule of rules) {
+    const occurrenceDate = occurrenceDateForDayOfMonth(year, month, rule.day_of_month);
+    if (excludeRuleId && rule.id === excludeRuleId && occurrenceDate === excludeOriginalDate) continue;
+    if (overrideByKey.has(overrideKey(rule.id, occurrenceDate))) continue;
+    total += durationMinutes(rule.start_time, rule.end_time);
+  }
+
+  const monthPrefix = `${year}-${String(month).padStart(2, "0")}`;
+  for (const o of overrides) {
+    if (excludeOverrideId && o.id === excludeOverrideId) continue;
+    if (o.override_type !== "modified" || !o.override_date) continue;
+    if (!o.override_date.startsWith(monthPrefix)) continue;
+    total += durationMinutes(o.start_time as string, o.end_time as string);
+  }
+
+  for (const f of oneOffs) {
+    if (excludeOneOffId && f.id === excludeOneOffId) continue;
+    if (!f.available_date.startsWith(monthPrefix)) continue;
+    total += durationMinutes(f.start_time, f.end_time);
+  }
+
   return total;
+}
+
+export function wouldExceedMonthCap(
+  rules: ExpertMonthlyAvailabilityRule[],
+  overrides: ExpertAvailabilityOverride[],
+  oneOffs: ExpertOneOffAvailability[],
+  year: number,
+  month: number,
+  candidateMinutes: number,
+  options?: Parameters<typeof getMonthTotalMinutes>[5],
+): boolean {
+  return getMonthTotalMinutes(rules, overrides, oneOffs, year, month, options) + candidateMinutes > MAX_RECURRING_MONTHLY_MINUTES;
+}
+
+/**
+ * "Upcoming Months" (spec: dynamically calculated, never stored as rows)
+ * -- for each of the next `monthsAhead` calendar months starting at
+ * (startYear, startMonth), resolve every rule's occurrence for that
+ * month: "regular" (the rule's natural date/time, unmodified), "skipped"
+ * (an override removed it for that month only), or "modified" (an
+ * override moved it to a different date/time, possibly a different
+ * month than its natural one). Grouped under the occurrence's ORIGINAL
+ * month -- the month the base rule places it in -- since that's the
+ * month whose Edit/Skip/Restore controls operate on it via
+ * (recurring_rule_id, original_date); a "modified" card additionally
+ * shows the date/time it was actually moved to.
+ */
+export function getUpcomingMonths(
+  rules: ExpertMonthlyAvailabilityRule[],
+  overrides: ExpertAvailabilityOverride[],
+  monthsAhead: number,
+  startYear: number,
+  startMonth: number,
+): UpcomingMonth[] {
+  const overrideByKey = new Map<string, ExpertAvailabilityOverride>();
+  for (const o of overrides) {
+    overrideByKey.set(overrideKey(o.recurring_rule_id, o.original_date), o);
+  }
+
+  const sortedRules = [...rules].sort(
+    (a, b) => a.day_of_month - b.day_of_month || a.start_time.localeCompare(b.start_time),
+  );
+
+  const months: UpcomingMonth[] = [];
+  let cursor = { year: startYear, month: startMonth };
+
+  for (let i = 0; i < monthsAhead; i += 1) {
+    const { year, month } = cursor;
+
+    const occurrences: UpcomingOccurrence[] = sortedRules.map((rule) => {
+      const originalDate = occurrenceDateForDayOfMonth(year, month, rule.day_of_month);
+      const override = overrideByKey.get(overrideKey(rule.id, originalDate));
+
+      if (!override) {
+        return {
+          ruleId: rule.id,
+          originalDate,
+          status: "regular",
+          overrideId: null,
+          displayDate: originalDate,
+          start_time: rule.start_time,
+          end_time: rule.end_time,
+        };
+      }
+
+      if (override.override_type === "skipped") {
+        return {
+          ruleId: rule.id,
+          originalDate,
+          status: "skipped",
+          overrideId: override.id,
+          displayDate: originalDate,
+          start_time: rule.start_time,
+          end_time: rule.end_time,
+        };
+      }
+
+      return {
+        ruleId: rule.id,
+        originalDate,
+        status: "modified",
+        overrideId: override.id,
+        displayDate: override.override_date ?? originalDate,
+        start_time: override.start_time ?? rule.start_time,
+        end_time: override.end_time ?? rule.end_time,
+      };
+    });
+
+    months.push({ year, month, label: monthLabel(year, month), occurrences });
+    cursor = addMonths(year, month, 1);
+  }
+
+  return months;
 }

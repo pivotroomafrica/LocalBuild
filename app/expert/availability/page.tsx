@@ -3,21 +3,20 @@ import {
   requireApprovedExpertPage,
   getExpertAvailabilitySettings,
   getExpertMonthlyAvailabilityRules,
+  getExpertAvailabilityOverrides,
   getExpertOneOffAvailability,
-  getExpertUnavailableDates,
 } from "@/lib/availability/data";
 import { AvailabilityManager } from "@/components/expert/AvailabilityManager";
-import { UnavailableDatesManager } from "@/components/expert/UnavailableDatesManager";
 
 export default async function ExpertAvailabilityPage() {
   const supabase = await createClient();
-  await requireApprovedExpertPage(supabase);
+  const { expertProfileId } = await requireApprovedExpertPage(supabase);
 
-  const [settings, rules, oneOffs, unavailableDates] = await Promise.all([
+  const [settings, rules, overrides, oneOffs] = await Promise.all([
     getExpertAvailabilitySettings(supabase),
     getExpertMonthlyAvailabilityRules(supabase),
+    getExpertAvailabilityOverrides(supabase),
     getExpertOneOffAvailability(supabase),
-    getExpertUnavailableDates(supabase),
   ]);
 
   return (
@@ -30,13 +29,12 @@ export default async function ExpertAvailabilityPage() {
       </div>
 
       <AvailabilityManager
+        expertProfileId={expertProfileId}
         initialTimezone={settings?.timezone ?? null}
         initialRules={rules}
+        initialOverrides={overrides}
         initialOneOffs={oneOffs}
-        initialUnavailableDates={unavailableDates.map((d) => d.unavailable_date)}
       />
-
-      <UnavailableDatesManager initialDates={unavailableDates.map((d) => d.unavailable_date)} />
     </div>
   );
 }
