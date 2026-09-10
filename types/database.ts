@@ -14,6 +14,126 @@ export type Database = {
   }
   public: {
     Tables: {
+      booking_intake: {
+        Row: {
+          additional_context: string
+          booking_id: string
+          created_at: string
+          discussion_topic: string
+          id: string
+          materials_to_review: string | null
+          updated_at: string
+        }
+        Insert: {
+          additional_context: string
+          booking_id: string
+          created_at?: string
+          discussion_topic: string
+          id?: string
+          materials_to_review?: string | null
+          updated_at?: string
+        }
+        Update: {
+          additional_context?: string
+          booking_id?: string
+          created_at?: string
+          discussion_topic?: string
+          id?: string
+          materials_to_review?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_intake_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bookings: {
+        Row: {
+          base_price: number
+          booking_reference: string
+          booking_status: string
+          created_at: string
+          currency: string
+          customer_id: string
+          customer_timezone: string | null
+          duration_minutes: number
+          end_at: string
+          expert_profile_id: string
+          expert_timezone: string
+          hold_expires_at: string | null
+          id: string
+          session_format: string
+          session_type_id: string | null
+          start_at: string
+          updated_at: string
+        }
+        Insert: {
+          base_price: number
+          booking_reference: string
+          booking_status?: string
+          created_at?: string
+          currency?: string
+          customer_id: string
+          customer_timezone?: string | null
+          duration_minutes: number
+          end_at: string
+          expert_profile_id: string
+          expert_timezone: string
+          hold_expires_at?: string | null
+          id?: string
+          session_format: string
+          session_type_id?: string | null
+          start_at: string
+          updated_at?: string
+        }
+        Update: {
+          base_price?: number
+          booking_reference?: string
+          booking_status?: string
+          created_at?: string
+          currency?: string
+          customer_id?: string
+          customer_timezone?: string | null
+          duration_minutes?: number
+          end_at?: string
+          expert_profile_id?: string
+          expert_timezone?: string
+          hold_expires_at?: string | null
+          id?: string
+          session_format?: string
+          session_type_id?: string | null
+          start_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_expert_profile_id_fkey"
+            columns: ["expert_profile_id"]
+            isOneToOne: false
+            referencedRelation: "expert_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_session_type_id_fkey"
+            columns: ["session_type_id"]
+            isOneToOne: false
+            referencedRelation: "expert_session_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_profiles: {
         Row: {
           company_name: string | null
@@ -549,6 +669,41 @@ export type Database = {
         }
         Returns: string
       }
+      advance_booking_to_awaiting_payment: {
+        Args: { p_booking_id: string }
+        Returns: undefined
+      }
+      booking_hold_minutes: { Args: never; Returns: number }
+      booking_horizon_days: { Args: never; Returns: number }
+      booking_min_notice_hours: { Args: never; Returns: number }
+      booking_slot_increment_minutes: { Args: never; Returns: number }
+      create_booking_hold: {
+        Args: {
+          p_customer_timezone?: string
+          p_duration_minutes: number
+          p_expert_slug: string
+          p_session_format: string
+          p_start_at: string
+        }
+        Returns: {
+          booking_id: string
+          booking_reference: string
+        }[]
+      }
+      expert_all_raw_windows_for_date: {
+        Args: { p_date: string; p_expert_profile_id: string }
+        Returns: {
+          end_time: string
+          start_time: string
+        }[]
+      }
+      expert_merged_windows_for_date: {
+        Args: { p_date: string; p_expert_profile_id: string }
+        Returns: {
+          end_time: string
+          start_time: string
+        }[]
+      }
       expert_month_total_minutes: {
         Args: {
           p_exclude_one_off_id?: string
@@ -570,6 +725,31 @@ export type Database = {
         Returns: {
           end_time: string
           start_time: string
+        }[]
+      }
+      expert_window_is_available: {
+        Args: {
+          p_date: string
+          p_end_time: string
+          p_expert_profile_id: string
+          p_start_time: string
+        }
+        Returns: boolean
+      }
+      generate_booking_reference: { Args: never; Returns: string }
+      get_bookable_slots: {
+        Args: {
+          p_customer_timezone?: string
+          p_duration_minutes: number
+          p_expert_slug: string
+          p_range_end: string
+          p_range_start: string
+          p_session_format: string
+        }
+        Returns: {
+          end_at: string
+          expert_timezone: string
+          start_at: string
         }[]
       }
       get_expert_directory_public: {
@@ -621,6 +801,10 @@ export type Database = {
           slug: string
         }[]
       }
+      get_expert_slug_for_booking: {
+        Args: { p_booking_id: string }
+        Returns: string
+      }
       is_admin: { Args: never; Returns: boolean }
       is_published_expert_photo: {
         Args: { object_name: string }
@@ -643,6 +827,15 @@ export type Database = {
         Returns: undefined
       }
       resolve_own_approved_expert_profile_id: { Args: never; Returns: string }
+      save_booking_intake: {
+        Args: {
+          p_additional_context: string
+          p_booking_id: string
+          p_discussion_topic: string
+          p_materials_to_review?: string
+        }
+        Returns: string
+      }
       set_expert_availability_timezone: {
         Args: { p_timezone: string }
         Returns: undefined

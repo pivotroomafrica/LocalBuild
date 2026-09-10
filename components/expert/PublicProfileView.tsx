@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { PublicProfileData } from "@/lib/public/data";
 
 /**
@@ -9,9 +10,16 @@ import type { PublicProfileData } from "@/lib/public/data";
  * it can never accidentally render a field (like the raw storage photo
  * path, or an admin/audit column) that was never meant to be public.
  *
- * No booking button anywhere in this component -- Phase 3 explicitly
- * does not build booking/payment, so every session option ends in a
- * "coming soon" state rather than a call to action that goes nowhere.
+ * "Book a Session" (Phase 5, spec section 7) links to /book/[slug]
+ * whenever the expert has at least one active session offering -- that
+ * route independently re-derives real availability and shows its own
+ * "No availability right now" state if none exists, so this component
+ * never needs to know the expert's actual open times, only whether
+ * booking is worth offering at all. On the owner-only preview page this
+ * link is harmless even before publication: /book/[slug] resolves
+ * through the same published-only check as the rest of the public data
+ * layer, so an unpublished profile's own preview simply shows "not
+ * available" if followed.
  */
 export function PublicProfileView({ profile }: { profile: PublicProfileData }) {
   const formatLabel = [profile.onlineEnabled ? "Online" : null, profile.inPersonEnabled ? "In Person" : null]
@@ -136,9 +144,12 @@ export function PublicProfileView({ profile }: { profile: PublicProfileData }) {
               Prices shown are base session prices. Applicable government taxes will be
               calculated separately.
             </p>
-            <div className="mt-4 rounded-md bg-[var(--color-bg)] px-4 py-3 text-center text-sm text-[var(--color-text-muted)]">
-              Booking is coming soon. Sessions will be available to book directly on Pivotroom shortly.
-            </div>
+            <Link
+              href={`/book/${profile.slug}`}
+              className="mt-4 inline-flex w-full items-center justify-center rounded-md bg-[var(--color-brand)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--color-brand-hover)]"
+            >
+              Book a Session
+            </Link>
           </>
         ) : (
           <p className="text-sm text-[var(--color-text-muted)]">Session options are being finalized.</p>

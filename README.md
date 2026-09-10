@@ -3,17 +3,19 @@
 Expert marketplace where customers book paid one-to-one consultations with
 experienced professionals.
 
-**Current implemented milestone: Pivotroom V1 Phase 4 — Expert
-Availability Engine (final day-of-month model).** Customers can apply to
-become experts (Phase 2); an admin can review and publish an application
-(Phase 3); an approved expert can now make a small amount of time
-available each month (Pivotroom's actual product model — 1-5 hours/month,
-not a traditional weekly work schedule), either as a recurring rule tied
-to a day of the month (e.g. "the 15th, 3-4 PM"), a one-time specific
-date, or both — plus edit, skip, or add extra time for any single future
-month without touching the underlying recurring rule. Bookings and
-payments are still not implemented — see "Explicitly not implemented"
-below.
+**Current implemented milestone: Pivotroom V1 Phase 5 — Customer Booking
+Engine.** Customers can apply to become experts (Phase 2); an admin can
+review and publish an application (Phase 3); an approved expert can make
+a small amount of time available each month (Phase 4's final day-of-month
+model). A logged-out visitor can now browse a published expert's real
+availability, pick a duration/format/date/time, sign in or create an
+account (their selection survives the round trip), reserve a 15-minute
+hold on that exact time, fill in a one-time professional-background gate
+and a short set of session-preparation questions, review a summary, and
+land on a placeholder "Ready for Payment" screen. Phase 5 stops there —
+no payment provider is connected, and a booking can never reach
+`confirmed`. See "Booking Engine (Phase 5)" below and "Explicitly not
+implemented" for the exact boundary.
 
 **Note on Phase 4's history — two retired models before the current one:**
 Phase 4 originally shipped with a Monday-Sunday recurring *weekly*
@@ -343,6 +345,72 @@ use today):**
   RLS or grants at all — `anon` has exactly the same (zero) direct access
   to those tables before and after this migration, confirmed live.
 
+**Phase 5:**
+- `032_bookings.sql` — the two new tables. `bookings`: one row is BOTH a
+  temporary hold (`booking_status` `held`/`awaiting_payment` +
+  `hold_expires_at`) and, in a future phase, a real appointment
+  (`confirmed`) — deliberately no separate `booking_holds` table. Stores
+  a price/duration/format snapshot at hold-creation time, never a live
+  join back to `expert_session_types`
+  (`session_type_id` is nullable, `on delete set null`). `btree_gist` is
+  installed here (not previously used in this project) so two GiST
+  exclusion constraints — `bookings_no_overlapping_expert_time`
+  (`expert_profile_id WITH =`, time-range `WITH &&`) and
+  `bookings_no_overlapping_customer_time` (same shape, keyed on
+  `customer_id`) — can enforce "no two active bookings occupy overlapping
+  time" atomically at the database level, restricted to
+  `booking_status IN ('held','awaiting_payment','confirmed')`. `booking_
+  intake`: one row per booking, the session-preparation questions
+  (spec-mandated fields only — no business-stage or file-upload
+  questions). No pre-generated slot table anywhere — bookable times are
+  derived on demand (`034`), so schema growth is proportional to real
+  booking attempts, never to possible future slots.
+- `033_bookings_rls.sql` — RLS + grants for both new tables, same
+  discipline as every table since Phase 4: `revoke all ... from anon,
+  authenticated` FIRST (this project's new tables default to full CRUD
+  grants for both roles), then narrow `SELECT`-only policies scoped to
+  `customer_id = auth.uid()` or `is_admin()`. Zero `INSERT`/`UPDATE`/
+  `DELETE` grant to `authenticated` at all — every write goes through the
+  `SECURITY DEFINER` functions in `034`, never a direct client write.
+- `034_booking_functions.sql` — the policy constants
+  (`booking_slot_increment_minutes()` 15, `booking_hold_minutes()` 15,
+  `booking_min_notice_hours()` 24, `booking_horizon_days()` 90 — internal
+  only, mirrored by hand as TypeScript constants in `types/booking.ts`);
+  the slot-derivation layer (`expert_all_raw_windows_for_date()` — unions
+  the existing `expert_recurring_and_override_windows_for_date()` (`030`,
+  unchanged) with `expert_one_off_availability`, the one place both are
+  combined; `expert_merged_windows_for_date()` — merges touching/
+  overlapping raw windows into continuous ranges; `expert_window_is_
+  available()` — the single revalidation check `create_booking_hold` uses
+  to independently confirm a candidate slot really fits); the one new
+  public RPC (`get_bookable_slots()` — `SECURITY DEFINER`, granted to
+  `anon`+`authenticated`, returns only `(start_at, end_at,
+  expert_timezone)` for a published/approved expert, minus active
+  bookings, never a raw availability/booking row or any private ID); and
+  the three authenticated-only mutation functions —
+  `create_booking_hold()` (resolves customer from `auth.uid()` and
+  expert/price from server-side lookups only, never a client-supplied ID
+  or price; re-validates duration/format/notice/horizon/slot-fit
+  regardless of what the frontend displayed; lazily flips this expert's
+  and this customer's own stale `held`/`awaiting_payment` rows to
+  `expired` before the exclusion-constraint-protected `INSERT`, since
+  there is no cron — see "Booking Engine (Phase 5)" below for why that
+  ordering matters), `save_booking_intake()` (re-derives ownership from
+  `auth.uid()` + the booking's own `customer_id` every call; upserts one
+  row per booking), and `advance_booking_to_awaiting_payment()`
+  (`held → awaiting_payment` only, with a fresh `hold_expires_at` —
+  spec-mandated "Continue to Payment" behavior; re-verifies the hold is
+  still active, intake exists, and the four required professional-profile
+  fields are complete; never writes `confirmed`).
+- `035_booking_expert_slug_lookup.sql` — one small read-only helper,
+  `get_expert_slug_for_booking()`: `expert_profiles` RLS only lets the
+  owner or an admin read a row, so a customer with a real booking has no
+  other way to resolve `booking.expert_profile_id` back to the expert's
+  public slug for the "Choose Another Time" link on an expired hold.
+  `SECURITY DEFINER`, authenticated-only, re-derives ownership from
+  `auth.uid()` every call, returns only the slug (and only if the expert
+  is still published) — never any other `expert_profiles` column.
+
 `supabase/seed.sql` seeds the 17 industries and the 8 expertise categories.
 It's separate from the migrations on purpose — schema vs. seed/demo data are
 never mixed. Fake customer/applicant accounts are **not** seeded there
@@ -354,18 +422,20 @@ Apply migrations and seed via the Supabase Dashboard SQL editor, the
 Supabase CLI (`supabase db push`), or the Supabase MCP tools, in the order
 listed above.
 
-Public application tables (10 total — Phase 3 added columns/views to the
+Public application tables (13 total — Phase 3 added columns/views to the
 Phase 2 set of 7, not new tables; Phase 4's final model nets 3: `expert_
 availability_settings` kept and reused from the original weekly model,
 `expert_monthly_availability_rules` and `expert_one_off_availability` in
 their final day-of-month shape, plus `expert_availability_overrides` —
 `expert_availability_windows` and `expert_unavailable_dates` from the
 original weekly model, and the week-of-month `expert_monthly_availability_
-rules` shape, were all dropped along the way): `profiles`, `industries`,
+rules` shape, were all dropped along the way; Phase 5 adds exactly the 2
+described above, `bookings` and `booking_intake`): `profiles`, `industries`,
 `customer_profiles`, `expert_profiles`, `expert_categories`,
 `expert_profile_categories`, `expert_session_types`,
 `expert_availability_settings`, `expert_monthly_availability_rules`,
-`expert_one_off_availability`, `expert_availability_overrides`. Zero
+`expert_one_off_availability`, `expert_availability_overrides`,
+`bookings`, `booking_intake`. Zero
 views — the 3 public projections that used to be views
 (`expert_directory_public`, `expert_profile_public`,
 `expert_session_types_public`) are now the 3 `SECURITY DEFINER` functions
@@ -772,7 +842,15 @@ app/
       [id]/page.tsx                               full application + review actions
   experts/                                        public marketplace, Phase 3
     page.tsx                                       directory (published experts only)
-    [slug]/page.tsx                                 public profile (published only, else 404)
+    [slug]/page.tsx                                 public profile (published only, else 404,
+                                                     now with "Book a Session" CTA, Phase 5)
+  book/[slug]/page.tsx                            public booking entry (Phase 5, no auth
+                                                     required -- duration/format/date/time picker)
+  booking/[reference]/
+    page.tsx                                       owner-only booking journey (Phase 5:
+                                                     profile completion -> intake -> review ->
+                                                     Continue to Payment)
+    payment/page.tsx                                "Ready for Payment" placeholder (Phase 5)
   dev/{rls-test,expert-rls-test}/                temporary, local only
 components/
   ui/          Button, TextField, TextareaField, SelectField, FormMessage,
@@ -788,6 +866,10 @@ components/
                AddExtraTimeModal ("+ Add Time" on an Upcoming Months card,
                Phase 4 repair)
   admin/       AdminActionButton, AdminMessageForm (Phase 3 review actions)
+  booking/     BookingPicker (duration/format/date/time, public, Phase 5),
+               BookingJourney (profile completion/intake/review/Continue
+               to Payment, owner-only, Phase 5 -- no local step state,
+               always derived from server props)
   layout/      AuthShell, DashboardHeader, ExpertApplicationNav, AdminHeader
 lib/
   supabase/    browser client, server client, proxy session-refresh helper
@@ -806,6 +888,11 @@ lib/
                   calculation logic -- day-of-month occurrence resolution,
                   Upcoming Months, both monthly caps, overlap checks, no
                   I/O, no React)
+  booking/     data.ts (get_bookable_slots/booking/intake reads, the
+               owner-scoped expert-slug lookup, profile-completeness
+               check), actions.ts (fetchBookableSlotsAction plus the
+               create-hold/save-intake/save-profile/advance-to-payment
+               server actions, Phase 5)
   validation/  shared field validators (profile.ts, expert.ts)
   utils/       phone normalization
 types/
@@ -816,13 +903,17 @@ types/
   availability.ts  day-of-month bounds, default timezone, the 1-5 hour cap
                     constant, rule/override/one-off input shapes, the
                     UpcomingMonth/UpcomingOccurrence UI-computation shapes
+  booking.ts   booking policy constants (mirroring the SQL functions),
+               session-format/booking-status labels, BookableSlot/
+               BookingSelection/BookingIntakeInput shapes (Phase 5)
 supabase/
   migrations/  schema, in order (001-004 Phase 1, 005-011 Phase 2,
                012-018 Phase 3, 019-030 Phase 4 -- 019-021 the original
                weekly model, 022 retires it, 023-026 the week-of-month
                monthly model, 027 retires it, 028-030 the final
                day-of-month + overrides model, 031 the pre-Phase-5
-               public-data-functions repair)
+               public-data-functions repair, 032-035 the Phase 5 booking
+               engine)
   seed.sql     industries + expertise categories
 proxy.ts       Next.js 16's renamed middleware convention (route protection
                + session refresh) — protects /dashboard, /expert, /dev,
@@ -915,35 +1006,138 @@ approved/published/suspended expert -> Overview -> "Set Availability" /
        availability never touches any of the three
 ```
 
-No booking calendar, no customer-facing time picker, no pre-generated
-slot or per-month occurrence rows, no bookings table anywhere in this
-codebase yet -- see "Explicitly not implemented" below.
+No pre-generated slot or per-month occurrence rows anywhere in this
+codebase -- see "Booking Engine (Phase 5)" below for how bookable times
+are derived on demand instead, and "Explicitly not implemented" for the
+exact Phase 5 boundary.
+
+## Booking Engine (Phase 5)
+
+**Core principle:** availability (Phase 4, untouched) answers "when is
+the expert willing to receive a booking"; a booking answers "a customer
+has selected a specific expert, duration, format, date, and time." A
+booking is its own transactional record -- an availability edit never
+rewrites a booking row, and a booking action never rewrites an
+availability row.
+
+**Slot derivation, not a slot table:** `get_bookable_slots()`
+(`034_booking_functions.sql`) consumes Phase 4's final availability model
+exactly as it stands -- day-of-month rules, per-occurrence overrides, and
+one-off availability, merged into continuous windows -- and subtracts
+active bookings (`confirmed`, or `held`/`awaiting_payment` with an
+unexpired hold) entirely in memory, on request. Nothing about a future
+bookable moment is ever persisted; database growth is proportional to
+real booking *attempts* (one `bookings` row + one `booking_intake` row
+per attempt), never to the 90-day horizon of possible slots.
+
+**Booking policy** (one centralized source, `034`'s policy-constant
+functions, mirrored in `types/booking.ts`): 15-minute slot-start
+increment, 15-minute hold duration, 24-hour minimum notice, 90-day
+horizon. Not yet per-expert configurable.
+
+**Booking status model:** `held` (a fresh reservation) → `awaiting_
+payment` (after "Continue to Payment," with a freshly extended hold) →
+`expired` (a stale, never-advanced hold). The CHECK constraint also
+allows `confirmed`/`completed`/`cancelled` so a future payment phase
+needs no new migration to reach them, but no Phase 5 function ever writes
+those three values -- a booking can never self-confirm.
+
+**Temporary holds, no cron:** a hold's `hold_expires_at` is the sole
+authority (never the client's own countdown display). There is
+deliberately no scheduled job to expire stale holds -- `create_booking_
+hold()` lazily flips the *current expert's* and *current customer's* own
+stale `held`/`awaiting_payment` rows to `expired` immediately before
+attempting its `INSERT`, so a hold whose time has passed but whose row
+hasn't been touched yet never blocks a new attempt, while the exclusion
+constraints below still guarantee no two *genuinely* concurrent attempts
+can both succeed.
+
+**Double-booking protection is database-level, not application-level:**
+two GiST exclusion constraints (`032_bookings.sql`, requiring the
+`btree_gist` extension) make it physically impossible for two active
+bookings to hold overlapping time for the same expert, or for the same
+customer across different experts -- verified live with two genuinely
+concurrent `create_booking_hold()` calls for the identical slot: exactly
+one succeeded, the other received the friendly "That time was just
+taken" message (Postgres error `23P01`), and exactly one row existed in
+the table afterward.
+
+**Price snapshot:** `duration_minutes`/`base_price`/`currency` are copied
+from `expert_session_types` once, at hold-creation time, and never
+recalculated -- verified live by changing an expert's rate after a hold
+existed and confirming the booking's stored price was unaffected.
+
+**Auth timing:** a visitor can browse and select a time without logging
+in; no hold is ever created for an anonymous visitor (experts have scarce
+1-5 hour/month supply). The exact selection (expert/duration/format/
+start) is carried through the login/signup round trip as query
+parameters on `next`, and the server independently re-validates
+everything about that selection the moment a hold is actually attempted
+-- never trusting that it was still valid because the frontend displayed
+it earlier.
+
+**Customer professional profile / booking intake:** advancing a hold to
+`awaiting_payment` requires the same four Phase 1 `customer_profiles`
+fields (current role, employment type, industry, years of experience)
+that stay optional on the regular profile page -- Phase 5 adds a
+booking-specific completeness *gate*, not a schema or Phase 1 behavior
+change. Booking intake (discussion topic, additional context, optional
+materials to review) is its own table, one row per booking, never merged
+into the permanent customer profile.
+
+**Security model:** every mutation (`create_booking_hold`, `save_
+booking_intake`, `advance_booking_to_awaiting_payment`) is `SECURITY
+DEFINER`, `authenticated`-only (verified live: `anon` cannot execute any
+of them, and cannot `SELECT` from `bookings`/`booking_intake` at all --
+both privileges were explicitly revoked in `033`), and resolves the
+caller's identity from `auth.uid()` internally -- never from a
+client-supplied customer/expert ID. A non-owner's attempt to read,
+advance, or add intake to another customer's booking returns the same
+"Booking not found" either way (verified live), never revealing whether
+the reference exists. `get_bookable_slots()` is the one new public
+(`anon`-reachable) function, returning only `(start_at, end_at,
+expert_timezone)` for a published expert -- the resulting Security
+Advisor WARN-level findings for `get_bookable_slots` and the four
+`authenticated`-only mutation functions are documented, audited
+findings, exactly the same class already accepted for every other
+`SECURITY DEFINER` function in this project (see the completion report
+delivered with this milestone for the full per-function audit) -- not
+something a future phase needs to "fix."
 
 ## Explicitly not implemented (future phases)
 
-Bookings, booking intake/reschedule/cancel, booking dashboard, a
-customer-facing date/time picker or calendar on the public expert profile
-(still "Booking coming soon"), raw recurrence text ("the 15th of every
-month") shown on the public profile, pre-generated future appointment-
-slot rows or per-month occurrence rows (availability stays rule-based,
-"Upcoming Months" is computed at render time only), booking conflict/
-subtraction logic (nothing to subtract yet -- no bookings exist),
-per-expert minimum notice or booking-horizon settings, buffer times, a
-generic RRULE/cron recurrence system or arbitrary intervals (every 2
-months, every 3 weeks, etc. -- V1 is exactly a day-of-month 1-28 + time,
-nothing more), overnight availability windows (configure day-separated
-windows instead), an "accepting bookings" toggle, a hard cap on one-off
-availability beyond the real-month actual-total cap it already
-contributes to (Cap B; there is no *separate*, additional one-off-only
-cap), Chapa or manual payments, payment tables, tax/VAT calculation,
-commission, fees, payouts, earnings, any actual Google Calendar/Outlook/
-Calendly/Cal.com/Google Meet API integration or OAuth connection, calendar
-event creation of any kind (the schema is only designed to allow this
-later -- see "Future Google Calendar / booking compatibility" above),
-notifications (email/WhatsApp), reviews, ratings, testimonials,
-session/booking counts, badges, referrals, gift-a-session, AI
-matching/generation/recommendations/search/chatbot, community/messaging,
-analytics dashboards, CV/certificate uploads, a review-events/history
-table (see "Database" above for why), an "Unsuspend" step distinct from
-Restore, and an internal admin-notes system separate from the one
-applicant-visible review message. Do not assume any of this exists.
+**Availability (Phase 4) items, still standing:** raw recurrence text
+("the 15th of every month") shown on the public profile, per-expert
+minimum notice or booking-horizon settings (the Phase 5 policy constants
+are global, not per-expert), buffer times, a generic RRULE/cron
+recurrence system or arbitrary intervals (V1 is exactly a day-of-month
+1-28 + time), overnight availability windows, an "accepting bookings"
+toggle, a hard cap on one-off availability beyond the real-month
+actual-total cap it already contributes to (Cap B), a review-events/
+history table, an "Unsuspend" step distinct from Restore, and an internal
+admin-notes system separate from the one applicant-visible review
+message.
+
+**Booking (Phase 5) boundary -- Phase 5 stops at "Ready for Payment,"
+explicitly:** Chapa, manual bank transfer, any payment provider or
+payment verification, a `payments`/`transactions`/`receipts` table, tax/
+VAT calculation (the existing tax-notice text is shown unchanged; no
+percentage is hard-coded anywhere), platform commission, transaction
+fees, expert payouts/earnings, refunds, booking cancellation, booking
+rescheduling ("Change date" or similar), a customer or expert booking
+dashboard ("My Sessions" or similar -- the booking-reference page is the
+only booking UI), an admin booking CRM, Google Calendar/Outlook/Calendly/
+Cal.com/Google Meet API integration, OAuth connection, or calendar event
+creation of any kind (the schema is only designed to allow this later --
+`bookings` owns no calendar-event columns), email/WhatsApp booking
+notifications (PostHog analytics events are wired conceptually but not
+active in this codebase), reviews, ratings, session/booking counts, a
+"My Sessions" list, and a self-service or automatic path to `booking_
+status = 'confirmed'` from anywhere in the codebase. A booking can only
+ever reach `held`, `awaiting_payment`, or `expired` through Phase 5 code.
+
+**Still standing from earlier phases regardless:** notifications (email/
+WhatsApp) of any kind, testimonials, badges, referrals, gift-a-session,
+AI matching/generation/recommendations/search/chatbot, community/
+messaging, analytics dashboards, CV/certificate uploads. Do not assume
+any of this exists.
