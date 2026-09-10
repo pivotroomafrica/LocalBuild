@@ -20,10 +20,19 @@ type TypedClient = SupabaseClient<Database>;
  * additionally scoped to the same approved-owner condition at the
  * database level.
  *
- * Not approved (draft/submitted/changes_requested/rejected) -> redirect
- * to /expert/application rather than expose any availability UI or error
- * detail. ready/published/suspended are all fine, as long as
- * application_status is still 'approved.'
+ * Three distinct redirect targets, so an unauthorized visitor lands
+ * somewhere that actually explains their situation instead of a generic
+ * "couldn't load your page" error:
+ *   - No expert_profiles row at all (a normal customer who never
+ *     applied) -> /become-an-expert?from=availability, which shows why
+ *     they landed there and offers "Apply to Become an Expert."
+ *   - A row exists but application_status isn't 'approved' (draft,
+ *     submitted, changes_requested, or rejected) -> /expert/application,
+ *     which already renders a clear, status-specific panel for every one
+ *     of those states (see app/expert/application/page.tsx) -- no need
+ *     to duplicate that logic here.
+ *   - application_status = 'approved' (ready/published/suspended) ->
+ *     allowed through, unchanged.
  */
 export async function requireApprovedExpertPage(
   supabase: TypedClient,
@@ -39,7 +48,11 @@ export async function requireApprovedExpertPage(
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (!expertProfile || expertProfile.application_status !== "approved") {
+  if (!expertProfile) {
+    redirect("/become-an-expert?from=availability");
+  }
+
+  if (expertProfile.application_status !== "approved") {
     redirect("/expert/application");
   }
 

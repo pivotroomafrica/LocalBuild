@@ -530,55 +530,7 @@ export type Database = {
       }
     }
     Views: {
-      expert_directory_public: {
-        Row: {
-          category_names: string[] | null
-          current_company: string | null
-          current_position: string | null
-          full_name: string | null
-          headline: string | null
-          in_person_enabled: boolean | null
-          online_enabled: boolean | null
-          profile_image_path: string | null
-          slug: string | null
-          starting_price: number | null
-        }
-        Relationships: []
-      }
-      expert_profile_public: {
-        Row: {
-          career_highlights: string | null
-          category_names: string[] | null
-          city: string | null
-          country: string | null
-          current_company: string | null
-          current_position: string | null
-          expertise_summary: string | null
-          full_name: string | null
-          headline: string | null
-          in_person_enabled: boolean | null
-          linkedin_url: string | null
-          online_enabled: boolean | null
-          problems_help_with: string | null
-          profile_image_path: string | null
-          short_bio: string | null
-          slug: string | null
-          who_i_help: string | null
-          years_experience_range: string | null
-        }
-        Relationships: []
-      }
-      expert_session_types_public: {
-        Row: {
-          base_price: number | null
-          currency: string | null
-          duration_minutes: number | null
-          in_person_enabled: boolean | null
-          online_enabled: boolean | null
-          slug: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       add_expert_monthly_rule: {
@@ -618,6 +570,55 @@ export type Database = {
         Returns: {
           end_time: string
           start_time: string
+        }[]
+      }
+      get_expert_directory_public: {
+        Args: never
+        Returns: {
+          category_names: string[]
+          current_company: string
+          current_position: string
+          full_name: string
+          headline: string
+          in_person_enabled: boolean
+          online_enabled: boolean
+          profile_image_path: string
+          slug: string
+          starting_price: number
+        }[]
+      }
+      get_expert_profile_public: {
+        Args: { p_slug: string }
+        Returns: {
+          career_highlights: string
+          category_names: string[]
+          city: string
+          country: string
+          current_company: string
+          current_position: string
+          expertise_summary: string
+          full_name: string
+          headline: string
+          in_person_enabled: boolean
+          linkedin_url: string
+          online_enabled: boolean
+          problems_help_with: string
+          profile_image_path: string
+          short_bio: string
+          slug: string
+          who_i_help: string
+          years_experience_range: string
+        }[]
+      }
+      get_expert_session_types_public: {
+        Args: { p_slug: string }
+        Returns: {
+          base_price: number
+          currency: string
+          duration_minutes: number
+          in_person_enabled: boolean
+          online_enabled: boolean
+          slug: string
         }[]
       }
       is_admin: { Args: never; Returns: boolean }

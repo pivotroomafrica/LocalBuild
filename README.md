@@ -32,6 +32,30 @@ override mechanism for editing, skipping, or adding time to one specific
 month. Every retirement is its own migration, never a rewrite of
 history — see "Database" below.
 
+**Note on the pre-Phase-5 repair pass:** after browser testing of the
+final day-of-month model, four issues were fixed without changing the
+availability data model itself: the "+ Add Time" action on an Upcoming
+Months card (was inert — it silently opened an unrelated form far down
+the page instead of a dialog scoped to that month; now a proper "Add time
+in `<Month>`" modal, still saving through the same
+`add_expert_one_off_availability()` RPC); every `window.confirm()` on an
+availability action (Skip, Remove) replaced with a reusable
+`ConfirmDialog` component (`components/ui/{Modal,ConfirmDialog}.tsx`);
+`/expert/availability`'s unauthorized-access UX (a customer with no
+application now lands on `/become-an-expert` with an explanation instead
+of a generic error; every other non-approved state lands on
+`/expert/application`, which already explains it); and the 3
+`security_definer_view` CRITICAL advisor findings against the Phase 3
+public views, resolved by replacing them with equivalent `SECURITY
+DEFINER` functions (`031_public_data_functions.sql` — see "Public data
+exposure" below for the full comparison of alternatives). A genuinely
+unrelated pre-existing bug was also found and fixed along the way: the
+route-protection middleware matched `/expert` as a plain string prefix,
+which meant `pathname.startsWith("/expert")` also matched `/experts` and
+`/experts/[slug]` (the *public* directory) and forced every logged-out
+visitor into a login redirect before ever reaching the public
+marketplace — see "Row Level Security"/`lib/supabase/middleware.ts`.
+
 ## Stack
 
 Next.js 16 (App Router, TypeScript, Tailwind v4) + Supabase (Auth, Postgres,
@@ -305,6 +329,20 @@ use today):**
   availability(uuid)` from `025` are reused unchanged — neither ever
   referenced the retired columns.
 
+**Pre-Phase-5 repair:**
+- `031_public_data_functions.sql` — drops the 3 Phase 3 public views
+  (`expert_directory_public`, `expert_profile_public`,
+  `expert_session_types_public`, `016`) and replaces them with 3
+  equivalent `SECURITY DEFINER` functions of the same name pattern
+  (`get_expert_directory_public()`, `get_expert_profile_public(slug)`,
+  `get_expert_session_types_public(slug)`) to resolve 3 CRITICAL
+  `security_definer_view` Security Advisor findings — see "Public data
+  exposure" below for the full before/after and the alternatives
+  considered. Does not touch `expert_profiles`/`profiles`/
+  `expert_profile_categories`/`expert_session_types`/`expert_categories`
+  RLS or grants at all — `anon` has exactly the same (zero) direct access
+  to those tables before and after this migration, confirmed live.
+
 `supabase/seed.sql` seeds the 17 industries and the 8 expertise categories.
 It's separate from the migrations on purpose — schema vs. seed/demo data are
 never mixed. Fake customer/applicant accounts are **not** seeded there
@@ -327,10 +365,12 @@ rules` shape, were all dropped along the way): `profiles`, `industries`,
 `customer_profiles`, `expert_profiles`, `expert_categories`,
 `expert_profile_categories`, `expert_session_types`,
 `expert_availability_settings`, `expert_monthly_availability_rules`,
-`expert_one_off_availability`, `expert_availability_overrides`. Plus
-3 views (`expert_directory_public`, `expert_profile_public`,
-`expert_session_types_public` — safe public projections, not independent
-data). Supabase Auth's own `auth.users` is the root identity; nothing
+`expert_one_off_availability`, `expert_availability_overrides`. Zero
+views — the 3 public projections that used to be views
+(`expert_directory_public`, `expert_profile_public`,
+`expert_session_types_public`) are now the 3 `SECURITY DEFINER` functions
+described under "Public data exposure" below (`031_public_data_
+functions.sql`). Supabase Auth's own `auth.users` is the root identity; nothing
 here duplicates it. There is no separate expert authentication system —
 an expert application is just another row owned by an existing
 `auth.users`/`profiles` identity, and there is no separate admin
@@ -475,24 +515,47 @@ this click, zero rows match and the caller gets a controlled "this
 application's status changed" message — never a silent no-op, and never a
 stale write.
 
-**Public data exposure** goes exclusively through the 3 views in
-`016_public_expert_views.sql`, never direct table access — `anon` has zero
-grants on `expert_profiles`/`profiles`/`expert_profile_categories`/
+**Public data exposure** goes exclusively through 3 `SECURITY DEFINER`
+functions — `get_expert_directory_public()`, `get_expert_profile_public(slug)`,
+`get_expert_session_types_public(slug)`, all in
+`031_public_data_functions.sql` — never direct table access. `anon` has
+zero grant on `expert_profiles`/`profiles`/`expert_profile_categories`/
 `expert_session_types` (confirmed live: `select count(*)` against each,
-as `anon`, returns 0 on every one). Each view's column list is a hard
-allowlist with no `id`, `user_id`, email, phone, `review_message`,
-`reviewed_*`/`approved_*`/`published_*`, or `account_status`/`role` —
-confirmed live by listing `information_schema.columns` for all three
-views. A view's default (non-`security_invoker`) behavior — running with
-the view owner's privileges rather than the querying role's — is what
-lets these read through RLS-protected tables at all; the WHERE clause
-(`profile_status = 'published'`) and the column list together are the
-entire exposure boundary. Supabase's security advisor flags this pattern
-as `security_definer_view` (ERROR level) on all three views — reviewed
-and accepted: it is the mechanism the Postgres/Supabase docs describe for
-exactly this use case, and switching to `security_invoker` would require
-granting `anon` much broader, riskier direct RLS access to the base
-tables instead.
+as `anon`, returns 0 on every one; `select user_id from expert_profiles`
+as `anon` also returns zero rows). Each function's declared return
+columns are a hard allowlist with no `id`, `user_id`, email, phone,
+`review_message`, `reviewed_*`/`approved_*`/`published_*`, or
+`account_status`/`role`.
+
+These functions replace the 3 views originally defined in
+`016_public_expert_views.sql` (`expert_directory_public`,
+`expert_profile_public`, `expert_session_types_public`, dropped by
+`031_public_data_functions.sql`). The views worked identically —
+`SECURITY DEFINER`-equivalent owner privileges bypassing RLS internally,
+a hard column allowlist, and the same `profile_status = 'published'`
+filter — but Supabase's Security Advisor flags any non-`security_invoker`
+view as `security_definer_view` at CRITICAL/ERROR severity regardless of
+intent. Converting the views to `security_invoker = true` instead (rather
+than replacing them with functions) was evaluated and rejected:
+`expert_directory_public`/`expert_profile_public` both join
+`profiles ON profiles.id = expert_profiles.user_id`, and under invoker
+semantics that join requires the querying role to hold `SELECT` on
+`expert_profiles.user_id` — meaning `anon` would need a direct grant on
+exactly the column this product explicitly forbids exposing to anonymous
+users, with no alternate join key available without a schema change.
+Functions sidestep this: Supabase's view-specific lint doesn't apply to
+them at all (confirmed live: `security_definer_view` no longer appears in
+the security advisor output after `031`), while `anon`/`authenticated`
+still only ever get `EXECUTE` on the function, never any grant on the
+underlying tables — the same "narrow allowlist, RLS bypassed internally
+only within a trusted, reviewed boundary" property the views had,
+verified unchanged. A service-role-based "server-only credential, filter
+in application code" architecture was also considered and remains a
+reasonable future path, but wasn't adopted now since
+`SUPABASE_SERVICE_ROLE_KEY` isn't populated in this environment and this
+codebase has never used it anywhere (see "Environment variables" above)
+— see `031_public_data_functions.sql`'s own header comment for the full
+comparison of all three options.
 
 ## Expert Availability (Phase 4 — final day-of-month model)
 
@@ -698,7 +761,9 @@ app/
       expertise/page.tsx                         category picker
       sessions/page.tsx                          session offerings CRUD
       preview/page.tsx                           owner-only public-profile preview (Phase 3)
-    availability/page.tsx                         day-of-month availability + Upcoming Months (Phase 4, approved-expert-only)
+    availability/
+      page.tsx                                     day-of-month availability + Upcoming Months (Phase 4, approved-expert-only)
+      error.tsx                                     route-scoped fallback -- never renders a raw error
   admin/                                         admin-only, Phase 3
     layout.tsx                                   requireAdminPage() + AdminHeader
     page.tsx                                     redirects to /admin/experts
@@ -710,14 +775,18 @@ app/
     [slug]/page.tsx                                 public profile (published only, else 404)
   dev/{rls-test,expert-rls-test}/                temporary, local only
 components/
-  ui/          Button, TextField, TextareaField, SelectField, FormMessage
+  ui/          Button, TextField, TextareaField, SelectField, FormMessage,
+               Modal (generic portal dialog), ConfirmDialog (Pivotroom's
+               window.confirm() replacement for destructive actions)
   auth/        signup/login/forgot/reset forms
   profile/     ProfileForm (customer)
   expert/      ExpertProfileForm, PhotoUpload, CategoryPicker,
                AddSessionForm, SessionOfferingRow, SubmitApplicationPanel,
                PublicProfileView (shared by /experts/[slug] and the preview page),
                AvailabilityManager (day-of-month rules, Upcoming Months +
-               per-occurrence overrides, one-off dates, Phase 4)
+               per-occurrence overrides, one-off dates, Phase 4),
+               AddExtraTimeModal ("+ Add Time" on an Upcoming Months card,
+               Phase 4 repair)
   admin/       AdminActionButton, AdminMessageForm (Phase 3 review actions)
   layout/      AuthShell, DashboardHeader, ExpertApplicationNav, AdminHeader
 lib/
@@ -728,8 +797,9 @@ lib/
                checklist, incl. the by-id loader admin/preview reuse), slug.ts
   admin/       data.ts (requireAdminPage/requireAdminForAction, expert list/
                detail reads), actions.ts (review + publish server actions)
-  public/      data.ts (public directory/profile reads through the 3 views,
-               plus the owner-preview data converter)
+  public/      data.ts (public directory/profile reads through the 3
+               SECURITY DEFINER functions -- 031_public_data_functions.sql
+               -- plus the owner-preview data converter)
   availability/  data.ts (requireApprovedExpertPage + reads, incl.
                   overrides), actions.ts (RPC wrappers for the monthly
                   rule/override/one-off/timezone RPCs), engine.ts (pure
@@ -742,7 +812,7 @@ types/
   database.ts  generated from the Supabase schema
   profile.ts   customer domain types
   expert.ts    expert domain types (experience ranges, session durations,
-               application/profile status labels, public view row types)
+               application/profile status labels)
   availability.ts  day-of-month bounds, default timezone, the 1-5 hour cap
                     constant, rule/override/one-off input shapes, the
                     UpcomingMonth/UpcomingOccurrence UI-computation shapes
@@ -751,11 +821,17 @@ supabase/
                012-018 Phase 3, 019-030 Phase 4 -- 019-021 the original
                weekly model, 022 retires it, 023-026 the week-of-month
                monthly model, 027 retires it, 028-030 the final
-               day-of-month + overrides model)
+               day-of-month + overrides model, 031 the pre-Phase-5
+               public-data-functions repair)
   seed.sql     industries + expertise categories
 proxy.ts       Next.js 16's renamed middleware convention (route protection
                + session refresh) — protects /dashboard, /expert, /dev,
-               /admin, and /auth/reset-password; additionally checks
+               /admin, and /auth/reset-password using path-segment-boundary
+               matching (`path === prefix || path.startsWith(prefix + "/")`,
+               not a plain substring `startsWith` -- a plain prefix check
+               would also match /experts and /experts/[slug], the public
+               directory, against the /expert prefix; found and fixed in
+               the pre-Phase-5 repair pass); additionally checks
                profiles.role for /admin (layer 1 of 3 -- see "Row Level
                Security")
 ```

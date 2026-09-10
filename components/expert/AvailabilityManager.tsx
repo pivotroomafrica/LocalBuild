@@ -19,12 +19,15 @@ import {
   getMonthTotalMinutes,
   getRecurringMonthlyMinutes,
   getUpcomingMonths,
+  monthLabel as formatMonthLabel,
   oneOffOverlapsExisting,
   ruleOverlapsExisting,
   validateTimeRange,
   wouldExceedRecurringCap,
 } from "@/lib/availability/engine";
 import { FormMessage } from "@/components/ui/FormMessage";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { AddExtraTimeModal } from "@/components/expert/AddExtraTimeModal";
 import {
   DAY_OF_MONTH_VALUES,
   DEFAULT_TIMEZONE,
@@ -149,6 +152,18 @@ export function AvailabilityManager({
   const [oneOffFormError, setOneOffFormError] = useState<string | null>(null);
   const [isSavingOneOff, startSaveOneOffTransition] = useTransition();
 
+  // Add Extra Time modal (Upcoming Months -> "+ Add Time")
+  const [addTimeMonth, setAddTimeMonth] = useState<{ year: number; month: number; label: string } | null>(null);
+
+  // Shared confirmation dialog for destructive availability actions
+  // (Skip, Remove) -- replaces window.confirm() everywhere.
+  const [pendingConfirm, setPendingConfirm] = useState<{
+    title: string;
+    description: React.ReactNode;
+    confirmLabel: string;
+    onConfirm: () => Promise<{ error?: string } | void>;
+  } | null>(null);
+
   const tzOptions = useMemo(() => timezoneOptions(), []);
 
   const recurringMinutes = getRecurringMonthlyMinutes(rules);
@@ -268,13 +283,19 @@ export function AvailabilityManager({
   }
 
   function handleRemoveRule(id: string) {
-    if (!window.confirm("Remove this recurring availability? Any months you've customized for it will be removed too.")) return;
-    startSaveRuleTransition(async () => {
-      const result = await removeMonthlyRuleAction(id);
-      if (!result.error) {
-        setRules((prev) => prev.filter((r) => r.id !== id));
-        setOverrides((prev) => prev.filter((o) => o.recurring_rule_id !== id));
-      }
+    setPendingConfirm({
+      title: "Remove this availability?",
+      description: "Any months you've customized for it will be removed too. This can't be undone.",
+      confirmLabel: "Remove",
+      onConfirm: async () => {
+        const result = await removeMonthlyRuleAction(id);
+        if (!result.error) {
+          setRules((prev) => prev.filter((r) => r.id !== id));
+          setOverrides((prev) => prev.filter((o) => o.recurring_rule_id !== id));
+          setPendingConfirm(null);
+        }
+        return result;
+      },
     });
   }
 
@@ -365,13 +386,25 @@ export function AvailabilityManager({
   }
 
   function handleSkipOccurrence(ruleId: string, originalDate: string) {
-    if (!window.confirm("Skip this occurrence for this month only? Your regular schedule continues afterward.")) return;
-    startSaveOverrideTransition(async () => {
-      const result = await setMonthOverrideAction({ recurringRuleId: ruleId, originalDate, overrideType: "skipped" });
-      if (result.error) return;
-      if (result.id) {
-        upsertOverrideLocally({ ruleId, originalDate, overrideType: "skipped", id: result.id });
-      }
+    const [y, m] = originalDate.split("-").map(Number);
+    const label = formatMonthLabel(y, m);
+    setPendingConfirm({
+      title: `Skip ${label} availability?`,
+      description: (
+        <>
+          Your regular availability will be skipped for this month only. Your normal schedule will continue again
+          next month.
+        </>
+      ),
+      confirmLabel: `Skip ${label}`,
+      onConfirm: async () => {
+        const result = await setMonthOverrideAction({ recurringRuleId: ruleId, originalDate, overrideType: "skipped" });
+        if (result.error) return result;
+        if (result.id) {
+          upsertOverrideLocally({ ruleId, originalDate, overrideType: "skipped", id: result.id });
+        }
+        setPendingConfirm(null);
+      },
     });
   }
 
@@ -447,10 +480,18 @@ export function AvailabilityManager({
   }
 
   function handleRemoveOneOff(id: string) {
-    if (!window.confirm("Remove this availability?")) return;
-    startSaveOneOffTransition(async () => {
-      const result = await removeOneOffAvailabilityAction(id);
-      if (!result.error) setOneOffs((prev) => prev.filter((o) => o.id !== id));
+    setPendingConfirm({
+      title: "Remove this availability?",
+      description: "This specific-date availability will be removed. This can't be undone.",
+      confirmLabel: "Remove",
+      onConfirm: async () => {
+        const result = await removeOneOffAvailabilityAction(id);
+        if (!result.error) {
+          setOneOffs((prev) => prev.filter((o) => o.id !== id));
+          setPendingConfirm(null);
+        }
+        return result;
+      },
     });
   }
 
@@ -617,16 +658,32 @@ export function AvailabilityManager({
         {rules.length === 0 ? (
           <p className="text-xs text-[var(--color-text-muted)]">Add regular availability above to see upcoming months.</p>
         ) : (
-          upcomingMonths.map((monthEntry) => (
+          upcomingMonths.map((monthEntry) => {
+            const monthTotalMinutes = getMonthTotalMinutes(
+              ruleRows,
+              overrides,
+              oneOffRows,
+              monthEntry.year,
+              monthEntry.month,
+            );
+
+            return (
             <div key={`${monthEntry.year}-${monthEntry.month}`} className="rounded-md border border-[var(--color-border)] p-4">
               <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-[var(--color-text)]">{monthEntry.label}</h3>
+                <div>
+                  <h3 className="text-sm font-semibold text-[var(--color-text)]">{monthEntry.label}</h3>
+                  <p className="text-xs text-[var(--color-text-muted)]">
+                    {monthEntry.label} total: {formatDuration(monthTotalMinutes)}
+                  </p>
+                </div>
                 <button
                   type="button"
-                  onClick={() => openAddOneOff(`${monthEntry.year}-${String(monthEntry.month).padStart(2, "0")}-01`)}
+                  onClick={() =>
+                    setAddTimeMonth({ year: monthEntry.year, month: monthEntry.month, label: monthEntry.label })
+                  }
                   className="text-xs font-medium text-[var(--color-brand)] hover:underline"
                 >
-                  + Add extra time
+                  + Add Time
                 </button>
               </div>
 
@@ -762,7 +819,8 @@ export function AvailabilityManager({
                 })}
               </div>
             </div>
-          ))
+            );
+          })
         )}
       </section>
 
@@ -891,6 +949,32 @@ export function AvailabilityManager({
         {recurringMessage ? <p className="mt-2 text-xs text-[var(--color-text-muted)]">{recurringMessage}</p> : null}
         <p className="mt-2 text-xs text-[var(--color-text-muted)]">Pivotroom recommends 1–5 hours per month.</p>
       </section>
+
+      {addTimeMonth ? (
+        <AddExtraTimeModal
+          open
+          year={addTimeMonth.year}
+          month={addTimeMonth.month}
+          monthLabel={addTimeMonth.label}
+          ruleRows={ruleRows}
+          overrides={overrides}
+          oneOffRows={oneOffRows}
+          onClose={() => setAddTimeMonth(null)}
+          onAdded={(oneOff) => {
+            setOneOffs((prev) => [...prev, oneOff]);
+            setAddTimeMonth(null);
+          }}
+        />
+      ) : null}
+
+      <ConfirmDialog
+        open={pendingConfirm !== null}
+        title={pendingConfirm?.title ?? ""}
+        description={pendingConfirm?.description ?? null}
+        confirmLabel={pendingConfirm?.confirmLabel ?? "Confirm"}
+        onCancel={() => setPendingConfirm(null)}
+        onConfirm={() => pendingConfirm!.onConfirm()}
+      />
     </div>
   );
 }

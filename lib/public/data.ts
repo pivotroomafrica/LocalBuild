@@ -49,18 +49,18 @@ export type PublicDirectoryCard = {
   inPersonEnabled: boolean;
 };
 
-/** /experts -- card list, backed entirely by expert_directory_public
- * (already filtered to profile_status = 'published' at the database
- * level, per 016_public_expert_views.sql -- there is no additional
- * status filter to apply here). */
+/** /experts -- card list, backed by get_expert_directory_public()
+ * (031_public_data_functions.sql; replaces the retired expert_directory_
+ * public view -- same column list, same profile_status = 'published'
+ * filter, same SECURITY DEFINER mechanism, now as a function rather than
+ * a view so it isn't flagged by Supabase's Security Definer View
+ * advisor). There is no additional status filter to apply here -- the
+ * function itself already resolves to published rows only. */
 export async function getPublicExpertDirectory(supabase: TypedClient): Promise<PublicDirectoryCard[]> {
-  const { data, error } = await supabase
-    .from("expert_directory_public")
-    .select("*")
-    .order("full_name");
+  const { data, error } = await supabase.rpc("get_expert_directory_public");
 
   if (error) {
-    console.error("getPublicExpertDirectory: failed to load expert_directory_public", error);
+    console.error("getPublicExpertDirectory: failed to load get_expert_directory_public", error);
     return [];
   }
 
@@ -80,29 +80,22 @@ export async function getPublicExpertDirectory(supabase: TypedClient): Promise<P
   );
 }
 
-/** /experts/[slug] -- full profile, backed by expert_profile_public +
- * expert_session_types_public. Returns null for any non-published slug
- * (including one that doesn't exist at all, or belongs to a
- * draft/submitted/rejected/suspended application) -- the two cases are
- * indistinguishable on purpose, so a private application never leaks its
- * existence (spec section 55). */
+/** /experts/[slug] -- full profile, backed by get_expert_profile_public()
+ * + get_expert_session_types_public() (031_public_data_functions.sql;
+ * replace the retired expert_profile_public/expert_session_types_public
+ * views). Returns null for any non-published slug (including one that
+ * doesn't exist at all, or belongs to a draft/submitted/rejected/
+ * suspended application) -- the two cases are indistinguishable on
+ * purpose, so a private application never leaks its existence. */
 export async function getPublicExpertProfile(
   supabase: TypedClient,
   slug: string,
 ): Promise<PublicProfileData | null> {
-  const { data: profile } = await supabase
-    .from("expert_profile_public")
-    .select("*")
-    .eq("slug", slug)
-    .maybeSingle();
+  const { data: profile } = await supabase.rpc("get_expert_profile_public", { p_slug: slug }).maybeSingle();
 
   if (!profile) return null;
 
-  const { data: sessionTypes } = await supabase
-    .from("expert_session_types_public")
-    .select("*")
-    .eq("slug", slug)
-    .order("duration_minutes");
+  const { data: sessionTypes } = await supabase.rpc("get_expert_session_types_public", { p_slug: slug });
 
   const photoUrl = await getExpertPhotoUrl(supabase, profile.profile_image_path);
 

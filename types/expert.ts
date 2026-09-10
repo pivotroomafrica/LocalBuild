@@ -5,13 +5,6 @@ export type ExpertCategory = Tables<"expert_categories">;
 export type ExpertProfileCategory = Tables<"expert_profile_categories">;
 export type ExpertSessionType = Tables<"expert_session_types">;
 
-/** Public, safe projections -- never the base tables -- read by the
- * public directory (/experts) and public profile (/experts/[slug]).
- * See supabase/migrations/016_public_expert_views.sql. */
-export type ExpertDirectoryPublicRow = Tables<"expert_directory_public">;
-export type ExpertProfilePublicRow = Tables<"expert_profile_public">;
-export type ExpertSessionTypePublicRow = Tables<"expert_session_types_public">;
-
 export type ApplicationStatus =
   | "draft"
   | "submitted"

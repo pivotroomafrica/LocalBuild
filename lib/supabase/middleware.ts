@@ -43,12 +43,17 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  const isProtected = PROTECTED_PREFIXES.some((prefix) =>
-    pathname.startsWith(prefix),
-  );
-  const isAuthPage = AUTH_PREFIXES.some((prefix) =>
-    pathname.startsWith(prefix),
-  );
+  // Path-segment-boundary match, not a plain substring prefix: a plain
+  // pathname.startsWith("/expert") would also match "/experts" and
+  // "/experts/[slug]" (the PUBLIC directory) since "/experts" literally
+  // starts with the string "/expert" -- that bug silently forced every
+  // logged-out visitor to /auth/login before ever reaching the public
+  // marketplace pages.
+  const matchesPrefix = (path: string, prefix: string) =>
+    path === prefix || path.startsWith(`${prefix}/`);
+
+  const isProtected = PROTECTED_PREFIXES.some((prefix) => matchesPrefix(pathname, prefix));
+  const isAuthPage = AUTH_PREFIXES.some((prefix) => matchesPrefix(pathname, prefix));
 
   if (!user && isProtected) {
     const redirectUrl = new URL("/auth/login", request.url);

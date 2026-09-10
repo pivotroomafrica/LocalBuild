@@ -7,12 +7,12 @@ export default async function PublicExpertProfilePage({ params }: { params: Prom
   const { slug } = await params;
   const supabase = await createClient();
 
-  // getPublicExpertProfile reads exclusively through expert_profile_public
-  // (filtered to profile_status = 'published' at the database level) --
-  // any other status resolves to null here, identical to a slug that was
-  // never registered at all. notFound() renders a bare 404 either way, so
-  // a draft/submitted/rejected/unpublished application never reveals that
-  // it exists (spec section 55).
+  // getPublicExpertProfile reads exclusively through
+  // get_expert_profile_public() (filtered to profile_status = 'published'
+  // at the database level) -- any other status resolves to null here,
+  // identical to a slug that was never registered at all. notFound()
+  // renders a bare 404 either way, so a draft/submitted/rejected/
+  // unpublished application never reveals that it exists.
   const profile = await getPublicExpertProfile(supabase, slug);
   if (!profile) notFound();
 

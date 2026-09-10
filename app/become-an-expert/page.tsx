@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function BecomeAnExpertPage() {
+export default async function BecomeAnExpertPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}) {
+  const { from } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -27,6 +32,12 @@ export default async function BecomeAnExpertPage() {
         consultation offerings you&apos;d like to provide, and submit your application for
         review.
       </p>
+
+      {from === "availability" ? (
+        <p className="mt-6 max-w-md rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm text-[var(--color-text)]">
+          Availability is available after your expert application is approved.
+        </p>
+      ) : null}
 
       <div className="mt-8 flex w-full max-w-xs flex-col gap-3">
         <Link
