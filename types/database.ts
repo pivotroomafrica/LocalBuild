@@ -612,6 +612,88 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount_paid: number
+          bank_used: string
+          booking_id: string
+          created_at: string
+          currency: string
+          customer_id: string
+          expected_amount: number
+          id: string
+          payment_method: string
+          payment_status: string
+          receipt_path: string | null
+          rejection_reason: string | null
+          submitted_at: string
+          transaction_reference: string
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          amount_paid: number
+          bank_used: string
+          booking_id: string
+          created_at?: string
+          currency?: string
+          customer_id: string
+          expected_amount: number
+          id?: string
+          payment_method?: string
+          payment_status?: string
+          receipt_path?: string | null
+          rejection_reason?: string | null
+          submitted_at?: string
+          transaction_reference: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          amount_paid?: number
+          bank_used?: string
+          booking_id?: string
+          created_at?: string
+          currency?: string
+          customer_id?: string
+          expected_amount?: number
+          id?: string
+          payment_method?: string
+          payment_status?: string
+          receipt_path?: string | null
+          rejection_reason?: string | null
+          submitted_at?: string
+          transaction_reference?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           account_status: string
@@ -810,9 +892,14 @@ export type Database = {
         Args: { object_name: string }
         Returns: boolean
       }
+      manual_payment_verification_hold_hours: { Args: never; Returns: number }
       max_expert_monthly_availability_minutes: {
         Args: { p_expert_profile_id?: string }
         Returns: number
+      }
+      reject_manual_payment: {
+        Args: { p_payment_id: string; p_reason: string }
+        Returns: undefined
       }
       remove_expert_month_override: {
         Args: { p_override_id: string }
@@ -851,6 +938,16 @@ export type Database = {
         }
         Returns: string
       }
+      submit_manual_payment: {
+        Args: {
+          p_amount_paid: number
+          p_bank_used: string
+          p_booking_reference: string
+          p_receipt_path?: string
+          p_transaction_reference: string
+        }
+        Returns: string
+      }
       update_expert_monthly_rule: {
         Args: {
           p_day_of_month: number
@@ -875,6 +972,10 @@ export type Database = {
       }
       validate_day_of_month: {
         Args: { p_day_of_month: number }
+        Returns: undefined
+      }
+      verify_manual_payment: {
+        Args: { p_payment_id: string }
         Returns: undefined
       }
     }

@@ -3,19 +3,23 @@
 Expert marketplace where customers book paid one-to-one consultations with
 experienced professionals.
 
-**Current implemented milestone: Pivotroom V1 Phase 5 — Customer Booking
-Engine.** Customers can apply to become experts (Phase 2); an admin can
-review and publish an application (Phase 3); an approved expert can make
-a small amount of time available each month (Phase 4's final day-of-month
-model). A logged-out visitor can now browse a published expert's real
-availability, pick a duration/format/date/time, sign in or create an
-account (their selection survives the round trip), reserve a 15-minute
-hold on that exact time, fill in a one-time professional-background gate
-and a short set of session-preparation questions, review a summary, and
-land on a placeholder "Ready for Payment" screen. Phase 5 stops there —
-no payment provider is connected, and a booking can never reach
-`confirmed`. See "Booking Engine (Phase 5)" below and "Explicitly not
-implemented" for the exact boundary.
+**Current implemented milestone: Pivotroom V1 Phase 6 — Manual Payment &
+Admin Verification.** Customers can apply to become experts (Phase 2); an
+admin can review and publish an application (Phase 3); an approved expert
+can make a small amount of time available each month (Phase 4's final
+day-of-month model); a logged-out visitor can browse a published expert's
+real availability, select a time, sign in, and reserve a hold through to
+"Ready for Payment" (Phase 5). A customer can now choose manual bank
+transfer, see Pivotroom's bank details, submit their transaction
+reference (and an optional receipt), and wait for admin verification; an
+admin has a simple payment queue and can verify (which atomically
+confirms the booking) or reject (with a reason, so the customer can
+resubmit). `booking_status = 'confirmed'` is reachable for the first time
+in this milestone, exclusively through that one admin-verification path
+— see "Manual Payment (Phase 6)" below and "Explicitly not implemented"
+for the exact boundary (no Chapa, no automatic bank verification, no
+refunds, no payouts/commission, no calendar/meeting integration, no
+notifications).
 
 **Note on Phase 4's history — two retired models before the current one:**
 Phase 4 originally shipped with a Monday-Sunday recurring *weekly*
@@ -411,6 +415,45 @@ use today):**
   `auth.uid()` every call, returns only the slug (and only if the expert
   is still published) — never any other `expert_profiles` column.
 
+**Phase 6:**
+- `036_payments.sql` — the `payments` table (generic, not
+  `manual_payments`, so a future Chapa integration can add rows to the
+  same table rather than a parallel one — `payment_method` only allows
+  `'manual'` today, but `payment_status`'s CHECK constraint already
+  includes the wider future vocabulary, the same forward-compatible
+  pattern `bookings.booking_status` used in Phase 5). Multiple rows may
+  exist per booking over time (a rejection followed by a resubmission) —
+  history is never overwritten. A partial unique index
+  (`payments_one_pending_per_booking`) enforces at most one
+  `pending_verification` row per booking at the database level. Also
+  creates the private `manual-payment-receipts` Storage bucket (5 MB cap,
+  JPEG/PNG/WebP/PDF), object keys scoped
+  `<customer_id>/<booking_id>/<random>-<name>` — one file per submission
+  attempt, so a rejected attempt's receipt survives a later resubmission.
+- `037_payments_rls.sql` — RLS + grants for `payments` (same
+  revoke-all-then-narrow-grant discipline as every table since Phase 4:
+  owner/admin `SELECT` only, zero `INSERT`/`UPDATE`/`DELETE` grant to
+  `authenticated` — every write goes through `038`'s functions) and
+  Storage policies for the receipts bucket (owner-scoped read/write by
+  the object key's first folder segment, plus a bucket-wide admin `SELECT`
+  policy, same pattern as `expert-profile-images`).
+- `038_payment_functions.sql` — `manual_payment_verification_hold_hours()`
+  (24, the one named policy constant, mirrored in `types/payment.ts`);
+  `submit_manual_payment()` (the only way a `payments` row is created —
+  resolves the booking from the caller's own `auth.uid()`, never a
+  client-supplied customer/amount; re-validates the booking is still
+  `awaiting_payment` and not stale-expired; on success, extends
+  `bookings.hold_expires_at` to the 24-hour manual-verification window —
+  reusing the exact same column Phase 5's short hold already uses, not a
+  second competing expiry field; a concurrent double-submission is
+  handled idempotently via the partial unique index, returning the
+  existing pending payment instead of erroring); `verify_manual_payment()`
+  (admin-only; atomically flips `pending_verification → verified` AND
+  `awaiting_payment → confirmed` in one transaction — the first and only
+  Phase 6 path to `confirmed`); `reject_manual_payment()` (admin-only;
+  `pending_verification → rejected` with a required reason; never touches
+  the booking, so the customer can resubmit).
+
 `supabase/seed.sql` seeds the 17 industries and the 8 expertise categories.
 It's separate from the migrations on purpose — schema vs. seed/demo data are
 never mixed. Fake customer/applicant accounts are **not** seeded there
@@ -422,20 +465,20 @@ Apply migrations and seed via the Supabase Dashboard SQL editor, the
 Supabase CLI (`supabase db push`), or the Supabase MCP tools, in the order
 listed above.
 
-Public application tables (13 total — Phase 3 added columns/views to the
+Public application tables (14 total — Phase 3 added columns/views to the
 Phase 2 set of 7, not new tables; Phase 4's final model nets 3: `expert_
 availability_settings` kept and reused from the original weekly model,
 `expert_monthly_availability_rules` and `expert_one_off_availability` in
 their final day-of-month shape, plus `expert_availability_overrides` —
 `expert_availability_windows` and `expert_unavailable_dates` from the
 original weekly model, and the week-of-month `expert_monthly_availability_
-rules` shape, were all dropped along the way; Phase 5 adds exactly the 2
-described above, `bookings` and `booking_intake`): `profiles`, `industries`,
-`customer_profiles`, `expert_profiles`, `expert_categories`,
+rules` shape, were all dropped along the way; Phase 5 adds `bookings` and
+`booking_intake`; Phase 6 adds exactly 1, `payments`): `profiles`,
+`industries`, `customer_profiles`, `expert_profiles`, `expert_categories`,
 `expert_profile_categories`, `expert_session_types`,
 `expert_availability_settings`, `expert_monthly_availability_rules`,
 `expert_one_off_availability`, `expert_availability_overrides`,
-`bookings`, `booking_intake`. Zero
+`bookings`, `booking_intake`, `payments`. Zero
 views — the 3 public projections that used to be views
 (`expert_directory_public`, `expert_profile_public`,
 `expert_session_types_public`) are now the 3 `SECURITY DEFINER` functions
@@ -494,6 +537,25 @@ is rendered, never persisted).
   (which encodes the owner's `user_id`) is never sent to a client
   component. A second policy (`018_expert_photo_admin_access.sql`) lets an
   admin view any applicant's photo during review, before publish.
+- **Bucket (Phase 6):** `manual-payment-receipts` (private — a bank
+  transfer receipt is sensitive financial evidence, spec-mandated to
+  never have a public URL).
+- **Allowed formats:** JPEG, PNG, WebP, PDF (bucket `allowed_mime_types`,
+  checked again in `submitManualPaymentAction`).
+- **Size limit:** 5&nbsp;MB (bucket `file_size_limit`, checked again
+  client-/server-side before upload).
+- **Ownership:** each object's path is
+  `<customer_id>/<booking_id>/<random>-<filename>` — unlike the
+  upsert-on-write expert-photo path, every submission attempt gets its
+  own file, so a rejected attempt's receipt is preserved as evidence even
+  after a resubmission uploads a new one. Storage RLS restricts
+  select/insert/update to objects whose path's first segment matches the
+  caller's own `auth.uid()`; a bucket-wide `SELECT` policy additionally
+  lets an admin view any receipt (same `is_admin()` pattern as
+  `expert_photo_select_admin`). The app resolves a receipt to a
+  short-lived signed URL server-side (`getReceiptSignedUrl`,
+  `lib/payment/data.ts`) for both the customer's own view and the admin
+  payment-detail page — the raw path is never sent to a client component.
 
 ## Row Level Security
 
@@ -840,6 +902,9 @@ app/
     experts/
       page.tsx                                   tabbed review queue + search
       [id]/page.tsx                               full application + review actions
+    payments/                                     Phase 6
+      page.tsx                                     tabbed payment queue (pending/verified/rejected)
+      [id]/page.tsx                                 booking + payment detail, verify/reject actions
   experts/                                        public marketplace, Phase 3
     page.tsx                                       directory (published experts only)
     [slug]/page.tsx                                 public profile (published only, else 404,
@@ -850,7 +915,10 @@ app/
     page.tsx                                       owner-only booking journey (Phase 5:
                                                      profile completion -> intake -> review ->
                                                      Continue to Payment)
-    payment/page.tsx                                "Ready for Payment" placeholder (Phase 5)
+    payment/page.tsx                                functional manual-payment page (Phase 6:
+                                                     bank instructions + submission form, or
+                                                     pending/rejected/confirmed state, all derived
+                                                     from server-side booking/payment status)
   dev/{rls-test,expert-rls-test}/                temporary, local only
 components/
   ui/          Button, TextField, TextareaField, SelectField, FormMessage,
@@ -865,11 +933,14 @@ components/
                per-occurrence overrides, one-off dates, Phase 4),
                AddExtraTimeModal ("+ Add Time" on an Upcoming Months card,
                Phase 4 repair)
-  admin/       AdminActionButton, AdminMessageForm (Phase 3 review actions)
+  admin/       AdminActionButton, AdminMessageForm (Phase 3 review actions),
+               PaymentVerifyButton, PaymentRejectForm (Phase 6 review actions)
   booking/     BookingPicker (duration/format/date/time, public, Phase 5),
                BookingJourney (profile completion/intake/review/Continue
                to Payment, owner-only, Phase 5 -- no local step state,
                always derived from server props)
+  payment/     ManualPaymentForm (bank used/transaction reference/amount
+               paid/optional receipt, Phase 6)
   layout/      AuthShell, DashboardHeader, ExpertApplicationNav, AdminHeader
 lib/
   supabase/    browser client, server client, proxy session-refresh helper
@@ -893,6 +964,13 @@ lib/
                check), actions.ts (fetchBookableSlotsAction plus the
                create-hold/save-intake/save-profile/advance-to-payment
                server actions, Phase 5)
+  payment/     bankConfig.ts (centralized bank-transfer details, read from
+               PIVOTROOM_BANK_* env vars), data.ts (payment reads, admin
+               queue/detail incl. duplicate-transaction-reference flag,
+               signed receipt URLs), actions.ts (submitManualPaymentAction
+               -- uploads the optional receipt then calls
+               submit_manual_payment() --, verifyPaymentAction,
+               rejectPaymentAction, Phase 6)
   validation/  shared field validators (profile.ts, expert.ts)
   utils/       phone normalization
 types/
@@ -906,6 +984,9 @@ types/
   booking.ts   booking policy constants (mirroring the SQL functions),
                session-format/booking-status labels, BookableSlot/
                BookingSelection/BookingIntakeInput shapes (Phase 5)
+  payment.ts   manual-payment policy constant, payment-method/status
+               labels, receipt validation constants, ManualPaymentInput
+               shape (Phase 6)
 supabase/
   migrations/  schema, in order (001-004 Phase 1, 005-011 Phase 2,
                012-018 Phase 3, 019-030 Phase 4 -- 019-021 the original
@@ -913,7 +994,7 @@ supabase/
                monthly model, 027 retires it, 028-030 the final
                day-of-month + overrides model, 031 the pre-Phase-5
                public-data-functions repair, 032-035 the Phase 5 booking
-               engine)
+               engine, 036-038 the Phase 6 manual-payment engine)
   seed.sql     industries + expertise categories
 proxy.ts       Next.js 16's renamed middleware convention (route protection
                + session refresh) — protects /dashboard, /expert, /dev,
@@ -1104,6 +1185,79 @@ findings, exactly the same class already accepted for every other
 delivered with this milestone for the full per-function audit) -- not
 something a future phase needs to "fix."
 
+## Manual Payment (Phase 6)
+
+**The only path to `confirmed`:** Phase 5 ends every booking at
+`awaiting_payment`. Phase 6 adds exactly one way forward from there —
+manual bank transfer, admin-verified — and `booking_status = 'confirmed'`
+is unreachable through any other code path in this codebase. A customer
+can never self-confirm; an admin's `verify_manual_payment()` call is the
+only write.
+
+**Payment method policy:** Phase 6 does not hard-wire manual payment to a
+price threshold (e.g. "only above 300,000 ETB") — that is a future,
+server-side policy decision, not yet implemented. For this milestone,
+manual bank transfer is simply the one available method for every
+`awaiting_payment` booking.
+
+**Reusing the Phase 5 hold column, not a second one:** a bank transfer
+can take far longer than Phase 5's 15-minute short hold. Rather than add
+a competing `manual_payment_expires_at` column, `submit_manual_payment()`
+extends the *same* `bookings.hold_expires_at` Phase 5 already uses to
+`now() + manual_payment_verification_hold_hours()` (24 hours). Every
+slot-blocking mechanism from Phase 5 — the two GiST exclusion constraints
+and `get_bookable_slots()`'s active-booking subtraction — already
+respects that column for `awaiting_payment` bookings, so the reserved
+slot correctly stays blocked for the whole verification window with zero
+changes to Phase 5's schema or slot-derivation logic. Nothing is extended
+merely by *visiting* the payment page — only an actual successful
+submission reaches that `UPDATE`. On admin verification,
+`hold_expires_at` is cleared to `null`: a confirmed booking is a real
+appointment, not a hold, though the exclusion constraints continue to
+block overlapping time for it regardless (they key on `booking_status`,
+not `hold_expires_at`).
+
+**One `payments` row per submission attempt, not one per booking:**
+`payments` is a history table. A rejected attempt is never deleted or
+overwritten — a resubmission creates a *new* row — so admin/support/audit
+context from every attempt survives. Exactly one `pending_verification`
+row may exist per booking at a time, enforced by a partial unique index
+(`payments_one_pending_per_booking`); a double-clicked submit resolves to
+the same existing pending row instead of erroring or duplicating (live
+concurrency-tested: two near-simultaneous `submit_manual_payment()` calls
+for the same booking, both returned the identical payment id, exactly one
+row existed afterward).
+
+**Amount mismatch is flagged, never auto-resolved:** `expected_amount`
+(server snapshot of `bookings.base_price` at submission time) and
+`amount_paid` (customer-entered) are stored as two separate columns.
+Submission always succeeds regardless of whether they match — the admin
+payment-detail page visibly flags a mismatch; nothing here ever
+auto-confirms or auto-rejects based on the numbers alone.
+
+**Bank details:** centralized in `lib/payment/bankConfig.ts`, read from
+`PIVOTROOM_BANK_*` environment variables (server-only, no
+`NEXT_PUBLIC_` prefix) with clearly-labeled demo fallbacks so the app
+works out of the box in this demo project — never hard-coded in a React
+component.
+
+**Security, live-tested:** `anon` can execute none of
+`submit_manual_payment`/`verify_manual_payment`/`reject_manual_payment`
+and cannot `SELECT` `payments` at all. A non-owner cannot read another
+customer's payment or submit against their booking (`Booking not found`
+either way). A non-admin authenticated user calling
+`verify_manual_payment`/`reject_manual_payment` gets `Not authorized`. A
+second admin action against a payment that already moved on (verified or
+rejected) fails cleanly with "This payment is no longer pending
+verification" rather than silently re-applying — verified live by
+attempting `reject_manual_payment` and a duplicate `verify_manual_payment`
+against an already-verified payment. An expired booking (`hold_expires_at`
+already passed, verified against a real stale booking left over from
+manual browser testing) cannot receive a payment submission at all.
+Storage RLS for `manual-payment-receipts` was verified live across all
+four roles (owner, a different customer, admin, anon) with the expected
+result in every case.
+
 ## Explicitly not implemented (future phases)
 
 **Availability (Phase 4) items, still standing:** raw recurrence text
@@ -1118,23 +1272,38 @@ history table, an "Unsuspend" step distinct from Restore, and an internal
 admin-notes system separate from the one applicant-visible review
 message.
 
-**Booking (Phase 5) boundary -- Phase 5 stops at "Ready for Payment,"
-explicitly:** Chapa, manual bank transfer, any payment provider or
-payment verification, a `payments`/`transactions`/`receipts` table, tax/
-VAT calculation (the existing tax-notice text is shown unchanged; no
-percentage is hard-coded anywhere), platform commission, transaction
-fees, expert payouts/earnings, refunds, booking cancellation, booking
+**Booking (Phase 5) items, still standing:** booking cancellation, booking
 rescheduling ("Change date" or similar), a customer or expert booking
 dashboard ("My Sessions" or similar -- the booking-reference page is the
-only booking UI), an admin booking CRM, Google Calendar/Outlook/Calendly/
-Cal.com/Google Meet API integration, OAuth connection, or calendar event
-creation of any kind (the schema is only designed to allow this later --
-`bookings` owns no calendar-event columns), email/WhatsApp booking
-notifications (PostHog analytics events are wired conceptually but not
-active in this codebase), reviews, ratings, session/booking counts, a
-"My Sessions" list, and a self-service or automatic path to `booking_
-status = 'confirmed'` from anywhere in the codebase. A booking can only
-ever reach `held`, `awaiting_payment`, or `expired` through Phase 5 code.
+only booking UI), an admin booking CRM beyond the simple payment queue,
+Google Calendar/Outlook/Calendly/Cal.com/Google Meet API integration,
+OAuth connection, or calendar event creation of any kind (the schema is
+only designed to allow this later -- neither `bookings` nor `payments`
+owns any calendar-event columns), email/WhatsApp booking notifications
+(PostHog analytics events are wired conceptually but not active in this
+codebase), reviews, ratings, session/booking counts, a "My Sessions"
+list.
+
+**Payment (Phase 6) boundary -- Phase 6 stops at `confirmed`,
+explicitly:** Chapa, card payment, mobile wallet payment, any payment
+provider integration or API call of any kind, automatic bank
+verification/scraping/reconciliation (every submission is reviewed by a
+human admin, always), tax/VAT calculation (the existing tax-notice text
+is shown unchanged; no percentage is hard-coded anywhere; `payments`
+stores `expected_amount`/`amount_paid` only, no tax/fee columns),
+platform commission, transaction fees, expert payouts/earnings, a
+per-price payment-method policy (e.g. "manual only above 300,000 ETB" --
+manual transfer is simply available for every booking in this
+milestone), refunds (a rejected/mistaken verification has no undo path
+in this codebase), email/WhatsApp payment notifications, Google
+Calendar/Google Meet integration of any kind, a customer/expert payment
+dashboard beyond the booking-reference payment page and the simple admin
+queue, and a self-service or automatic path to `booking_status =
+'confirmed'` or `payment_status = 'verified'` from anywhere but
+`verify_manual_payment()`. A booking can only ever reach `held`,
+`awaiting_payment`, `confirmed`, or `expired`; a payment can only ever
+reach `pending_verification`, `verified`, or `rejected` -- through Phase
+6 code.
 
 **Still standing from earlier phases regardless:** notifications (email/
 WhatsApp) of any kind, testimonials, badges, referrals, gift-a-session,
