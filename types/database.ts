@@ -834,6 +834,18 @@ export type Database = {
           start_at: string
         }[]
       }
+      get_customer_context_for_booking: {
+        Args: { p_booking_id: string }
+        Returns: {
+          company_name: string
+          current_role: string
+          employment_type: string
+          full_name: string
+          industry_name: string
+          linkedin_url: string
+          years_experience_range: string
+        }[]
+      }
       get_expert_directory_public: {
         Args: never
         Returns: {

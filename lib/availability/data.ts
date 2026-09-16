@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type {
@@ -8,56 +7,9 @@ import type {
   ExpertOneOffAvailability,
 } from "@/types/availability";
 
+export { requireApprovedExpertPage } from "@/lib/expert/auth";
+
 type TypedClient = SupabaseClient<Database>;
-
-/**
- * Server-side authorization for /expert/availability. proxy.ts already
- * requires a session for every /expert/* path; this is the "and
- * application_status = approved" half. RLS
- * (029_expert_monthly_availability_final_rls.sql, and 020_expert_
- * availability_rls.sql for the reused settings table) is the layer that
- * holds even if this check had a bug: every read/write below is
- * additionally scoped to the same approved-owner condition at the
- * database level.
- *
- * Three distinct redirect targets, so an unauthorized visitor lands
- * somewhere that actually explains their situation instead of a generic
- * "couldn't load your page" error:
- *   - No expert_profiles row at all (a normal customer who never
- *     applied) -> /become-an-expert?from=availability, which shows why
- *     they landed there and offers "Apply to Become an Expert."
- *   - A row exists but application_status isn't 'approved' (draft,
- *     submitted, changes_requested, or rejected) -> /expert/application,
- *     which already renders a clear, status-specific panel for every one
- *     of those states (see app/expert/application/page.tsx) -- no need
- *     to duplicate that logic here.
- *   - application_status = 'approved' (ready/published/suspended) ->
- *     allowed through, unchanged.
- */
-export async function requireApprovedExpertPage(
-  supabase: TypedClient,
-): Promise<{ expertProfileId: string }> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/auth/login?next=/expert/availability");
-
-  const { data: expertProfile } = await supabase
-    .from("expert_profiles")
-    .select("id, application_status")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (!expertProfile) {
-    redirect("/become-an-expert?from=availability");
-  }
-
-  if (expertProfile.application_status !== "approved") {
-    redirect("/expert/application");
-  }
-
-  return { expertProfileId: expertProfile.id };
-}
 
 /** Every read below relies entirely on RLS to scope rows to the caller's
  * own approved expert profile -- there is no `.eq("expert_profile_id",

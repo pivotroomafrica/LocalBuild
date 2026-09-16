@@ -4,6 +4,7 @@ import { getBookingByReference, getExpertSlugForBooking, isHoldExpired } from "@
 import { getPublicExpertProfile } from "@/lib/public/data";
 import { getActivePaymentForBooking, getLatestPaymentForBooking } from "@/lib/payment/data";
 import { getBankConfig } from "@/lib/payment/bankConfig";
+import { formatSessionDateTime } from "@/lib/dashboard/presentation";
 import { ManualPaymentForm } from "@/components/payment/ManualPaymentForm";
 import { FormMessage } from "@/components/ui/FormMessage";
 import { SESSION_FORMAT_LABELS } from "@/types/booking";
@@ -54,13 +55,7 @@ export default async function BookingPaymentPage({
             <div className="flex justify-between">
               <dt className="text-[var(--color-text-muted)]">Date & time</dt>
               <dd className="font-medium">
-                {new Date(booking.start_at).toLocaleString(undefined, {
-                  weekday: "long",
-                  month: "long",
-                  day: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
-                })}
+                {formatSessionDateTime(booking.start_at, booking.customer_timezone)}
               </dd>
             </div>
             <div className="flex justify-between">

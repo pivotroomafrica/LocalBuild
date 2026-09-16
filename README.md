@@ -453,6 +453,22 @@ use today):**
   Phase 6 path to `confirmed`); `reject_manual_payment()` (admin-only;
   `pending_verification → rejected` with a required reason; never touches
   the booking, so the customer can resubmit).
+- `039_expert_session_access.sql` (Phase 7) — the one database change
+  Phase 7 needed: two additive RLS policies granting an expert read access
+  to their OWN `confirmed`/`completed` bookings (`bookings_select_own_
+  expert`) and that booking's intake (`booking_intake_select_expert`) —
+  the status gate lives directly in the `USING` predicate itself, so a
+  held/awaiting_payment/expired booking is invisible to the expert at the
+  database level, not merely hidden in the UI. Also adds
+  `get_customer_context_for_booking(p_booking_id)`, a narrow `SECURITY
+  DEFINER` function that is the *only* way an expert reads any customer
+  professional-profile data (name/role/employment type/company/industry/
+  years experience/LinkedIn — never email, phone, or payment info); it
+  re-derives the caller's expert identity from `auth.uid()` and
+  re-validates booking ownership + confirmed/completed status internally,
+  returning zero rows for anything else — indistinguishable from a
+  booking that doesn't exist. No table was added and no existing policy
+  was modified or removed.
 
 `supabase/seed.sql` seeds the 17 industries and the 8 expertise categories.
 It's separate from the migrations on purpose — schema vs. seed/demo data are
@@ -473,7 +489,9 @@ their final day-of-month shape, plus `expert_availability_overrides` —
 `expert_availability_windows` and `expert_unavailable_dates` from the
 original weekly model, and the week-of-month `expert_monthly_availability_
 rules` shape, were all dropped along the way; Phase 5 adds `bookings` and
-`booking_intake`; Phase 6 adds exactly 1, `payments`): `profiles`,
+`booking_intake`; Phase 6 adds exactly 1, `payments`; Phase 7 adds ZERO —
+it reads exclusively from tables that already existed, per its own
+strong preference against new tables): `profiles`,
 `industries`, `customer_profiles`, `expert_profiles`, `expert_categories`,
 `expert_profile_categories`, `expert_session_types`,
 `expert_availability_settings`, `expert_monthly_availability_rules`,
@@ -883,7 +901,14 @@ and should be deleted once no longer needed:
 app/
   page.tsx                          landing page
   auth/{signup,login,forgot-password,reset-password,callback}/
-  dashboard/{layout.tsx,profile/page.tsx}       customer profile (Phase 1)
+  dashboard/                                     customer, Phase 1 + Phase 7
+    layout.tsx                                     shared header for /dashboard/*
+    page.tsx                                       overview -- next confirmed + one actionable pending (Phase 7)
+    sessions/
+      page.tsx                                     My Sessions -- Upcoming/Pending/Past tabs (Phase 7)
+      [reference]/page.tsx                          session detail -- owner-only, derived state (Phase 7)
+    payments/page.tsx                              payment history, reusable for a future Chapa method (Phase 7)
+    profile/page.tsx                               customer profile (Phase 1)
   become-an-expert/page.tsx                     public expert entry point
   expert/
     layout.tsx                                  shared header for /expert/*
@@ -891,8 +916,14 @@ app/
       page.tsx                                  status, checklist, submit
       profile/page.tsx                           identity + bio + photo
       expertise/page.tsx                         category picker
-      sessions/page.tsx                          session offerings CRUD
+      sessions/page.tsx                          session offerings CRUD (pricing, not booked sessions)
       preview/page.tsx                           owner-only public-profile preview (Phase 3)
+    dashboard/page.tsx                            expert overview -- next confirmed session only (Phase 7)
+    sessions/
+      page.tsx                                     confirmed/completed sessions list (Phase 7)
+      [reference]/page.tsx                          session detail -- customer context via
+                                                     get_customer_context_for_booking(), never
+                                                     email/phone/payment info (Phase 7)
     availability/
       page.tsx                                     day-of-month availability + Upcoming Months (Phase 4, approved-expert-only)
       error.tsx                                     route-scoped fallback -- never renders a raw error
@@ -905,6 +936,10 @@ app/
     payments/                                     Phase 6
       page.tsx                                     tabbed payment queue (pending/verified/rejected)
       [id]/page.tsx                                 booking + payment detail, verify/reject actions
+    bookings/                                      Phase 7, minimal support visibility
+      page.tsx                                       tabbed booking list + reference search
+      [reference]/page.tsx                           booking + intake + payment status, links to
+                                                       /admin/payments for review (not rebuilt here)
   experts/                                        public marketplace, Phase 3
     page.tsx                                       directory (published experts only)
     [slug]/page.tsx                                 public profile (published only, else 404,
@@ -941,27 +976,47 @@ components/
                always derived from server props)
   payment/     ManualPaymentForm (bank used/transaction reference/amount
                paid/optional receipt, Phase 6)
-  layout/      AuthShell, DashboardHeader, ExpertApplicationNav, AdminHeader
+  session/     StatusPill (generic) + SessionStatusPill/BookingStatusPill/
+               PaymentStatusPill wrappers, CustomerSessionCard,
+               ExpertSessionCard, PendingActionCard (Phase 7 -- shared
+               across customer/expert/admin session views)
+  layout/      AuthShell, DashboardHeader, DashboardNav (Phase 7),
+               ExpertApplicationNav, ExpertOperationsNav (Phase 7, kept
+               separate from ExpertApplicationNav since that nav's own
+               "Sessions" link already means session pricing), AdminHeader
 lib/
   supabase/    browser client, server client, proxy session-refresh helper
   auth/        server actions (signUp/signIn/signOut/reset), error mapping
   profile/     server action to save personal + professional profile
   expert/      actions.ts (application flow), data.ts (reads + completion
-               checklist, incl. the by-id loader admin/preview reuse), slug.ts
+               checklist, incl. the by-id loader admin/preview reuse), slug.ts,
+               auth.ts (requireApprovedExpertPage -- generalized in Phase 7
+               to take the current path instead of a hardcoded redirect),
+               sessions.ts (confirmed/completed session reads +
+               get_customer_context_for_booking wrapper, Phase 7),
+               presentation.ts (expert-timezone-aware date formatting, Phase 7)
+  dashboard/   presentation.ts (derived-state date formatting + the one
+               next-action mapping), data.ts (requireCustomerPage, overview/
+               My Sessions/session-detail/payment-history reads -- batches
+               expert-name lookups per unique expert, never per booking,
+               Phase 7)
   admin/       data.ts (requireAdminPage/requireAdminForAction, expert list/
                detail reads), actions.ts (review + publish server actions)
   public/      data.ts (public directory/profile reads through the 3
                SECURITY DEFINER functions -- 031_public_data_functions.sql
                -- plus the owner-preview data converter)
-  availability/  data.ts (requireApprovedExpertPage + reads, incl.
-                  overrides), actions.ts (RPC wrappers for the monthly
-                  rule/override/one-off/timezone RPCs), engine.ts (pure
-                  calculation logic -- day-of-month occurrence resolution,
-                  Upcoming Months, both monthly caps, overlap checks, no
-                  I/O, no React)
+  availability/  data.ts (reads, incl. overrides -- requireApprovedExpertPage
+                  itself now lives in lib/expert/auth.ts, re-exported here
+                  for backward compatibility), actions.ts (RPC wrappers for
+                  the monthly rule/override/one-off/timezone RPCs),
+                  engine.ts (pure calculation logic -- day-of-month
+                  occurrence resolution, Upcoming Months, both monthly
+                  caps, overlap checks, no I/O, no React)
   booking/     data.ts (get_bookable_slots/booking/intake reads, the
                owner-scoped expert-slug lookup, profile-completeness
-               check), actions.ts (fetchBookableSlotsAction plus the
+               check, plus Phase 7's admin booking list/detail reads --
+               reused is_admin()-gated RLS, no new policy needed),
+               actions.ts (fetchBookableSlotsAction plus the
                create-hold/save-intake/save-profile/advance-to-payment
                server actions, Phase 5)
   payment/     bankConfig.ts (centralized bank-transfer details, read from
@@ -987,6 +1042,11 @@ types/
   payment.ts   manual-payment policy constant, payment-method/status
                labels, receipt validation constants, ManualPaymentInput
                shape (Phase 6)
+  session.ts   derived, presentation-only DerivedSessionState + its label
+               map, deriveSessionState() (pure -- booking_status + latest
+               payment_status -> one customer-facing state, raw DB values
+               never shown directly), SessionTab + sessionTabForState()
+               (Phase 7)
 supabase/
   migrations/  schema, in order (001-004 Phase 1, 005-011 Phase 2,
                012-018 Phase 3, 019-030 Phase 4 -- 019-021 the original
@@ -994,7 +1054,8 @@ supabase/
                monthly model, 027 retires it, 028-030 the final
                day-of-month + overrides model, 031 the pre-Phase-5
                public-data-functions repair, 032-035 the Phase 5 booking
-               engine, 036-038 the Phase 6 manual-payment engine)
+               engine, 036-038 the Phase 6 manual-payment engine, 039 the
+               Phase 7 expert session-access RLS + customer-context function)
   seed.sql     industries + expertise categories
 proxy.ts       Next.js 16's renamed middleware convention (route protection
                + session refresh) — protects /dashboard, /expert, /dev,
@@ -1258,6 +1319,105 @@ Storage RLS for `manual-payment-receipts` was verified live across all
 four roles (owner, a different customer, admin, anon) with the expected
 result in every case.
 
+## Customer & Expert Session Dashboards (Phase 7)
+
+**No new tables, one additive migration:** Phase 7 reads exclusively from
+`bookings`/`booking_intake`/`payments`/`profiles`/`customer_profiles`/
+`expert_profiles`, all already in place. The only database change is
+`039_expert_session_access.sql` — see "Database" above for exactly what
+it adds. Migrations `001`-`038` are untouched.
+
+**Customer routes** (`/dashboard`, `/dashboard/sessions`,
+`/dashboard/sessions/[reference]`, `/dashboard/payments`; `/dashboard/
+profile` already existed and now carries the same nav): a customer sees
+every one of their own bookings, in every state — `bookings_select_own`
+(`033`) already granted this, Phase 7 adds no new customer-facing RLS at
+all. The overview fetches only the next confirmed session and the single
+most relevant actionable pending booking (`getDashboardOverview`,
+`lib/dashboard/data.ts`), never the full history. My Sessions groups into
+Upcoming/Pending/Past, computed entirely from a derived, presentation-only
+state (`types/session.ts`'s `deriveSessionState`) that combines
+`booking_status` with the latest payment's `payment_status` into one of:
+Time Reserved, Awaiting Payment, Payment Verification Pending, Payment
+Needs Attention, Confirmed, Completed, Cancelled, Expired — the raw
+`booking_status`/`payment_status` values are never shown to a customer.
+A held/awaiting_payment booking whose `hold_expires_at` has already
+passed (there is no cron — see Phase 5/6) is treated as Expired for
+display even before the next real mutation flips the stored value,
+matching the same effective-expiry check the booking journey already
+used. Session detail never invents a meeting URL or address — Phase 7
+builds no Calendar/Meet/Zoom integration and no in-person location field,
+so it shows a plain "will be provided before your session" note instead.
+
+**Expert routes** (`/expert/dashboard`, `/expert/sessions`, `/expert/
+sessions/[reference]` — new, and distinct from `/expert/application/*`,
+which is applying to become an expert, not viewing booked sessions; a
+separate `ExpertOperationsNav` component exists specifically because
+`ExpertApplicationNav`'s own "Sessions" link already means something else
+entirely, session *pricing*): an expert sees ONLY their own `confirmed`/
+`completed` bookings — enforced by `bookings_select_own_expert` (`039`)
+in the RLS predicate itself, not by filtering in application code, so a
+held/awaiting_payment/expired booking with this expert is invisible at
+the database level even to a direct query. Eligibility for these routes
+is `requireApprovedExpertPage()` (moved to `lib/expert/auth.ts` and
+generalized to take the current path, so the login/become-an-expert
+redirect always points back at whichever operational page was requested,
+not a value hardcoded to `/expert/availability`) — gated on
+`expert_profiles.application_status = 'approved'`, never
+`profiles.role`, which stays `'customer'` even for a published expert
+(unchanged since Phase 2). The one new customer-data read an expert gets
+— name, role, employment type, company, industry, years of experience,
+LinkedIn, for session preparation — goes exclusively through
+`get_customer_context_for_booking()` (`039`); there is still no broad
+`SELECT` grant on `customer_profiles`/`profiles` for any expert, and this
+function never returns email, phone, payment info, receipt, or
+transaction reference. `/expert/availability` (Phase 4) now renders the
+same `ExpertOperationsNav` for a consistent operational area, with no
+behavior change.
+
+**Dual identity:** the same `auth.users`/`profiles` row can be a customer
+(their own bookings) and a published expert (bookings made with them) at
+once, with zero role-switching UI — `/dashboard/sessions` and `/expert/
+sessions` are simply two independent queries against the same table,
+each scoped by its own RLS policy (`bookings_select_own` vs. `bookings_
+select_own_expert`); both apply to the same row set whenever both are
+true for a given booking, with no conflict. Verified live: temporarily
+pointing a real confirmed/awaiting_payment booking's `customer_id` at a
+second account (the demo project's only two real users otherwise share
+one identity for both roles) confirmed the expert-side policy shows
+exactly the confirmed booking and nothing else, `get_customer_context_
+for_booking` returns data only for that same confirmed booking and empty
+rows for the awaiting_payment one, `booking_intake_select_expert` follows
+the identical gate, and a genuine stranger UUID (no `profiles`/`expert_
+profiles` row at all) gets zero rows from every one of these paths. Data
+was restored to its original state immediately after testing.
+
+**Timezone display:** booking timestamps stay UTC in the database,
+unchanged (Phase 5). Every customer-facing display now passes
+`booking.customer_timezone` (falling back to UTC for the rare
+pre-Phase-5-capture null) and every expert-facing display passes
+`booking.expert_timezone` explicitly to `Intl`/`toLocaleString`
+(`lib/dashboard/presentation.ts`'s `formatSessionDateTime` and `lib/
+expert/presentation.ts`'s `formatExpertSessionDateTime`) — a Server
+Component that omits an explicit `timeZone` renders in the *server's*
+runtime zone, not the visiting browser's, unlike a `"use client"`
+component. This was also a latent bug in the already-shipped Phase 6
+confirmed-booking display (`app/booking/[reference]/payment/page.tsx`),
+fixed here while touching the same concern.
+
+**Admin routes** (`/admin/bookings`, `/admin/bookings/[reference]` —
+new): a minimal support view over every booking, reusing the existing
+`is_admin()`-gated `bookings_select_admin`/`booking_intake_select_admin`
+policies from `033` — no new RLS was needed for admin. Deliberately kept
+separate from `/admin/payments` (Phase 6), connected only by navigation
+and a per-row link into the payment detail page — this phase does not
+rebuild or merge the two.
+
+**Ownership failures are 404s, not 403s,** everywhere in Phase 7,
+matching every earlier phase's posture: a session reference belonging to
+someone else, or a booking that doesn't exist at all, are indistinguishable
+responses.
+
 ## Explicitly not implemented (future phases)
 
 **Availability (Phase 4) items, still standing:** raw recurrence text
@@ -1273,16 +1433,17 @@ admin-notes system separate from the one applicant-visible review
 message.
 
 **Booking (Phase 5) items, still standing:** booking cancellation, booking
-rescheduling ("Change date" or similar), a customer or expert booking
-dashboard ("My Sessions" or similar -- the booking-reference page is the
-only booking UI), an admin booking CRM beyond the simple payment queue,
-Google Calendar/Outlook/Calendly/Cal.com/Google Meet API integration,
-OAuth connection, or calendar event creation of any kind (the schema is
-only designed to allow this later -- neither `bookings` nor `payments`
-owns any calendar-event columns), email/WhatsApp booking notifications
+rescheduling ("Change date" or similar), an admin booking CRM beyond the
+simple payment queue and the Phase 7 read-only bookings list, Google
+Calendar/Outlook/Calendly/Cal.com/Google Meet API integration, OAuth
+connection, or calendar event creation of any kind (the schema is only
+designed to allow this later -- neither `bookings` nor `payments` owns
+any calendar-event columns), email/WhatsApp booking notifications
 (PostHog analytics events are wired conceptually but not active in this
-codebase), reviews, ratings, session/booking counts, a "My Sessions"
-list.
+codebase), reviews, ratings, session/booking counts. (A customer/expert
+booking dashboard and a "My Sessions" list, previously listed here as not
+yet built, now exist -- see "Customer & Expert Session Dashboards (Phase
+7)" above.)
 
 **Payment (Phase 6) boundary -- Phase 6 stops at `confirmed`,
 explicitly:** Chapa, card payment, mobile wallet payment, any payment
@@ -1304,6 +1465,14 @@ queue, and a self-service or automatic path to `booking_status =
 `awaiting_payment`, `confirmed`, or `expired`; a payment can only ever
 reach `pending_verification`, `verified`, or `rejected` -- through Phase
 6 code.
+
+**Session dashboard (Phase 7) boundary, explicitly:** rescheduling,
+cancellation, refunds, payouts, expert earnings/commission reporting,
+referral payouts, ratings, reviews, chat/direct messaging, support
+tickets, and any email/WhatsApp/SMS/Telegram notification or Google
+Calendar/Meet/Zoom integration remain entirely unbuilt -- Phase 7 is
+read-only session/payment visibility for customer, expert, and admin,
+nothing more.
 
 **Still standing from earlier phases regardless:** notifications (email/
 WhatsApp) of any kind, testimonials, badges, referrals, gift-a-session,

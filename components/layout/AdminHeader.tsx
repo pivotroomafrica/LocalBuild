@@ -16,6 +16,9 @@ export function AdminHeader() {
             <Link href="/admin/payments" className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
               Payments
             </Link>
+            <Link href="/admin/bookings" className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
+              Bookings
+            </Link>
           </nav>
         </div>
         <form action={signOutAction}>
