@@ -6,7 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:auth": "playwright test auth-nav.spec.ts",
+    "test:e2e:availability": "playwright test availability.spec.ts",
+    "test:e2e:booking": "playwright test booking.spec.ts",
+    "test:e2e:payments": "playwright test payments.spec.ts",
+    "test:e2e:dashboards": "playwright test dashboards.spec.ts",
+    "test:e2e:security": "playwright test security.spec.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.6",
@@ -16,8 +24,9 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^20.19.43",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

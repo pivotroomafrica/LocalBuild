@@ -1651,6 +1651,44 @@ independent of bookings") that no current function returns, and building
 one was judged unnecessary scope for what the spec itself flagged as
 "where useful," not a defect.
 
+## E2E Test Suite (Playwright)
+
+Full-system browser E2E automation lives in `e2e/` (Playwright). See
+`e2e/README.md` for the complete guide -- environment variables, npm
+scripts (`test:e2e`, `test:e2e:headed`, `test:e2e:auth`,
+`test:e2e:availability`, `test:e2e:booking`, `test:e2e:payments`,
+`test:e2e:dashboards`, `test:e2e:security`), the fixture-account model
+(`test_customer_a/b`, `test_expert_a/b`, `test_admin`,
+`test_dual_identity` -- deterministic, idempotently provisioned via the
+Supabase service-role client, never hardcoded passwords), and the
+time-based testing strategy (deterministic backdating of
+`hold_expires_at` via the service-role client instead of adding
+env-configurable short durations to production SQL policy-constant
+functions -- see that file for the full rationale).
+
+8 spec files, 69 test cases across desktop/tablet/mobile viewports,
+covering: auth-aware public nav + route protection (`auth-nav.spec.ts`),
+the full expert application wizard through admin approve/publish
+(`expert-application.spec.ts`), availability persistence including the
+back-navigation regression (`availability.spec.ts`), the booking hold
+lifecycle including double-booking concurrency
+(`booking.spec.ts`), manual payment verify/reject/grace-expiry
+(`payments.spec.ts`), dashboard visibility and the
+RLS-OR-combination-leak regression across customer/expert/admin/
+dual-identity roles (`dashboards.spec.ts`), direct-object-reference and
+raw-error-leakage checks (`security.spec.ts`), and structural
+mobile/tablet/desktop layout checks (`responsive.spec.ts`).
+
+**Execution note:** this suite was authored against this project's real
+routes, component labels, and server actions, and `npx playwright test
+--list` confirms all 69 tests parse correctly against a real
+`next build`, but it has not yet been run end-to-end against a live
+Supabase connection (see `e2e/README.md`'s "Execution status" for why,
+in the environment where it was written). Treat it as real, ready
+infrastructure for CI or a developer machine with normal network access,
+not yet a substitute for the live SQL-based verification documented
+elsewhere in this README for each phase.
+
 ## Explicitly not implemented (future phases)
 
 **Availability (Phase 4) items, still standing:** raw recurrence text
