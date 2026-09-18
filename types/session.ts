@@ -10,6 +10,7 @@ import type { PaymentStatus } from "@/types/payment";
 export type DerivedSessionState =
   | "time_reserved"
   | "awaiting_payment"
+  | "payment_processing"
   | "payment_verification_pending"
   | "payment_needs_attention"
   | "confirmed"
@@ -20,6 +21,7 @@ export type DerivedSessionState =
 export const DERIVED_SESSION_STATE_LABELS: Record<DerivedSessionState, string> = {
   time_reserved: "Time Reserved",
   awaiting_payment: "Awaiting Payment",
+  payment_processing: "Payment Processing",
   payment_verification_pending: "Payment Verification Pending",
   payment_needs_attention: "Payment Needs Attention",
   confirmed: "Confirmed",
@@ -44,6 +46,8 @@ export function deriveSessionState(
     case "awaiting_payment":
       if (latestPaymentStatus === "pending_verification") return "payment_verification_pending";
       if (latestPaymentStatus === "rejected") return "payment_needs_attention";
+      if (latestPaymentStatus === "requires_review") return "payment_needs_attention";
+      if (latestPaymentStatus === "initiated") return "payment_processing";
       return "awaiting_payment";
     case "confirmed":
       return "confirmed";
@@ -67,6 +71,7 @@ export function sessionTabForState(state: DerivedSessionState): SessionTab {
       return "upcoming";
     case "time_reserved":
     case "awaiting_payment":
+    case "payment_processing":
     case "payment_verification_pending":
     case "payment_needs_attention":
       return "pending";

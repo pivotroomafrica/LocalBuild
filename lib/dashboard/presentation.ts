@@ -45,6 +45,7 @@ export function pendingActionForSession(
     case "payment_needs_attention":
       return { label: "Complete Payment", href: `/booking/${bookingReference}/payment` };
     case "payment_verification_pending":
+    case "payment_processing":
       return { label: "View Payment Status", href: `/booking/${bookingReference}/payment` };
     default:
       return null;

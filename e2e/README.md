@@ -47,6 +47,7 @@ npm run test:e2e:booking
 npm run test:e2e:payments
 npm run test:e2e:dashboards
 npm run test:e2e:security
+npm run test:e2e:chapa       # Phase 8 -- see "Chapa (Phase 8) tests" below
 ```
 
 `playwright.config.ts` boots `next dev` itself (`webServer`), so a single
@@ -83,6 +84,34 @@ runs out of the box against a fresh copy of the demo project):
 
 No password is ever committed -- see `.env.example` for the placeholder
 entries.
+
+## Chapa (Phase 8) tests
+
+`chapa.spec.ts` exercises the Chapa payment integration end to end against
+**MockChapaClient** (`lib/chapa/mock.ts`), never the real Chapa API -- the
+normal suite must not depend on Chapa's uptime (spec section 63). It needs
+three env vars the rest of the suite doesn't, all supplied automatically
+by `npm run test:e2e:chapa`:
+
+- `CHAPA_MODE=mock` -- selects `MockChapaClient` and unlocks the
+  `CHAPA_MODE=mock`-gated `/api/test/chapa-mock/*` routes (both otherwise
+  404, even in production, by construction).
+- `CHAPA_WEBHOOK_SECRET` -- any value; the spec computes its own
+  `x-chapa-signature` HMAC using this same value from `process.env`, so
+  the exact value doesn't matter as long as the test process and the
+  `next dev` server it starts see the same one.
+- `NEXT_PUBLIC_APP_URL` -- required by `lib/chapa/config.ts`'s
+  `getAppUrl()` to build the return/callback URLs; defaults to
+  `PLAYWRIGHT_BASE_URL` (or `http://localhost:3000`).
+
+Running `npm run test:e2e` (no `CHAPA_MODE`) skips `chapa.spec.ts`
+automatically (`isChapaConfigured()` is false, so "Pay with Chapa" never
+renders) rather than failing -- the rest of the suite runs exactly as
+before Phase 8. `npm run test:e2e:chapa` runs only this one file, with its
+own env, the same way `test:e2e:payments` etc. scope to one file.
+
+`CHAPA_SECRET_KEY` is never read at all in mock mode -- there is no real
+credential involved in this file, and it never calls `api.chapa.co`.
 
 ## Test data safety (spec section 2)
 
@@ -158,14 +187,18 @@ e2e/
     dashboards.spec.ts         -- Phase 7 dashboards + RLS-OR-combination-leak regression
     security.spec.ts           -- direct object reference + raw error leakage + storage privacy
     responsive.spec.ts         -- structural mobile/tablet/desktop checks (not aesthetics)
+    chapa.spec.ts              -- Phase 8 Chapa payments (mock provider only, see above)
 ```
 
 ## What this suite deliberately does NOT cover
 
-- Real Chapa/bank/email/Google Calendar provider behavior -- there is no
-  real provider integration yet (manual bank transfer only), so there is
-  nothing to test here; when a real provider is integrated, this is a
-  "VISUAL / PRODUCT REVIEW" / human-in-the-loop concern per the workflow's
-  own rules, not an automatable one.
+- Real Chapa/bank/email/Google Calendar provider network behavior -- Phase
+  8's Chapa flow is covered against `MockChapaClient` only (see "Chapa
+  (Phase 8) tests" above); a small manual real-Chapa-test-mode smoke check
+  (successful test payment, failed/cancelled test payment, a real webhook
+  delivery) is documented as PENDING in the Phase 8 completion report,
+  since it needs a real Chapa test account/credential this project does
+  not have. Bank transfer, email, and Google Calendar have no real
+  provider integration at all yet, so there is nothing further to test.
 - Visual/aesthetic polish, copy tone, animation quality -- `responsive.spec.ts`
   checks structure (overflow, reachability) only, never colors/spacing/wording.

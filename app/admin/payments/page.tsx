@@ -24,9 +24,11 @@ export default async function AdminPaymentsPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-text)]">Manual Payments</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-text)]">Payments</h1>
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-          Review bank-transfer submissions and confirm bookings.
+          Review bank-transfer submissions and Chapa payment attempts. Chapa payments confirm
+          automatically once verified against Chapa&apos;s API -- only manual transfers need a
+          Verify/Reject decision here.
         </p>
       </div>
 
@@ -61,7 +63,9 @@ export default async function AdminPaymentsPage({
                     {row.bookingReference} · {row.customerName} → {row.expertName}
                   </p>
                   <p className="text-xs text-[var(--color-text-muted)]">
-                    {row.bankUsed} · Ref: {row.transactionReference}
+                    {row.paymentMethod === "chapa"
+                      ? `Chapa · tx_ref: ${row.providerTxRef ?? "—"}`
+                      : `${row.bankUsed ?? "—"} · Ref: ${row.transactionReference ?? "—"}`}
                   </p>
                 </div>
                 <div className="text-right">

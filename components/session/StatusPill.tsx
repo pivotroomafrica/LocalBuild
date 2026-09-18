@@ -75,6 +75,7 @@ function toneForPaymentStatus(status: PaymentStatus): Tone {
       return "positive";
     case "rejected":
     case "failed":
+    case "requires_review":
       return "attention";
     default:
       return "neutral";

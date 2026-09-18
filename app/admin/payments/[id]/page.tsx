@@ -50,15 +50,34 @@ export default async function AdminPaymentDetailPage({ params }: { params: Promi
       <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
         <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Payment</h2>
         <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+          <Field label="Method" value={payment.payment_method === "chapa" ? "Chapa" : "Manual Bank Transfer"} />
           <Field label="Expected amount" value={`${Number(payment.expected_amount).toLocaleString()} ${payment.currency}`} />
           <Field
             label="Amount paid"
             value={`${Number(payment.amount_paid).toLocaleString()} ${payment.currency}`}
             highlight={Number(payment.expected_amount) !== Number(payment.amount_paid)}
           />
-          <Field label="Bank used" value={payment.bank_used} />
-          <Field label="Transaction reference" value={payment.transaction_reference} />
           <Field label="Submitted" value={new Date(payment.submitted_at).toLocaleString()} />
+
+          {payment.payment_method === "manual" ? (
+            <>
+              <Field label="Bank used" value={payment.bank_used ?? "—"} />
+              <Field label="Transaction reference" value={payment.transaction_reference ?? "—"} />
+            </>
+          ) : (
+            <>
+              <Field label="Chapa tx_ref" value={payment.provider_tx_ref ?? "—"} />
+              <Field label="Chapa reference" value={payment.provider_reference ?? "—"} />
+              <Field label="Provider status" value={payment.provider_status ?? "—"} />
+              <Field label="Mode" value={payment.provider_mode ?? "—"} />
+              {payment.initialized_at ? (
+                <Field label="Initialized" value={new Date(payment.initialized_at).toLocaleString()} />
+              ) : null}
+              {payment.verified_at ? (
+                <Field label="Provider-verified" value={new Date(payment.verified_at).toLocaleString()} />
+              ) : null}
+            </>
+          )}
         </dl>
 
         {Number(payment.expected_amount) !== Number(payment.amount_paid) ? (
@@ -73,22 +92,33 @@ export default async function AdminPaymentDetailPage({ params }: { params: Promi
             -- verify carefully before approving.
           </p>
         ) : null}
+        {payment.payment_status === "requires_review" ? (
+          <p className="mt-3 rounded-md bg-[var(--color-danger-bg)] px-3 py-2 text-xs font-medium text-[var(--color-danger)]">
+            Chapa reported this payment as successful, but the booking&apos;s reservation was no
+            longer safely confirmable when that was verified (e.g. it had already expired or been
+            released). No booking has been confirmed from this payment. Investigate manually --
+            check whether the slot is still available and coordinate with the customer before taking
+            any action. Phase 8 does not auto-refund.
+          </p>
+        ) : null}
 
-        {detail.receiptSignedUrl ? (
-          <div className="mt-4">
-            <p className="mb-2 text-xs font-medium text-[var(--color-text-muted)]">Receipt</p>
-            <a
-              href={detail.receiptSignedUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-medium text-[var(--color-brand)] hover:underline"
-            >
-              View receipt
-            </a>
-          </div>
-        ) : (
-          <p className="mt-4 text-xs text-[var(--color-text-muted)]">No receipt was uploaded.</p>
-        )}
+        {payment.payment_method === "manual" ? (
+          detail.receiptSignedUrl ? (
+            <div className="mt-4">
+              <p className="mb-2 text-xs font-medium text-[var(--color-text-muted)]">Receipt</p>
+              <a
+                href={detail.receiptSignedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-medium text-[var(--color-brand)] hover:underline"
+              >
+                View receipt
+              </a>
+            </div>
+          ) : (
+            <p className="mt-4 text-xs text-[var(--color-text-muted)]">No receipt was uploaded.</p>
+          )
+        ) : null}
       </section>
 
       {payment.payment_status === "rejected" && payment.rejection_reason ? (
@@ -100,11 +130,18 @@ export default async function AdminPaymentDetailPage({ params }: { params: Promi
 
       <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
         <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Review Decision</h2>
-        {payment.payment_status === "pending_verification" ? (
+        {payment.payment_method === "manual" && payment.payment_status === "pending_verification" ? (
           <div className="flex flex-col gap-6">
             <PaymentVerifyButton paymentId={payment.id} />
             <PaymentRejectForm paymentId={payment.id} />
           </div>
+        ) : payment.payment_method === "chapa" ? (
+          <p className="text-sm text-[var(--color-text-muted)]">
+            Chapa payments are confirmed automatically once verified directly against Chapa&apos;s
+            API -- there is no manual &quot;mark paid&quot; action. {payment.payment_status === "requires_review"
+              ? "This one needs manual investigation (see above), not a one-click resolution."
+              : "Nothing to do here."}
+          </p>
         ) : (
           <p className="text-sm text-[var(--color-text-muted)]">
             This payment has already been {payment.payment_status === "verified" ? "verified" : "reviewed"}.

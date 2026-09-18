@@ -615,57 +615,72 @@ export type Database = {
       payments: {
         Row: {
           amount_paid: number
-          bank_used: string
+          bank_used: string | null
           booking_id: string
           created_at: string
           currency: string
           customer_id: string
           expected_amount: number
           id: string
+          initialized_at: string | null
           payment_method: string
           payment_status: string
+          provider_mode: string | null
+          provider_reference: string | null
+          provider_status: string | null
+          provider_tx_ref: string | null
           receipt_path: string | null
           rejection_reason: string | null
           submitted_at: string
-          transaction_reference: string
+          transaction_reference: string | null
           updated_at: string
           verified_at: string | null
           verified_by: string | null
         }
         Insert: {
           amount_paid: number
-          bank_used: string
+          bank_used?: string | null
           booking_id: string
           created_at?: string
           currency?: string
           customer_id: string
           expected_amount: number
           id?: string
+          initialized_at?: string | null
           payment_method?: string
           payment_status?: string
+          provider_mode?: string | null
+          provider_reference?: string | null
+          provider_status?: string | null
+          provider_tx_ref?: string | null
           receipt_path?: string | null
           rejection_reason?: string | null
           submitted_at?: string
-          transaction_reference: string
+          transaction_reference?: string | null
           updated_at?: string
           verified_at?: string | null
           verified_by?: string | null
         }
         Update: {
           amount_paid?: number
-          bank_used?: string
+          bank_used?: string | null
           booking_id?: string
           created_at?: string
           currency?: string
           customer_id?: string
           expected_amount?: number
           id?: string
+          initialized_at?: string | null
           payment_method?: string
           payment_status?: string
+          provider_mode?: string | null
+          provider_reference?: string | null
+          provider_status?: string | null
+          provider_tx_ref?: string | null
           receipt_path?: string | null
           rejection_reason?: string | null
           submitted_at?: string
-          transaction_reference?: string
+          transaction_reference?: string | null
           updated_at?: string
           verified_at?: string | null
           verified_by?: string | null
@@ -763,6 +778,7 @@ export type Database = {
       booking_horizon_days: { Args: never; Returns: number }
       booking_min_notice_hours: { Args: never; Returns: number }
       booking_slot_increment_minutes: { Args: never; Returns: number }
+      chapa_checkout_hold_minutes: { Args: never; Returns: number }
       create_booking_hold: {
         Args: {
           p_customer_timezone?: string
@@ -774,6 +790,15 @@ export type Database = {
         Returns: {
           booking_id: string
           booking_reference: string
+        }[]
+      }
+      create_chapa_payment_attempt: {
+        Args: { p_booking_reference: string; p_provider_mode?: string }
+        Returns: {
+          currency: string
+          expected_amount: number
+          payment_id: string
+          provider_tx_ref: string
         }[]
       }
       expert_all_raw_windows_for_date: {
@@ -822,7 +847,24 @@ export type Database = {
         }
         Returns: boolean
       }
+      finalize_chapa_payment: {
+        Args: {
+          p_provider_mode?: string
+          p_provider_reference?: string
+          p_provider_tx_ref: string
+          p_verified_amount: number
+          p_verified_currency: string
+          p_verified_status: string
+          p_verified_tx_ref?: string
+        }
+        Returns: {
+          final_booking_status: string
+          final_payment_status: string
+          newly_finalized: boolean
+        }[]
+      }
       generate_booking_reference: { Args: never; Returns: string }
+      generate_chapa_tx_ref: { Args: never; Returns: string }
       get_bookable_slots: {
         Args: {
           p_customer_timezone?: string
@@ -922,6 +964,10 @@ export type Database = {
         Returns: boolean
       }
       manual_payment_verification_hold_hours: { Args: never; Returns: number }
+      mark_own_chapa_payment_failed: {
+        Args: { p_payment_id: string; p_reason?: string }
+        Returns: undefined
+      }
       max_expert_monthly_availability_minutes: {
         Args: { p_expert_profile_id?: string }
         Returns: number
@@ -1138,9 +1184,3 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
-
-export const Constants = {
-  public: {
-    Enums: {},
-  },
-} as const

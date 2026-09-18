@@ -22,17 +22,23 @@ export const MANUAL_PAYMENT_VERIFICATION_HOLD_HOURS = 24;
  */
 export const PAYMENT_REJECTION_GRACE_MINUTES = 120;
 
-export const PAYMENT_METHODS = ["manual"] as const;
+export const PAYMENT_METHODS = ["manual", "chapa"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 /**
- * Only the values Phase 6 code can ever write
- * (submit_manual_payment/verify_manual_payment/reject_manual_payment).
- * The database CHECK constraint also allows 'initiated'/'paid'/'failed'/
- * 'refunded' so a future Chapa phase needs no new migration to reach
- * them, but no Phase 6 function writes those values.
+ * Every value either Phase 6 (manual) or Phase 8 (Chapa) code can write.
+ * 'paid'/'refunded' remain in the database CHECK constraint but unused by
+ * any current function -- reserved, same "widen the constraint once,
+ * write it later" pattern Phase 6 originally used for Chapa's own values.
  */
-export const REACHABLE_PAYMENT_STATUSES = ["pending_verification", "verified", "rejected"] as const;
+export const REACHABLE_PAYMENT_STATUSES = [
+  "pending_verification",
+  "verified",
+  "rejected",
+  "initiated",
+  "failed",
+  "requires_review",
+] as const;
 
 export type PaymentStatus =
   | "pending_verification"
@@ -41,17 +47,27 @@ export type PaymentStatus =
   | "initiated"
   | "paid"
   | "failed"
-  | "refunded";
+  | "refunded"
+  | "requires_review";
 
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   pending_verification: "Pending Verification",
   verified: "Verified",
   rejected: "Payment Rejected",
-  initiated: "Initiated",
+  initiated: "Processing",
   paid: "Paid",
   failed: "Failed",
   refunded: "Refunded",
+  requires_review: "Requires Review",
 };
+
+/**
+ * Mirrors chapa_checkout_hold_minutes() in 042_chapa_payments.sql -- how
+ * long a booking's slot stays reserved once a Chapa transaction has been
+ * successfully initialized. Display only, kept in sync by hand; the
+ * database is what actually enforces it.
+ */
+export const CHAPA_CHECKOUT_HOLD_MINUTES = 30;
 
 export const TRANSACTION_REFERENCE_MAX_LENGTH = 200;
 export const BANK_USED_MAX_LENGTH = 150;

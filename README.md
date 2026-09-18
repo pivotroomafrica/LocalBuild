@@ -1732,6 +1732,139 @@ cancelled bookings are unaffected. Covered by 4 new Playwright cases in
 status") and verified live against PIVOTROOM-DEMO with a purpose-built
 fixture set. No migration needed -- read-side query fix only.
 
+## Chapa Payment Integration (Phase 8)
+
+A second payment method alongside Phase 6's manual bank transfer --
+manual is unchanged and still fully supported; Chapa is additive, not a
+replacement. Both methods write into the same generic `payments` table
+(migration 036's own comments already anticipated this); there is no
+parallel `chapa_*` schema.
+
+**Flow:** booking `awaiting_payment` -> customer picks "Pay with Chapa"
+-> `create_chapa_payment_attempt()` (042) resolves the customer/amount/
+currency server-side from the booking itself (never trusts a client-
+supplied amount), generates a unique `PR-CH-XXXXXXXX` tx_ref
+(`generate_chapa_tx_ref()`), inserts a `payment_method='chapa'` row with
+`payment_status='initiated'` **before** any HTTP call to Chapa, and
+extends `hold_expires_at` to `now() + chapa_checkout_hold_minutes()` (30
+min V1 default, policy-constant function, same no-cron lazy-expiry
+pattern as every other hold in this codebase) -> the server action calls
+Chapa's initialize API and redirects the browser to Chapa's own returned
+`checkout_url` (never a URL the app constructs) -> customer pays -> both
+Chapa's webhook (`/api/payments/chapa/webhook`) and the return route
+(`/booking/[reference]/payment/chapa/return`) call the exact same shared
+`verifyAndFinalizeChapaTransaction()` (`lib/chapa/verify.ts`), which
+always calls Chapa's own Verify Transaction API itself -- a webhook/
+callback/return payload's own `status` field is **never** treated as
+proof -- then hands the freshly-verified facts to `finalize_chapa_payment()`
+(042/043, `service_role`-only) for the actual atomic state transition.
+
+**Safety properties, all live-verified against PIVOTROOM-DEMO:**
+- **Idempotent + race-safe:** `finalize_chapa_payment()` locks the payment
+  row (`FOR UPDATE`) and short-circuits on an already-terminal state
+  (`verified`/`failed`/`requires_review`) -- the same successful webhook
+  delivered 1 or 10 times, or a callback/webhook race, converges on
+  exactly one transition. Verified live: repeated finalize calls for the
+  same tx_ref after a successful confirm return `newly_finalized: false`
+  with no further mutation.
+- **Never trusts partial matches:** amount is compared as `numeric`, not
+  floating point; currency must match exactly; and (added in migration
+  043, after live testing showed the gap) Chapa's own reported tx_ref, if
+  present in the verify response, is compared against the local row's
+  `provider_tx_ref` -- any mismatch (amount, currency, or tx_ref) routes
+  to `requires_review`, never a silent confirm. Live-verified for all
+  three mismatch types independently.
+- **Critical edge case -- late success after hold expiry:** if a Chapa
+  checkout's 30-minute hold has already elapsed (customer abandoned
+  checkout, slot may since be available to someone else) and Chapa THEN
+  reports a genuinely successful, amount/currency-matched payment,
+  `finalize_chapa_payment()` re-checks booking eligibility
+  (`booking_status = 'awaiting_payment'` AND hold still valid) inside the
+  same locked transaction immediately before confirming. If no longer
+  eligible, it moves the payment to `requires_review` with `verified_at`
+  set -- never silently confirms (no double booking) and never discards
+  the evidence that Chapa took the customer's money. Live-verified: a
+  backdated hold + a later `success` verification produced
+  `requires_review`, booking stayed `awaiting_payment`, and
+  `verified_at`/`provider_reference` were both preserved.
+- **RLS/grants (live-verified):** a customer sees only their own Chapa
+  payment rows (never another customer's, by id or by tx_ref); no
+  `UPDATE` grant on `payments` exists for `authenticated` at all, so a
+  customer cannot self-verify, forge `expected_amount`, or rewrite
+  `provider_tx_ref` directly; `finalize_chapa_payment()` is granted to
+  `service_role` only and returns `permission denied` for `authenticated`
+  and `anon`; `chapa_checkout_hold_minutes()`/`generate_chapa_tx_ref()`
+  are similarly locked to internal use.
+- **Retry/method-switching:** a failed/abandoned Chapa attempt never
+  blocks a retry -- a fresh `create_chapa_payment_attempt()` call
+  generates a brand-new tx_ref (the old one is kept, untouched, for
+  audit); a partial unique index (`payments_one_active_chapa_per_booking`)
+  makes "at most one active Chapa attempt per booking" a database-level
+  guarantee, not just an application check, so a double-clicked "Pay with
+  Chapa" reuses the existing attempt instead of creating a second one.
+
+**Key files:** `supabase/migrations/042_chapa_payments.sql` (schema +
+`create_chapa_payment_attempt`/`mark_own_chapa_payment_failed`/
+`finalize_chapa_payment`), `043_chapa_verified_tx_ref_check.sql` (adds the
+tx_ref-mismatch check to `finalize_chapa_payment`), `lib/chapa/*`
+(provider abstraction: `client.ts` interface, `real.ts` the actual HTTP
+client, `mock.ts`/`mockControl.ts` the test double, `factory.ts` the
+`CHAPA_MODE`-driven switch, `config.ts`, `signature.ts` webhook HMAC
+verification, `verify.ts` the shared verify+finalize path),
+`lib/supabase/service.ts` (first use of `SUPABASE_SERVICE_ROLE_KEY` by
+app code -- webhook/return-route code has no user session to authenticate
+as), `lib/payment/chapaActions.ts`, `components/payment/ChapaPayButton.tsx`,
+`app/booking/[reference]/payment/chapa/return/page.tsx`,
+`app/api/payments/chapa/webhook/route.ts`,
+`app/api/test/chapa-mock/*` (404 outside `CHAPA_MODE=mock`, never
+reachable in production).
+
+**Testing:** `e2e/specs/chapa.spec.ts` covers the mock success/failed/
+pending/amount-mismatch/currency-mismatch/wrong-tx_ref paths, webhook
+signature rejection, webhook idempotency, a callback/webhook race, and
+the abandoned-checkout + late-success-after-expiry edge case, all against
+`MockChapaClient` (`CHAPA_MODE=mock`, see `npm run test:e2e:chapa` and
+`e2e/README.md`) -- like the rest of this suite, written but not executed
+in this environment (no network access to run `next dev`/Supabase from
+this sandbox). The substantive verification came from live SQL testing
+against PIVOTROOM-DEMO (the same `SET ROLE authenticated` +
+`request.jwt.claims` technique used throughout this project), covering
+every scenario above plus a manual-payment regression pass (submit,
+duplicate-submission idempotency, verify, atomic booking confirmation,
+manual-required-fields constraint) confirming migrations 042/043 did not
+disturb Phase 6. Security Advisor after both migrations shows only
+pre-existing WARN-level findings (no CRITICAL/HIGH); `finalize_chapa_payment`
+correctly does not appear in either "callable by anon/authenticated"
+finding. `tsc --noEmit`, `eslint .`, and `next build` all pass.
+
+**PENDING (not executed, reported honestly):** a real Chapa test-mode
+smoke check (an actual test-mode API key, a real initialize + checkout +
+webhook delivery against `api.chapa.co`) was not run -- this project has
+no real Chapa credential, and this sandbox's network egress to
+`developer.chapa.co` is policy-blocked (its own API host, `api.chapa.co`,
+was not independently confirmed reachable either). The webhook signature
+scheme (`x-chapa-signature`, HMAC-SHA256 over the raw body) was
+cross-referenced via a third-party community SDK's documentation, not
+Chapa's own current docs directly, for the same reason -- re-verify
+against the current official docs before enabling live mode.
+
+**Before going live, configure in the Chapa merchant dashboard:**
+webhook URL (`https://<your-domain>/api/payments/chapa/webhook`) and its
+signing secret (matching `CHAPA_WEBHOOK_SECRET`), the live secret key
+(`CHAPA_SECRET_KEY`, no `CHASECK_TEST-` prefix), and confirm the
+return/callback domain matches `NEXT_PUBLIC_APP_URL`. None of this
+happens automatically -- see `.env.example` for every Chapa-related
+variable.
+
+**Explicitly out of scope for Phase 8** (per this phase's own spec, not
+carried into it): refunds, Chapa payouts, expert payouts, platform
+commission/settlement, an expert earnings dashboard, VAT/tax calculation,
+referral payouts, Google Calendar/Meet, email/WhatsApp notifications,
+rescheduling, cancellation, reviews, ratings, and any admin "mark Chapa
+paid manually" action (Chapa success is only ever established via the
+provider's own Verify Transaction API; an exceptional manual-resolution
+action for a `requires_review` payment was deliberately not built).
+
 ## Explicitly not implemented (future phases)
 
 **Availability (Phase 4) items, still standing:** raw recurrence text
@@ -1760,8 +1893,10 @@ yet built, now exist -- see "Customer & Expert Session Dashboards (Phase
 7)" above.)
 
 **Payment (Phase 6) boundary -- Phase 6 stops at `confirmed`,
-explicitly:** Chapa, card payment, mobile wallet payment, any payment
-provider integration or API call of any kind, automatic bank
+explicitly:** (Chapa integration is no longer out of scope -- see
+"Chapa Payment Integration (Phase 8)" above; the items below remained
+true for Phase 6 alone.) Card payment, mobile wallet payment, any other
+payment provider integration or API call of any kind, automatic bank
 verification/scraping/reconciliation (every submission is reviewed by a
 human admin, always), tax/VAT calculation (the existing tax-notice text
 is shown unchanged; no percentage is hard-coded anywhere; `payments`
