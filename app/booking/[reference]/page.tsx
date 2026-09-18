@@ -10,6 +10,7 @@ import {
 } from "@/lib/booking/data";
 import { getPublicExpertProfile } from "@/lib/public/data";
 import { BookingJourney } from "@/components/booking/BookingJourney";
+import { ReleaseTimeButton } from "@/components/booking/ReleaseTimeButton";
 import { FormMessage } from "@/components/ui/FormMessage";
 
 /**
@@ -90,7 +91,10 @@ export default async function BookingReferencePage({
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6">
-      <h1 className="mb-6 text-xl font-semibold text-[var(--color-text)]">Time Reserved</h1>
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold text-[var(--color-text)]">Time Reserved</h1>
+        <ReleaseTimeButton bookingId={booking.id} bookingReference={booking.booking_reference} />
+      </div>
       <BookingJourney
         booking={booking}
         intake={intake}

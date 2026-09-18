@@ -6,6 +6,8 @@ import { getActivePaymentForBooking, getLatestPaymentForBooking } from "@/lib/pa
 import { getBankConfig } from "@/lib/payment/bankConfig";
 import { formatSessionDateTime } from "@/lib/dashboard/presentation";
 import { ManualPaymentForm } from "@/components/payment/ManualPaymentForm";
+import { ReleaseTimeButton } from "@/components/booking/ReleaseTimeButton";
+import { HoldCountdown } from "@/components/booking/HoldCountdown";
 import { FormMessage } from "@/components/ui/FormMessage";
 import { SESSION_FORMAT_LABELS } from "@/types/booking";
 import { PAYMENT_STATUS_LABELS } from "@/types/payment";
@@ -99,7 +101,10 @@ export default async function BookingPaymentPage({
     return (
       <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6">
         <div className="flex flex-col gap-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
-          <h1 className="text-xl font-semibold text-[var(--color-text)]">Payment Submitted</h1>
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="text-xl font-semibold text-[var(--color-text)]">Payment Submitted</h1>
+            <ReleaseTimeButton bookingId={booking.id} bookingReference={booking.booking_reference} />
+          </div>
           <p className="text-sm text-[var(--color-text)]">Your transfer is waiting for verification.</p>
           <dl className="flex flex-col gap-2 text-sm text-[var(--color-text)]">
             <div className="flex justify-between">
@@ -137,11 +142,20 @@ export default async function BookingPaymentPage({
     <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6">
       <div className="flex flex-col gap-6">
         {rejected ? (
-          <div className="flex flex-col gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <div className="flex flex-col gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
             <h2 className="text-sm font-semibold text-[var(--color-text)]">Payment Needs Attention</h2>
+            <p className="text-sm text-[var(--color-text-muted)]">Admin reason:</p>
             <p className="text-sm text-[var(--color-text)]">{rejected.rejection_reason}</p>
+            {booking.hold_expires_at ? <HoldCountdown holdExpiresAt={booking.hold_expires_at} /> : null}
+            <div>
+              <ReleaseTimeButton bookingId={booking.id} bookingReference={booking.booking_reference} />
+            </div>
           </div>
-        ) : null}
+        ) : (
+          <div className="flex justify-end">
+            <ReleaseTimeButton bookingId={booking.id} bookingReference={booking.booking_reference} />
+          </div>
+        )}
 
         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
           <h1 className="mb-1 text-xl font-semibold text-[var(--color-text)]">Manual Bank Transfer</h1>

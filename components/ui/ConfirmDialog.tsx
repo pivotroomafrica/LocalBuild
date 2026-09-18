@@ -11,6 +11,7 @@ type Props = {
   description: React.ReactNode;
   confirmLabel: string;
   confirmingLabel?: string;
+  cancelLabel?: string;
   destructive?: boolean;
   onCancel: () => void;
   /** Return { error } to keep the dialog open and show it; return
@@ -28,6 +29,7 @@ export function ConfirmDialog({
   description,
   confirmLabel,
   confirmingLabel = "Working...",
+  cancelLabel = "Cancel",
   destructive = true,
   onCancel,
   onConfirm,
@@ -63,7 +65,7 @@ export function ConfirmDialog({
           disabled={isPending}
           className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Cancel
+          {cancelLabel}
         </button>
         <button
           type="button"

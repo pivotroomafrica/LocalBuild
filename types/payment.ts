@@ -12,6 +12,16 @@ export type Payment = Tables<"payments">;
  */
 export const MANUAL_PAYMENT_VERIFICATION_HOLD_HOURS = 24;
 
+/**
+ * Mirrors payment_rejection_grace_minutes() in
+ * 041_reservation_release_and_grace.sql -- the fresh, short window a
+ * booking gets from the moment its payment is rejected, replacing
+ * whatever was left of the original submission-time verification hold.
+ * Display only, kept in sync by hand; the database is what actually
+ * enforces it.
+ */
+export const PAYMENT_REJECTION_GRACE_MINUTES = 120;
+
 export const PAYMENT_METHODS = ["manual"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 

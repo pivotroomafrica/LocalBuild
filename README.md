@@ -899,7 +899,12 @@ and should be deleted once no longer needed:
 
 ```
 app/
-  page.tsx                          landing page
+  (public)/                                      route group (URL-transparent), auth-aware
+                                                    via PublicHeader -- pre-next-phase repair
+    layout.tsx                                     PublicHeader wrapper
+    page.tsx                                       landing page, auth-aware hero CTAs
+    experts/{page.tsx,[slug]/page.tsx}             public marketplace, Phase 3/5
+    become-an-expert/page.tsx                      public expert entry point
   auth/{signup,login,forgot-password,reset-password,callback}/
   dashboard/                                     customer, Phase 1 + Phase 7
     layout.tsx                                     shared header for /dashboard/*
@@ -909,7 +914,6 @@ app/
       [reference]/page.tsx                          session detail -- owner-only, derived state (Phase 7)
     payments/page.tsx                              payment history, reusable for a future Chapa method (Phase 7)
     profile/page.tsx                               customer profile (Phase 1)
-  become-an-expert/page.tsx                     public expert entry point
   expert/
     layout.tsx                                  shared header for /expert/*
     application/
@@ -940,10 +944,6 @@ app/
       page.tsx                                       tabbed booking list + reference search
       [reference]/page.tsx                           booking + intake + payment status, links to
                                                        /admin/payments for review (not rebuilt here)
-  experts/                                        public marketplace, Phase 3
-    page.tsx                                       directory (published experts only)
-    [slug]/page.tsx                                 public profile (published only, else 404,
-                                                     now with "Book a Session" CTA, Phase 5)
   book/[slug]/page.tsx                            public booking entry (Phase 5, no auth
                                                      required -- duration/format/date/time picker)
   booking/[reference]/
@@ -958,7 +958,9 @@ app/
 components/
   ui/          Button, TextField, TextareaField, SelectField, FormMessage,
                Modal (generic portal dialog), ConfirmDialog (Pivotroom's
-               window.confirm() replacement for destructive actions)
+               window.confirm() replacement for destructive actions --
+               optional cancelLabel prop added in the pre-next-phase
+               repair for "Keep Reservation" / "Release Time")
   auth/        signup/login/forgot/reset forms
   profile/     ProfileForm (customer)
   expert/      ExpertProfileForm, PhotoUpload, CategoryPicker,
@@ -969,11 +971,13 @@ components/
                AddExtraTimeModal ("+ Add Time" on an Upcoming Months card,
                Phase 4 repair)
   admin/       AdminActionButton, AdminMessageForm (Phase 3 review actions),
-               PaymentVerifyButton, PaymentRejectForm (Phase 6 review actions)
+               PaymentVerifyButton, PaymentRejectForm (Phase 6 review actions),
+               AdminReleaseButton (pre-next-phase repair)
   booking/     BookingPicker (duration/format/date/time, public, Phase 5),
                BookingJourney (profile completion/intake/review/Continue
                to Payment, owner-only, Phase 5 -- no local step state,
-               always derived from server props)
+               always derived from server props), ReleaseTimeButton,
+               HoldCountdown (pre-next-phase repair)
   payment/     ManualPaymentForm (bank used/transaction reference/amount
                paid/optional receipt, Phase 6)
   session/     StatusPill (generic) + SessionStatusPill/BookingStatusPill/
@@ -983,7 +987,8 @@ components/
   layout/      AuthShell, DashboardHeader, DashboardNav (Phase 7),
                ExpertApplicationNav, ExpertOperationsNav (Phase 7, kept
                separate from ExpertApplicationNav since that nav's own
-               "Sessions" link already means session pricing), AdminHeader
+               "Sessions" link already means session pricing), AdminHeader,
+               PublicHeader, RouterRefreshOnMount (pre-next-phase repair)
 lib/
   supabase/    browser client, server client, proxy session-refresh helper
   auth/        server actions (signUp/signIn/signOut/reset), error mapping
@@ -1004,7 +1009,8 @@ lib/
                context_for_booking (040), never per booking; every query
                explicitly filters customer_id in addition to RLS, Phase 7)
   admin/       data.ts (requireAdminPage/requireAdminForAction, expert list/
-               detail reads), actions.ts (review + publish server actions)
+               detail reads), actions.ts (review + publish server actions,
+               plus adminReleaseBookingReservationAction, pre-next-phase repair)
   public/      data.ts (public directory/profile reads through the 3
                SECURITY DEFINER functions -- 031_public_data_functions.sql
                -- plus the owner-preview data converter)
@@ -1021,7 +1027,8 @@ lib/
                reused is_admin()-gated RLS, no new policy needed),
                actions.ts (fetchBookableSlotsAction plus the
                create-hold/save-intake/save-profile/advance-to-payment
-               server actions, Phase 5)
+               server actions, Phase 5, plus releaseBookingReservationAction,
+               pre-next-phase repair)
   payment/     bankConfig.ts (centralized bank-transfer details, read from
                PIVOTROOM_BANK_* env vars), data.ts (payment reads, admin
                queue/detail incl. duplicate-transaction-reference flag,
@@ -1044,7 +1051,8 @@ types/
                BookingSelection/BookingIntakeInput shapes (Phase 5)
   payment.ts   manual-payment policy constant, payment-method/status
                labels, receipt validation constants, ManualPaymentInput
-               shape (Phase 6)
+               shape (Phase 6), PAYMENT_REJECTION_GRACE_MINUTES
+               (pre-next-phase repair)
   session.ts   derived, presentation-only DerivedSessionState + its label
                map, deriveSessionState() (pure -- booking_status + latest
                payment_status -> one customer-facing state, raw DB values
@@ -1061,7 +1069,10 @@ supabase/
                Phase 7 expert session-access RLS + customer-context
                function, 040 the Phase 7 browser-test repair --
                get_expert_context_for_booking() + the booked-customer
-               photo storage policy)
+               photo storage policy, 041 the pre-next-phase repair --
+               payment_rejection_grace_minutes(), the redefined
+               reject_manual_payment(), and release_booking_reservation()/
+               admin_release_booking_reservation())
   seed.sql     industries + expertise categories
 proxy.ts       Next.js 16's renamed middleware convention (route protection
                + session refresh) — protects /dashboard, /expert, /dev,
@@ -1469,6 +1480,176 @@ expert_profile_id is absent from the first expert's session list; and
 even after that expert was temporarily suspended, confirmed via both the
 function directly and the storage photo policy. All temporary test data
 was restored to its original state immediately after.
+
+## Pre-Next-Phase Repair (auth nav + payment reservation lifecycle + availability caching)
+
+Three unrelated real browser-test bugs, fixed before starting any further
+phase. One new migration (`041_reservation_release_and_grace.sql`);
+`001`-`040` untouched.
+
+**1. Logged-in home page still showed Login/Sign Up.** Root cause: `/`
+(and `/experts`, `/experts/[slug]`, `/become-an-expert`) had ZERO
+server-side auth awareness and, because nothing in their render path read
+`cookies()`/`headers()`/any Request-time API, Next.js fully **statically
+prerendered** them at build time -- confirmed by the build output itself
+(`○ /` before this fix). A statically prerendered page renders once, ever;
+it cannot reflect a visitor's session no matter what client-side auth
+state exists. This was never a "stale client state" bug. Fixed by moving
+these four routes into a new `app/(public)/` route group (a route group's
+parens are stripped from the URL, so none of these paths changed) wrapped
+in a new `PublicHeader` Server Component that calls
+`supabase.auth.getUser()` -- reading cookies() there opts the whole group
+out of static rendering (confirmed: these routes are now `ƒ` /
+server-rendered in the build output), so every request genuinely
+reflects that request's session. `PublicHeader` shows Log In/Sign Up when
+logged out; Dashboard (+ Expert Dashboard, only if
+`expert_profiles.application_status = 'approved'` for that account) + Log
+Out when logged in -- no role-switching UI, since a dual-identity account
+gets both links at once. The home page's own hero CTAs are equally
+auth-aware (Browse Experts/Go to Dashboard instead of Sign Up/Log In).
+Being a pure Server Component with no client-rendered placeholder, there
+is no hydration mismatch to cause flicker.
+
+**2 & 3. Rejected payment held its slot indefinitely.** Previously,
+`reject_manual_payment()` (038) flipped the payment to `rejected` but
+never touched `bookings.hold_expires_at` -- the booking kept whatever was
+left of the *original* 24-hour submission-time verification window (set
+by `submit_manual_payment()`), with no visible countdown and no release
+path. Fixed with a new named policy constant,
+`payment_rejection_grace_minutes()` (120 minutes for V1, mirrored as
+`PAYMENT_REJECTION_GRACE_MINUTES` in `types/payment.ts`), and
+`reject_manual_payment()` redefined (`create or replace`, 038's own file
+untouched) to additionally set a **fresh** `hold_expires_at = now() +
+120 minutes` at the moment of rejection -- replacing whatever was left of
+the original window, never extending it. `booking_status` still stays
+`awaiting_payment` so the customer can resubmit (unchanged spec section
+24 behavior).
+
+No changes were needed to `submit_manual_payment()`, `create_booking_hold()`,
+or `get_bookable_slots()`: all three already operate generically on
+`hold_expires_at`/`booking_status` regardless of *why* a hold exists, so
+the rejection-grace window already got the exact same lazy-expiry
+treatment (a stale row is flipped to `expired` the next time
+`create_booking_hold`/`submit_manual_payment` touches that expert or
+customer -- no cron) and the exact same "resubmission extends the hold to
+the full manual-verification window" behavior the original Phase 5/6
+holds already had, for free.
+
+**Customer release** (`release_booking_reservation()`, 041): self-service
+abandonment of the caller's own `held`/`awaiting_payment` (never
+`confirmed`) booking. Re-derives `customer_id` from `auth.uid()` every
+call; a booking that isn't the caller's own resolves to the same "Booking
+not found" as one that doesn't exist. Sets `booking_status = 'expired'`
+and `hold_expires_at = now()` immediately -- the slot is bookable again
+right away, not after waiting out any hold. Surfaced as a "Release This
+Time" button (`components/booking/ReleaseTimeButton.tsx`) on
+`/booking/[reference]` (held) and every `awaiting_payment` state of
+`/booking/[reference]/payment` (submitted/pending, no payment yet, and
+rejected) -- confirmed via Pivotroom's own `ConfirmDialog` (extended with
+an optional `cancelLabel` prop so this flow can say "Keep Reservation" /
+"Release Time" instead of the generic "Cancel"), never
+`window.confirm()`.
+
+**Admin release** (`admin_release_booking_reservation()`, 041): same
+effect, gated on `is_admin()` instead of ownership, for a stuck/rejected
+reservation an admin knows shouldn't be retried. Surfaced as a "Release
+Reservation" button on `/admin/bookings/[reference]`, shown only for
+`held`/`awaiting_payment` bookings, never a confirmed one. Neither
+release function touches payment history.
+
+**Rejection countdown** (`components/booking/HoldCountdown.tsx`): a
+client-side ticker computed from the booking's real `hold_expires_at`,
+purely decorative -- the countdown reaching zero grants nothing by
+itself; only the database's own `hold_expires_at` check (inside
+`submit_manual_payment`/`create_booking_hold`) is authoritative.
+
+**Resubmission** (spec section 8, no code change needed -- see above):
+resubmitting before the grace window closes calls the same, unmodified
+`submit_manual_payment()`, which unconditionally sets `hold_expires_at =
+now() + manual_payment_verification_hold_hours()` (24h) on success --
+correctly replacing the 120-minute rejection-grace deadline with the
+full verification window, exactly as spec section 8 requires. Live-
+verified against a real reject -> resubmit cycle that happened during
+this repair's own testing window (payment history timestamps + the
+booking's resulting `hold_expires_at` matched exactly).
+
+**No infinite reservation** (spec section 11): every unconfirmed state
+(`held`, `awaiting_payment` with no payment / pending_verification /
+rejected) now has a finite `hold_expires_at` that every relevant function
+already respects, or an explicit customer/admin release path. Only
+`confirmed` blocks without an hold expiry, by design.
+
+**Live-tested against PIVOTROOM-DEMO:**
+- Security (spec section 23): a customer could not release another
+  customer's booking (`release_booking_reservation` on a booking they
+  don't own -> "Booking not found"); could not release their own
+  *confirmed* booking (-> "This booking can no longer be released"); a
+  non-admin could not call `admin_release_booking_reservation` (-> "Not
+  authorized"). `anon` has no execute grant on any of the three new/
+  redefined functions (confirmed via `pg_proc`/`has_function_privilege`).
+- A real customer successfully released their own `held` booking via
+  `release_booking_reservation` -- `booking_status` flipped to `expired`
+  and `hold_expires_at` to the release moment, confirmed by re-querying
+  the row afterward.
+- `payment_rejection_grace_minutes()` returns `120` live.
+
+**Availability disappearing after navigating into the booking flow and
+back.** Diagnosed, not guessed, per the explicit repro steps: a live
+before/after database trace against a real expert's one-off availability
+(2 rows) and monthly rules (1 row) confirmed **zero rows changed** after
+calling `get_bookable_slots()` exactly as the public booking flow does
+(the same call `/book/[slug]` makes) -- both the availability tables and
+the count of new `bookings` rows were byte-for-byte identical before and
+after. Reading every function in the call chain
+(`get_bookable_slots`/`expert_merged_windows_for_date`/
+`expert_all_raw_windows_for_date`) confirms there is no `insert`/`update`/
+`delete` statement anywhere in it -- viewing the booking route cannot
+mutate availability or create a hold at the database level, full stop.
+
+The actual cause was the browser's **Client Cache** (Next.js App Router
+glossary: "Pages are not cached by default but are reused during browser
+back/forward navigation") -- confirmed directly from this project's own
+bundled docs (`node_modules/next/dist/docs`, since this Next.js version
+carries real breaking changes from training-data Next.js, per this
+repo's own `AGENTS.md`). `staleTimes` explicitly does not change this
+behavior ("This doesn't change back/forward caching behavior"), so
+neither that config knob nor `export const dynamic = "force-dynamic"` (a
+server rendering-mode directive, irrelevant to a client-side cache) can
+fix it on their own. This project does not enable `cacheComponents`
+(unset in `next.config.ts`), so the App Router does not preserve mounted
+component instances via React's `<Activity>` the way it would with Cache
+Components enabled (`preserving-ui-state.md`: "This guide assumes Cache
+Components is enabled... Before Cache Components, preserving page-level
+state across navigations required workarounds") -- meaning a
+back-navigation in this project's mode genuinely remounts the page's
+client component tree from the (possibly stale) cached RSC payload,
+rather than resuming a frozen one. That's what makes the fix reliable:
+`router.refresh()` -- documented as one of the few operations that
+"clears the Client Cache for the current route" -- mounted as a tiny,
+always-present Client Component (`components/layout/
+RouterRefreshOnMount.tsx`) on `/expert/availability` and `/book/[slug]`,
+whose effect genuinely fires on every mount in this project's rendering
+mode, including one restored via the browser's back button. `export const
+dynamic = "force-dynamic"` was also added to both routes for explicit
+documentation of intent, though it is not itself what fixes this
+particular bug.
+
+**Availability vs. bookable slots (spec sections 16-17):** already
+correctly separate, by construction, not a new fix -- confirmed by
+re-reading the two data paths. `/expert/availability`'s editor
+(`lib/availability/data.ts`) reads `expert_monthly_availability_rules`/
+`expert_availability_overrides`/`expert_one_off_availability` directly,
+with zero booking-subtraction logic anywhere in that file.
+`get_bookable_slots()` is a fully separate function that derives raw
+availability and THEN subtracts active bookings/holds -- the editor can
+never show reduced availability because of an active hold; there is no
+code path connecting the two. The "show Reserved rather than a
+misleading No availability" copy nuance (also spec section 17) is left
+as a deliberately deferred, explained future UX enhancement: it would
+need a new signal ("does this month have ANY raw availability at all,
+independent of bookings") that no current function returns, and building
+one was judged unnecessary scope for what the spec itself flagged as
+"where useful," not a defect.
 
 ## Explicitly not implemented (future phases)
 

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminBookingDetail } from "@/lib/booking/data";
 import { BookingStatusPill, PaymentStatusPill } from "@/components/session/StatusPill";
+import { AdminReleaseButton } from "@/components/admin/AdminReleaseButton";
 import { SESSION_FORMAT_LABELS, type BookingStatus } from "@/types/booking";
 import type { PaymentStatus } from "@/types/payment";
 
@@ -28,6 +29,9 @@ export default async function AdminBookingDetailPage({
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-text)]">{booking.booking_reference}</h1>
           <BookingStatusPill status={booking.booking_status as BookingStatus} />
+          {booking.booking_status === "held" || booking.booking_status === "awaiting_payment" ? (
+            <AdminReleaseButton bookingId={booking.id} bookingReference={booking.booking_reference} />
+          ) : null}
         </div>
       </div>
 

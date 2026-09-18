@@ -279,6 +279,40 @@ export async function suspendExpertAction(
   return { success: true };
 }
 
+/**
+ * Admin "Release Reservation" (pre-next-phase repair, spec section 6) --
+ * terminates a stuck/rejected held/awaiting_payment booking so the slot
+ * opens immediately. admin_release_booking_reservation() (041) re-checks
+ * is_admin() and the booking's current status internally; never usable
+ * on a confirmed session, and payment history is left untouched.
+ */
+export async function adminReleaseBookingReservationAction(
+  _prevState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const supabase = await createClient();
+  const auth = await requireAdminForAction(supabase);
+  if (!auth.ok) return { error: auth.error };
+
+  const bookingId = String(formData.get("booking_id") ?? "");
+  const bookingReference = String(formData.get("booking_reference") ?? "");
+  if (!bookingId) return { error: GENERIC_ERROR };
+
+  const { error } = await supabase.rpc("admin_release_booking_reservation", { p_booking_id: bookingId });
+  if (error) {
+    const message = error.message.toLowerCase();
+    if (message.includes("not an active reservation") || message.includes("booking not found")) {
+      return { error: error.message };
+    }
+    return { error: GENERIC_ERROR };
+  }
+
+  revalidatePath("/admin/bookings");
+  if (bookingReference) revalidatePath(`/admin/bookings/${bookingReference}`);
+  revalidatePath("/admin/payments");
+  return { success: true };
+}
+
 /** Restore: suspended -> ready. The reverse of Suspend -- without this,
  * suspending a profile would be a one-way dead end, which is not
  * "minimal operational safety," it's a trap. Does not republish by

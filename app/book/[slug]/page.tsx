@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getPublicExpertProfile } from "@/lib/public/data";
 import { BookingPicker } from "@/components/booking/BookingPicker";
+import { RouterRefreshOnMount } from "@/components/layout/RouterRefreshOnMount";
 
 /**
  * Public booking entry point (spec section 8) -- reachable without
@@ -10,7 +11,17 @@ import { BookingPicker } from "@/components/booking/BookingPicker";
  * survives the auth round-trip unchanged (spec section 27): only the
  * actual "Reserve This Time" submission is protected, by
  * create_booking_hold() requiring auth.uid() internally.
+ *
+ * The actual bookable-slot list is always fetched fresh (BookingPicker
+ * calls fetchBookableSlotsAction, a Server Action, in a useEffect on
+ * mount -- not baked into this page's own RSC payload), so it is not
+ * itself subject to the browser back/forward Client Cache staleness this
+ * page's own Server-Component-rendered pricing/format data could be --
+ * see RouterRefreshOnMount's comment for why that guard is still added
+ * here for the latter.
  */
+export const dynamic = "force-dynamic";
+
 export default async function BookExpertPage({
   params,
   searchParams,
@@ -39,6 +50,7 @@ export default async function BookExpertPage({
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6">
+      <RouterRefreshOnMount />
       <BookingPicker
         expertSlug={slug}
         expertName={profile.fullName}

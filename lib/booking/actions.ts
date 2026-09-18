@@ -49,6 +49,7 @@ function toSafeError(message: string | undefined): string {
     "reserved time expired",
     "session details first",
     "professional profile first",
+    "can no longer be released",
   ];
   return knownFragments.some((fragment) => message.toLowerCase().includes(fragment.toLowerCase()))
     ? message
@@ -252,4 +253,32 @@ export async function advanceBookingToPaymentAction(
   if (error) return { error: toSafeError(error.message) };
 
   redirect(`/booking/${bookingReference}/payment`);
+}
+
+/**
+ * "Release This Time" (pre-next-phase repair, spec section 5) -- customer
+ * abandonment of their OWN held/awaiting_payment reservation, never a
+ * confirmed session. release_booking_reservation() (041) re-derives
+ * ownership from auth.uid() and re-checks the booking is still
+ * held/awaiting_payment internally -- this action only forwards the call
+ * and revalidates the pages that show this booking's state.
+ */
+export async function releaseBookingReservationAction(
+  bookingId: string,
+  bookingReference: string,
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be logged in to do that." };
+
+  const { error } = await supabase.rpc("release_booking_reservation", { p_booking_id: bookingId });
+  if (error) return { error: toSafeError(error.message) };
+
+  revalidatePath(`/booking/${bookingReference}`);
+  revalidatePath(`/booking/${bookingReference}/payment`);
+  revalidatePath("/dashboard/sessions");
+  revalidatePath("/dashboard");
+  return {};
 }

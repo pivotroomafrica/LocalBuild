@@ -751,6 +751,10 @@ export type Database = {
         }
         Returns: string
       }
+      admin_release_booking_reservation: {
+        Args: { p_booking_id: string }
+        Returns: undefined
+      }
       advance_booking_to_awaiting_payment: {
         Args: { p_booking_id: string }
         Returns: undefined
@@ -922,8 +926,13 @@ export type Database = {
         Args: { p_expert_profile_id?: string }
         Returns: number
       }
+      payment_rejection_grace_minutes: { Args: never; Returns: number }
       reject_manual_payment: {
         Args: { p_payment_id: string; p_reason: string }
+        Returns: undefined
+      }
+      release_booking_reservation: {
+        Args: { p_booking_id: string }
         Returns: undefined
       }
       remove_expert_month_override: {

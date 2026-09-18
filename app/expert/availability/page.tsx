@@ -8,6 +8,13 @@ import {
 } from "@/lib/availability/data";
 import { AvailabilityManager } from "@/components/expert/AvailabilityManager";
 import { ExpertOperationsNav } from "@/components/layout/ExpertOperationsNav";
+import { RouterRefreshOnMount } from "@/components/layout/RouterRefreshOnMount";
+
+/** Explicit documentation of intent (already implied by requireApprovedExpertPage's
+ * cookies() read): this page must never be served from a static/prerendered
+ * shell. Does not by itself fix stale back-navigation -- see
+ * RouterRefreshOnMount's own comment for why that needs a client-side fix. */
+export const dynamic = "force-dynamic";
 
 export default async function ExpertAvailabilityPage() {
   const supabase = await createClient();
@@ -22,6 +29,7 @@ export default async function ExpertAvailabilityPage() {
 
   return (
     <div>
+      <RouterRefreshOnMount />
       <ExpertOperationsNav current="/expert/availability" />
 
       <div className="flex flex-col gap-8">
