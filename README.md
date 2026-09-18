@@ -1689,6 +1689,32 @@ infrastructure for CI or a developer machine with normal network access,
 not yet a substitute for the live SQL-based verification documented
 elsewhere in this README for each phase.
 
+## Full System Regression + Security + E2E Audit (Phase 1 → Pre-Next-Phase Repair)
+
+A complete re-verification pass across every phase above, run against
+PIVOTROOM-DEMO via live SQL impersonation (`SET ROLE authenticated` +
+`request.jwt.claims`) rather than assuming prior phases' own
+at-the-time testing still holds. Covered: full SECURITY DEFINER audit
+(30 functions), full RLS policy audit (14 tables + both storage
+buckets), and live regression of the auth/role-escalation boundary, the
+Phase 2/3 application+review state machine (including a live
+demonstration that self-approval is blocked), Phase 4 availability
+limits, Phase 5 booking hold/overlap/price-snapshot, Phase 6 payment
+submission/verify/reject/grace-expiry, and Phase 7 dashboard visibility
+-- including a live, first-principles demonstration of the exact
+RLS-OR-combination leak class the Phase 7 browser-test repair fixed
+(a bare, unfiltered query as a dual-identity account provably leaks
+customer-side bookings into an "expert view" through RLS alone; the
+app's explicit `expert_profile_id` + `booking_status` filters correctly
+close it). Also set up this project's first Playwright E2E suite (see
+above). One MEDIUM-severity, non-security finding surfaced (admin
+booking list doesn't apply the same hold-expiry-aware status correction
+`lib/dashboard/data.ts` already has) and one LOW-severity bug in the new
+E2E fixture code itself (invalid enum values, fixed same-session). No
+CRITICAL or HIGH findings anywhere in the system. Full matrix and
+verdict delivered as this task's completion report rather than
+duplicated here.
+
 ## Explicitly not implemented (future phases)
 
 **Availability (Phase 4) items, still standing:** raw recurrence text
