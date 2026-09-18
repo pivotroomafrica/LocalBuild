@@ -103,13 +103,35 @@ export async function getExpertSlugForBooking(
  * advance_booking_to_awaiting_payment) is what actually flips it. A
  * plain helper (not inline in a page component) so the Date.now() read
  * isn't attributed to a component's render body.
+ *
+ * Takes only the two fields it needs (not a full Booking) so it can also
+ * be applied to a narrower admin-list projection -- see
+ * effectiveBookingStatus() below, the single reusable place any
+ * BookingStatus-shaped view (as opposed to the customer-facing, payment-
+ * aware DerivedSessionState in types/session.ts) corrects for this.
  */
-export function isHoldExpired(booking: Booking): boolean {
+export function isHoldExpired(booking: Pick<Booking, "booking_status" | "hold_expires_at">): boolean {
   return (
     (booking.booking_status === "held" || booking.booking_status === "awaiting_payment") &&
     booking.hold_expires_at !== null &&
     new Date(booking.hold_expires_at).getTime() <= Date.now()
   );
+}
+
+/**
+ * The BookingStatus a booking should be treated as everywhere that isn't
+ * already going through DerivedSessionState (types/session.ts, which is
+ * customer-facing and payment-status-aware) -- reuses isHoldExpired
+ * rather than re-deriving expiry, so there is exactly one definition of
+ * "expired" in the codebase. A held/awaiting_payment row whose
+ * hold_expires_at has already passed is effectively 'expired' even
+ * though the raw column hasn't been lazily flipped yet; every other
+ * status (confirmed/completed/cancelled/expired itself) passes through
+ * unchanged.
+ */
+export function effectiveBookingStatus(booking: Pick<Booking, "booking_status" | "hold_expires_at">): BookingStatus {
+  if (isHoldExpired(booking)) return "expired";
+  return booking.booking_status as BookingStatus;
 }
 
 /**
@@ -177,12 +199,50 @@ export type AdminBookingListRow = {
 const ADMIN_BOOKINGS_PAGE_LIMIT = 50;
 
 /**
+ * A raw booking_status tab can also be reached by a row whose EFFECTIVE
+ * status (effectiveBookingStatus() above) differs from its raw column --
+ * only 'held'/'awaiting_payment' rows can become effectively 'expired'
+ * (spec section 33: no cron), so those are exactly the raw statuses that
+ * must be fetched, then re-classified in JS, when the requested tab is
+ * one of 'held', 'awaiting_payment', or 'expired'. Every other tab
+ * (confirmed/completed/cancelled) is unaffected and queried as-is.
+ */
+function rawStatusesToFetchForTab(tab: AdminBookingTab): BookingStatus[] | null {
+  switch (tab) {
+    case "all":
+      return null; // no filter
+    case "held":
+    case "awaiting_payment":
+      return [tab];
+    case "expired":
+      return ["expired", "held", "awaiting_payment"];
+    default:
+      return [tab];
+  }
+}
+
+/**
  * Admin booking list (spec section 39) -- one status tab at a time, plus a
  * plain booking-reference search (spec: "search at minimum by booking
  * reference"), same "no fake counts, no complex filtering" posture as the
  * existing admin expert/payment queues. Nested embeds are hinted with
  * their constraint names for the same reason as getAdminPaymentList:
  * bookings carries more than one foreign key into profiles.
+ *
+ * Tabs/display use effectiveBookingStatus(), not the raw column, so an
+ * expired-but-not-yet-flipped held/awaiting_payment reservation shows up
+ * under "Expired" everywhere here, never lingering under "Held" /
+ * "Awaiting Payment" -- the same correction the customer/expert
+ * dashboards already apply via DerivedSessionState, reusing the one
+ * shared isHoldExpired() check rather than a second implementation.
+ *
+ * Because the effective-status tabs (held/awaiting_payment/expired) are
+ * filtered in JS after a broadened raw-status fetch, a tab can return
+ * fewer than ADMIN_BOOKINGS_PAGE_LIMIT rows even if more exist beyond
+ * that fetch's page -- an accepted limitation of this "no fake counts,
+ * no complex filtering" support view, not a correctness issue (the
+ * fetch is ordered newest-first, so the most relevant rows are the ones
+ * on this page).
  */
 export async function getAdminBookingList(
   supabase: TypedClient,
@@ -192,14 +252,15 @@ export async function getAdminBookingList(
   let query = supabase
     .from("bookings")
     .select(
-      `id, booking_reference, start_at, duration_minutes, session_format, booking_status,
+      `id, booking_reference, start_at, duration_minutes, session_format, booking_status, hold_expires_at,
        profiles!bookings_customer_id_fkey(full_name),
        expert_profiles!bookings_expert_profile_id_fkey(profiles!expert_profiles_user_id_fkey(full_name))`,
     )
     .order("created_at", { ascending: false })
     .limit(ADMIN_BOOKINGS_PAGE_LIMIT);
 
-  if (tab !== "all") query = query.eq("booking_status", tab);
+  const rawStatuses = rawStatusesToFetchForTab(tab);
+  if (rawStatuses) query = query.in("booking_status", rawStatuses);
 
   const term = search?.trim();
   if (term) query = query.ilike("booking_reference", `%${term}%`);
@@ -228,22 +289,24 @@ export async function getAdminBookingList(
     }
   }
 
-  return rows.map((row) => {
-    const customer = row.profiles as unknown as { full_name: string } | null;
-    const expertProfile = row.expert_profiles as unknown as { profiles: { full_name: string } | null } | null;
+  return rows
+    .map((row) => {
+      const customer = row.profiles as unknown as { full_name: string } | null;
+      const expertProfile = row.expert_profiles as unknown as { profiles: { full_name: string } | null } | null;
 
-    return {
-      id: row.id,
-      bookingReference: row.booking_reference,
-      customerName: customer?.full_name ?? "Unknown",
-      expertName: expertProfile?.profiles?.full_name ?? "Unknown",
-      startAt: row.start_at,
-      durationMinutes: row.duration_minutes,
-      sessionFormat: row.session_format as SessionFormat,
-      bookingStatus: row.booking_status as BookingStatus,
-      latestPaymentStatus: latestPaymentStatusByBooking.get(row.id) ?? null,
-    };
-  });
+      return {
+        id: row.id,
+        bookingReference: row.booking_reference,
+        customerName: customer?.full_name ?? "Unknown",
+        expertName: expertProfile?.profiles?.full_name ?? "Unknown",
+        startAt: row.start_at,
+        durationMinutes: row.duration_minutes,
+        sessionFormat: row.session_format as SessionFormat,
+        bookingStatus: effectiveBookingStatus(row),
+        latestPaymentStatus: latestPaymentStatusByBooking.get(row.id) ?? null,
+      };
+    })
+    .filter((row) => tab === "all" || row.bookingStatus === tab);
 }
 
 export type AdminBookingDetail = {

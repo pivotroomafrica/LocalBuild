@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { ensureTestFixtures, cleanupBooking, createAdminClient } from "../fixtures/supabase-admin";
+import { ensureTestFixtures, cleanupBooking, createAdminClient, backdateHoldExpiry } from "../fixtures/supabase-admin";
 import { loginAsFixture } from "../fixtures/auth";
 
 /**
@@ -197,5 +197,119 @@ test.describe("Dashboards: visibility and cross-user security", () => {
     await loginAsFixture(page, "expertB");
     const response = await page.goto(`/expert/sessions/${confirmedBookingReference}`);
     expect(response?.status()).toBe(404);
+  });
+});
+
+/**
+ * Admin booking list: hold-expiry-aware status (final Phase 7 polish fix).
+ *
+ * getAdminBookingList() (lib/booking/data.ts) used to filter/display by
+ * the raw `booking_status` column alone, so a held/awaiting_payment
+ * reservation whose `hold_expires_at` had already passed (spec section
+ * 33: no cron, only the next real mutation flips the column) could keep
+ * showing under "Held"/"Awaiting Payment" indefinitely even though the
+ * slot had already reopened everywhere else in the app. The fix reuses
+ * the same `isHoldExpired()` check the customer/expert dashboards
+ * already apply, via a new `effectiveBookingStatus()` helper -- these
+ * four tests are the exact scenarios named in that fix's requirements.
+ *
+ * Expiry is exercised deterministically via `backdateHoldExpiry()`
+ * (service-role client), not a real wait -- see e2e/README.md's
+ * "Time-based testing strategy".
+ */
+test.describe("Admin booking list: hold-expiry-aware status", () => {
+  let customerAId: string;
+  let expertAProfileId: string;
+  let expiredHeldBookingId: string;
+  let activeHeldBookingId: string;
+  let confirmedBookingId: string;
+
+  test.beforeAll(async () => {
+    const fixtures = await ensureTestFixtures();
+    customerAId = fixtures.customerA.userId;
+    expertAProfileId = fixtures.expertA.expertProfileId!;
+
+    const admin = createAdminClient();
+
+    async function insertBooking(reference: string, status: "held" | "confirmed", holdMinutesFromNow: number | null) {
+      const start = new Date();
+      start.setDate(start.getDate() + 8);
+      const end = new Date(start);
+      end.setMinutes(end.getMinutes() + 30);
+      const { data, error } = await admin
+        .from("bookings")
+        .insert({
+          booking_reference: reference,
+          customer_id: customerAId,
+          expert_profile_id: expertAProfileId,
+          duration_minutes: 30,
+          session_format: "online",
+          start_at: start.toISOString(),
+          end_at: end.toISOString(),
+          expert_timezone: "Africa/Addis_Ababa",
+          base_price: 25000,
+          currency: "ETB",
+          booking_status: status,
+          hold_expires_at:
+            holdMinutesFromNow === null ? null : new Date(Date.now() + holdMinutesFromNow * 60_000).toISOString(),
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      return data.id as string;
+    }
+
+    expiredHeldBookingId = await insertBooking(`E2EEXP${Date.now()}`.slice(0, 20).toUpperCase(), "held", 20);
+    activeHeldBookingId = await insertBooking(`E2EACT${Date.now()}`.slice(0, 20).toUpperCase(), "held", 20);
+    confirmedBookingId = await insertBooking(`E2ECONFB${Date.now()}`.slice(0, 20).toUpperCase(), "confirmed", null);
+
+    // Deterministic time-travel: backdate ONLY the first booking's hold
+    // past expiry, leaving the second genuinely active for comparison.
+    await backdateHoldExpiry(expiredHeldBookingId, 5 * 60);
+  });
+
+  test.afterAll(async () => {
+    await cleanupBooking(expiredHeldBookingId);
+    await cleanupBooking(activeHeldBookingId);
+    await cleanupBooking(confirmedBookingId);
+  });
+
+  test("expired held booking appears under the Expired tab", async ({ page }) => {
+    await loginAsFixture(page, "admin");
+    const admin = createAdminClient();
+    const { data } = await admin.from("bookings").select("booking_reference").eq("id", expiredHeldBookingId).single();
+
+    await page.goto("/admin/bookings?tab=expired");
+    await expect(page.getByText(data!.booking_reference)).toBeVisible();
+  });
+
+  test("expired held booking does NOT appear under the Held tab", async ({ page }) => {
+    await loginAsFixture(page, "admin");
+    const admin = createAdminClient();
+    const { data } = await admin.from("bookings").select("booking_reference").eq("id", expiredHeldBookingId).single();
+
+    await page.goto("/admin/bookings?tab=held");
+    await expect(page.getByText(data!.booking_reference)).toHaveCount(0);
+  });
+
+  test("a genuinely active held booking still appears under the Held tab", async ({ page }) => {
+    await loginAsFixture(page, "admin");
+    const admin = createAdminClient();
+    const { data } = await admin.from("bookings").select("booking_reference").eq("id", activeHeldBookingId).single();
+
+    await page.goto("/admin/bookings?tab=held");
+    await expect(page.getByText(data!.booking_reference)).toBeVisible();
+  });
+
+  test("a confirmed booking's tab membership is unaffected", async ({ page }) => {
+    await loginAsFixture(page, "admin");
+    const admin = createAdminClient();
+    const { data } = await admin.from("bookings").select("booking_reference").eq("id", confirmedBookingId).single();
+
+    await page.goto("/admin/bookings?tab=confirmed");
+    await expect(page.getByText(data!.booking_reference)).toBeVisible();
+
+    await page.goto("/admin/bookings?tab=expired");
+    await expect(page.getByText(data!.booking_reference)).toHaveCount(0);
   });
 });

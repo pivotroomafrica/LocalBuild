@@ -1715,6 +1715,23 @@ CRITICAL or HIGH findings anywhere in the system. Full matrix and
 verdict delivered as this task's completion report rather than
 duplicated here.
 
+**Final Phase 7 polish fix (post-audit):** `getAdminBookingList()`
+(`lib/booking/data.ts`) now uses the same hold-expiry-aware effective
+status the customer/expert dashboards already apply, instead of the raw
+`booking_status` column. A new `effectiveBookingStatus()` helper reuses
+the existing `isHoldExpired()` check (now widened to accept a minimal
+`Pick<Booking, "booking_status" | "hold_expires_at">` rather than a full
+row) -- there is still exactly one definition of "expired" in the
+codebase, not a second one. A held/awaiting_payment reservation whose
+`hold_expires_at` has already passed now correctly shows under
+"Expired" in `/admin/bookings`, in both its tab filter and its displayed
+status pill, instead of lingering under "Held"/"Awaiting Payment" until
+some unrelated action happens to flip the row. Confirmed/completed/
+cancelled bookings are unaffected. Covered by 4 new Playwright cases in
+`e2e/specs/dashboards.spec.ts` ("Admin booking list: hold-expiry-aware
+status") and verified live against PIVOTROOM-DEMO with a purpose-built
+fixture set. No migration needed -- read-side query fix only.
+
 ## Explicitly not implemented (future phases)
 
 **Availability (Phase 4) items, still standing:** raw recurrence text
