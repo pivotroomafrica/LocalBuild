@@ -10,9 +10,9 @@ import type { PaymentStatus } from "@/types/payment";
  * starts appearing in the same rows alongside manual transfers. */
 export default async function DashboardPaymentsPage() {
   const supabase = await createClient();
-  await requireCustomerPage(supabase, "/dashboard/payments");
+  const { userId } = await requireCustomerPage(supabase, "/dashboard/payments");
 
-  const rows = await getCustomerPaymentHistory(supabase);
+  const rows = await getCustomerPaymentHistory(supabase, userId);
 
   return (
     <div>

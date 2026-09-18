@@ -22,6 +22,12 @@ import { PAYMENT_STATUS_LABELS } from "@/types/payment";
  * booking_status genuinely reads 'confirmed' (spec sections 19, 47, 56)
  * -- that value is only ever written by verify_manual_payment() (038),
  * an admin-only, atomic transition.
+ *
+ * Ownership enforced both by RLS (bookings_select_own, 033) and an
+ * explicit `customer_id === user.id` re-check -- a reference reachable
+ * only through some OTHER permissive policy (e.g. this same account being
+ * the expert on that booking, bookings_select_own_expert, 039) resolves
+ * to notFound() here, same as one that doesn't exist.
  */
 export default async function BookingPaymentPage({
   params,
@@ -37,7 +43,7 @@ export default async function BookingPaymentPage({
   if (!user) redirect(`/auth/login?next=${encodeURIComponent(`/booking/${reference}/payment`)}`);
 
   const booking = await getBookingByReference(supabase, reference);
-  if (!booking) notFound();
+  if (!booking || booking.customer_id !== user.id) notFound();
 
   if (booking.booking_status === "confirmed") {
     const expertSlug = await getExpertSlugForBooking(supabase, booking.id);

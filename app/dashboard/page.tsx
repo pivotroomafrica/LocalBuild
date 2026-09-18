@@ -12,9 +12,9 @@ import { SESSION_FORMAT_LABELS } from "@/types/booking";
  * booking, never the customer's full booking history. */
 export default async function DashboardOverviewPage() {
   const supabase = await createClient();
-  await requireCustomerPage(supabase, "/dashboard");
+  const { userId } = await requireCustomerPage(supabase, "/dashboard");
 
-  const { nextConfirmedSession, actionablePendingSession } = await getDashboardOverview(supabase);
+  const { nextConfirmedSession, actionablePendingSession } = await getDashboardOverview(supabase, userId);
 
   const hasNothing = !nextConfirmedSession && !actionablePendingSession;
 

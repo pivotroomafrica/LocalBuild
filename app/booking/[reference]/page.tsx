@@ -14,12 +14,16 @@ import { FormMessage } from "@/components/ui/FormMessage";
 
 /**
  * The booking journey for one specific hold -- ownership enforced by RLS
- * (bookings_select_own, 033) so a reference belonging to another customer
- * resolves to notFound() here, never a 403 that would confirm the
- * reference exists (spec section 60). Not in middleware.ts's
- * PROTECTED_PREFIXES (booking selection itself is public, spec section
- * 26), so this page enforces auth itself, same pattern as
- * requireApprovedExpertPage in lib/availability/data.ts.
+ * (bookings_select_own, 033) AND an explicit `customer_id === user.id`
+ * re-check below, so a reference belonging to another customer, or one
+ * only reachable through some OTHER permissive policy (e.g. this same
+ * account being the EXPERT on that booking -- bookings_select_own_expert,
+ * 039, is also a permissive policy on the same table), resolves to
+ * notFound() here, never a 403 that would confirm the reference exists
+ * (spec section 60). Not in middleware.ts's PROTECTED_PREFIXES (booking
+ * selection itself is public, spec section 26), so this page enforces
+ * auth itself, same pattern as requireApprovedExpertPage in
+ * lib/expert/auth.ts.
  */
 export default async function BookingReferencePage({
   params,
@@ -35,7 +39,7 @@ export default async function BookingReferencePage({
   if (!user) redirect(`/auth/login?next=${encodeURIComponent(`/booking/${reference}`)}`);
 
   const booking = await getBookingByReference(supabase, reference);
-  if (!booking) notFound();
+  if (!booking || booking.customer_id !== user.id) notFound();
 
   if (isHoldExpired(booking)) {
     const expertSlug = await getExpertSlugForBooking(supabase, booking.id);

@@ -8,10 +8,12 @@ import { SESSION_FORMAT_LABELS } from "@/types/booking";
 import type { PaymentStatus } from "@/types/payment";
 
 /**
- * Session detail (spec sections 12-14). Ownership is enforced entirely by
- * RLS inside getCustomerSessionDetail -- a reference belonging to another
- * customer resolves to notFound() here, the same response as a reference
- * that doesn't exist at all (spec section 52).
+ * Session detail (spec sections 12-14). Ownership is enforced both by RLS
+ * and by an explicit customer_id check inside getCustomerSessionDetail --
+ * a reference belonging to another customer, or one only reachable
+ * through some other permissive policy, resolves to notFound() here, the
+ * same response as a reference that doesn't exist at all (spec section
+ * 52).
  *
  * Never shows a fake meeting URL or address -- Phase 7 builds no Google
  * Meet/Calendar/Zoom integration and no in-person location field, so this
@@ -24,9 +26,9 @@ export default async function DashboardSessionDetailPage({
 }) {
   const { reference } = await params;
   const supabase = await createClient();
-  await requireCustomerPage(supabase, `/dashboard/sessions/${reference}`);
+  const { userId } = await requireCustomerPage(supabase, `/dashboard/sessions/${reference}`);
 
-  const detail = await getCustomerSessionDetail(supabase, reference);
+  const detail = await getCustomerSessionDetail(supabase, userId, reference);
   if (!detail) notFound();
 
   const { booking, intake, payments, derivedState } = detail;

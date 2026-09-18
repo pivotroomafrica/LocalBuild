@@ -10,13 +10,19 @@ import { EXPERT_EXPERIENCE_RANGE_LABELS, type ExpertExperienceRange } from "@/ty
 
 /**
  * Expert-facing session detail (spec sections 24-31, 55). Ownership and
- * confirmed/completed status are enforced entirely inside
- * getExpertSessionDetail (bookings_select_own_expert + booking_intake_
- * select_expert, both 039) -- a booking that isn't this expert's, or
- * hasn't reached confirmed/completed, resolves to notFound() here exactly
- * like a reference that doesn't exist at all (spec section 52). This
- * blocks the expert's own held/awaiting_payment bookings from this page
- * too, not just the list.
+ * confirmed/completed status are enforced THREE ways: RLS
+ * (bookings_select_own_expert + booking_intake_select_expert, both 039),
+ * an explicit application-layer re-check inside getExpertSessionDetail
+ * (booking.expert_profile_id === this expert's own expertProfileId AND
+ * booking_status in ('confirmed','completed')), and get_customer_context_
+ * for_booking()'s own internal re-validation for the customer projection
+ * -- a booking that isn't this expert's, or hasn't reached
+ * confirmed/completed, resolves to notFound() here exactly like a
+ * reference that doesn't exist at all (spec section 52). This blocks the
+ * expert's own held/awaiting_payment bookings from this page too, not
+ * just the list, and also blocks a booking that only became reachable
+ * through some OTHER permissive policy (e.g. this same account being the
+ * CUSTOMER on it).
  *
  * Shows only what get_customer_context_for_booking() (039) returns --
  * name, role, employment type, company, industry, years of experience,
@@ -31,9 +37,9 @@ export default async function ExpertSessionDetailPage({
 }) {
   const { reference } = await params;
   const supabase = await createClient();
-  await requireApprovedExpertPage(supabase, `/expert/sessions/${reference}`);
+  const { expertProfileId } = await requireApprovedExpertPage(supabase, `/expert/sessions/${reference}`);
 
-  const detail = await getExpertSessionDetail(supabase, reference);
+  const detail = await getExpertSessionDetail(supabase, expertProfileId, reference);
   if (!detail) notFound();
 
   const { booking, intake, customer } = detail;

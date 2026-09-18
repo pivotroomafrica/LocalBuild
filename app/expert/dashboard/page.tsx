@@ -10,14 +10,17 @@ import { SESSION_FORMAT_LABELS } from "@/types/booking";
 /**
  * Expert dashboard overview (spec sections 20-23) -- just the next
  * confirmed session. An expert never sees a held/awaiting_payment/expired
- * booking here at all (spec section 25): getExpertNextSession only reads
- * rows bookings_select_own_expert (039) already restricts to confirmed.
+ * booking here at all (spec section 25): getExpertNextSession explicitly
+ * filters on this expert's own expertProfileId AND booking_status =
+ * 'confirmed', in addition to (never instead of) bookings_select_own_
+ * expert (039) -- see the function's own comment for why RLS alone isn't
+ * sufficient for a dual-identity account.
  */
 export default async function ExpertDashboardPage() {
   const supabase = await createClient();
-  await requireApprovedExpertPage(supabase, "/expert/dashboard");
+  const { expertProfileId } = await requireApprovedExpertPage(supabase, "/expert/dashboard");
 
-  const nextSession = await getExpertNextSession(supabase);
+  const nextSession = await getExpertNextSession(supabase, expertProfileId);
 
   return (
     <div>

@@ -4,13 +4,16 @@ import { getExpertSessions } from "@/lib/expert/sessions";
 import { ExpertOperationsNav } from "@/components/layout/ExpertOperationsNav";
 import { ExpertSessionCard } from "@/components/session/ExpertSessionCard";
 
-/** Expert Sessions (spec section 25) -- confirmed/completed sessions only,
- * enforced by bookings_select_own_expert (039), not by filtering here. */
+/** Expert Sessions (spec section 25) -- confirmed/completed sessions only
+ * for this expert's own expertProfileId, enforced by an explicit filter
+ * in getExpertSessions in addition to bookings_select_own_expert (039) --
+ * see that function's own comment for why RLS alone isn't sufficient for
+ * a dual-identity account. */
 export default async function ExpertSessionsPage() {
   const supabase = await createClient();
-  await requireApprovedExpertPage(supabase, "/expert/sessions");
+  const { expertProfileId } = await requireApprovedExpertPage(supabase, "/expert/sessions");
 
-  const sessions = await getExpertSessions(supabase);
+  const sessions = await getExpertSessions(supabase, expertProfileId);
 
   return (
     <div>

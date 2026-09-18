@@ -846,6 +846,15 @@ export type Database = {
           years_experience_range: string
         }[]
       }
+      get_expert_context_for_booking: {
+        Args: { p_booking_id: string }
+        Returns: {
+          full_name: string
+          headline: string
+          profile_image_path: string
+          slug: string
+        }[]
+      }
       get_expert_directory_public: {
         Args: never
         Returns: {
@@ -900,6 +909,10 @@ export type Database = {
         Returns: string
       }
       is_admin: { Args: never; Returns: boolean }
+      is_booked_expert_photo: {
+        Args: { object_name: string }
+        Returns: boolean
+      }
       is_published_expert_photo: {
         Args: { object_name: string }
         Returns: boolean

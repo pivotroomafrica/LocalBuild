@@ -4,9 +4,9 @@ import type { Database } from "@/types/database";
 import type { Booking, BookingIntake, BookingStatus, SessionFormat } from "@/types/booking";
 import type { Payment, PaymentStatus } from "@/types/payment";
 import { deriveSessionState, sessionTabForState, type DerivedSessionState, type SessionTab } from "@/types/session";
-import { getBookingByReference, getBookingIntake, getExpertSlugForBooking, isHoldExpired } from "@/lib/booking/data";
+import { getBookingIntake, isHoldExpired } from "@/lib/booking/data";
 import { getPaymentsForBooking, getLatestPaymentForBooking } from "@/lib/payment/data";
-import { getPublicExpertProfile } from "@/lib/public/data";
+import { getExpertPhotoUrl } from "@/lib/expert/data";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -57,18 +57,24 @@ function effectiveDerivedState(booking: Booking, latestPaymentStatus: PaymentSta
 
 /**
  * Resolves display info (name/slug/photo) for the distinct experts behind
- * a set of bookings -- one get_expert_slug_for_booking + one
- * get_expert_profile_public call per UNIQUE expert, never per booking
- * (spec section 68: don't over-fetch). Raw expert_profiles rows are never
- * selected directly here: RLS only grants that table to the owning expert
- * or an admin (010/013), so a customer's only legitimate path to an
- * expert's name is the same public-profile RPC pair the Phase 5 booking
- * journey already uses.
+ * a set of bookings -- one get_expert_context_for_booking() call per
+ * UNIQUE expert, never per booking (spec section 68: don't over-fetch).
+ *
+ * Browser-test repair: this used to go through get_expert_slug_for_booking
+ * + the PUBLIC get_expert_profile_public() RPC, which intentionally
+ * returns nothing for a non-published expert -- correct for the public
+ * directory, wrong here, since an existing booking must keep showing its
+ * expert even after that expert is later suspended/unpublished (that was
+ * the reported "Unknown Expert" bug). get_expert_context_for_booking()
+ * (040) is gated purely on booking ownership (customer_id = auth.uid()),
+ * not publish status, so it doesn't have that gap. Raw expert_profiles
+ * rows are still never selected directly: RLS only grants that table to
+ * the owning expert or an admin (010/013).
  */
 async function getExpertDisplayMapForBookings(
   supabase: TypedClient,
   bookings: Booking[],
-): Promise<Map<string, { slug: string; fullName: string; photoUrl: string | null }>> {
+): Promise<Map<string, { slug: string | null; fullName: string; photoUrl: string | null }>> {
   const oneBookingIdPerExpert = new Map<string, string>();
   for (const booking of bookings) {
     if (!oneBookingIdPerExpert.has(booking.expert_profile_id)) {
@@ -78,11 +84,15 @@ async function getExpertDisplayMapForBookings(
 
   const entries = await Promise.all(
     Array.from(oneBookingIdPerExpert.entries()).map(async ([expertProfileId, bookingId]) => {
-      const slug = await getExpertSlugForBooking(supabase, bookingId);
-      if (!slug) return null;
-      const profile = await getPublicExpertProfile(supabase, slug);
-      if (!profile) return null;
-      return [expertProfileId, { slug, fullName: profile.fullName, photoUrl: profile.photoUrl }] as const;
+      const { data } = await supabase
+        .rpc("get_expert_context_for_booking", { p_booking_id: bookingId })
+        .maybeSingle();
+      if (!data) return null;
+      const photoUrl = await getExpertPhotoUrl(supabase, data.profile_image_path);
+      return [
+        expertProfileId,
+        { slug: data.slug ?? null, fullName: data.full_name ?? "Unknown expert", photoUrl },
+      ] as const;
     }),
   );
 
@@ -91,7 +101,7 @@ async function getExpertDisplayMapForBookings(
 
 function toSessionSummary(
   booking: Booking,
-  expertMap: Map<string, { slug: string; fullName: string; photoUrl: string | null }>,
+  expertMap: Map<string, { slug: string | null; fullName: string; photoUrl: string | null }>,
   latestPaymentStatus: PaymentStatus | null,
 ): CustomerSessionSummary {
   const expert = expertMap.get(booking.expert_profile_id);
@@ -112,17 +122,33 @@ function toSessionSummary(
 
 const SESSIONS_PAGE_LIMIT = 30;
 
-/** Every booking the caller owns (bookings_select_own, 033), bounded to one
- * page (spec section 68: list pages paginate/limit). Latest payment status
- * is fetched in one batched query for just the awaiting_payment rows,
- * never one query per booking. */
-async function getOwnBookingsWithLatestPayments(supabase: TypedClient): Promise<{
+/**
+ * Every booking the caller owns, bounded to one page (spec section 68:
+ * list pages paginate/limit). Latest payment status is fetched in one
+ * batched query for just the awaiting_payment rows, never one query per
+ * booking.
+ *
+ * Browser-test repair: explicitly filters `.eq("customer_id", userId)`
+ * instead of a bare `select *` relying on RLS alone. Permissive RLS
+ * policies are OR'd together -- for a dual-identity account (customer on
+ * some bookings, ALSO an expert who owns other bookings, or an admin), a
+ * bare select would additionally return rows visible only via
+ * bookings_select_own_expert or bookings_select_admin, which don't belong
+ * on a "my own bookings as a customer" page. RLS still independently
+ * enforces the same boundary underneath; this is defense-in-depth, not a
+ * replacement for it.
+ */
+async function getOwnBookingsWithLatestPayments(
+  supabase: TypedClient,
+  userId: string,
+): Promise<{
   bookings: Booking[];
   latestPaymentStatusByBooking: Map<string, PaymentStatus>;
 }> {
   const { data } = await supabase
     .from("bookings")
     .select("*")
+    .eq("customer_id", userId)
     .order("start_at", { ascending: false })
     .limit(SESSIONS_PAGE_LIMIT);
 
@@ -149,8 +175,12 @@ async function getOwnBookingsWithLatestPayments(supabase: TypedClient): Promise<
 
 /** My Sessions (spec section 6) -- Upcoming/Pending/Past, derived purely
  * from DerivedSessionState, never the raw booking_status column. */
-export async function getCustomerSessions(supabase: TypedClient, tab: SessionTab): Promise<CustomerSessionSummary[]> {
-  const { bookings, latestPaymentStatusByBooking } = await getOwnBookingsWithLatestPayments(supabase);
+export async function getCustomerSessions(
+  supabase: TypedClient,
+  userId: string,
+  tab: SessionTab,
+): Promise<CustomerSessionSummary[]> {
+  const { bookings, latestPaymentStatusByBooking } = await getOwnBookingsWithLatestPayments(supabase, userId);
   const expertMap = await getExpertDisplayMapForBookings(supabase, bookings);
 
   const summaries = bookings
@@ -171,14 +201,18 @@ const PENDING_CANDIDATE_LIMIT = 5;
 /** Dashboard overview (spec sections 6-8) -- prioritizes the next
  * confirmed session plus the single most relevant actionable pending
  * booking. Fetches only what's needed for those two cards, never the
- * customer's full booking history (spec section 68). */
-export async function getDashboardOverview(supabase: TypedClient): Promise<DashboardOverview> {
+ * customer's full booking history (spec section 68). Both queries
+ * explicitly filter `.eq("customer_id", userId)` -- see the comment on
+ * getOwnBookingsWithLatestPayments for why that can't be left to RLS
+ * alone. */
+export async function getDashboardOverview(supabase: TypedClient, userId: string): Promise<DashboardOverview> {
   const nowIso = new Date().toISOString();
 
   const [{ data: nextConfirmed }, { data: pendingCandidates }] = await Promise.all([
     supabase
       .from("bookings")
       .select("*")
+      .eq("customer_id", userId)
       .eq("booking_status", "confirmed")
       .gt("start_at", nowIso)
       .order("start_at", { ascending: true })
@@ -187,6 +221,7 @@ export async function getDashboardOverview(supabase: TypedClient): Promise<Dashb
     supabase
       .from("bookings")
       .select("*")
+      .eq("customer_id", userId)
       .in("booking_status", ["held", "awaiting_payment"])
       .order("created_at", { ascending: false })
       .limit(PENDING_CANDIDATE_LIMIT),
@@ -221,32 +256,46 @@ export type CustomerSessionDetail = {
   derivedState: DerivedSessionState;
 };
 
-/** Session detail (spec sections 12-14) -- ownership enforced entirely by
- * bookings_select_own RLS: a reference belonging to another customer, or
- * one that doesn't exist, both resolve to null here, so the caller can
- * notFound() either way without distinguishing them (spec section 52). */
+/**
+ * Session detail (spec sections 12-14). Ownership is checked TWICE: RLS
+ * (bookings_select_own, 033) scopes what a bare `select` can even return,
+ * and this function additionally re-verifies `booking.customer_id ===
+ * userId` explicitly before using the row for anything -- the same
+ * defense-in-depth the expert-side detail page now applies (see
+ * lib/expert/sessions.ts), so a booking that only became reachable
+ * through some OTHER permissive policy (e.g. this same account is also
+ * the expert on it) can never be mistaken for the caller's own customer
+ * booking. Either kind of mismatch resolves to null here exactly like a
+ * reference that doesn't exist (spec section 52).
+ */
 export async function getCustomerSessionDetail(
   supabase: TypedClient,
+  userId: string,
   reference: string,
 ): Promise<CustomerSessionDetail | null> {
-  const booking = await getBookingByReference(supabase, reference);
-  if (!booking) return null;
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("*")
+    .eq("booking_reference", reference)
+    .maybeSingle();
 
-  const [intake, payments, expertSlug] = await Promise.all([
+  if (!booking || booking.customer_id !== userId) return null;
+
+  const [intake, payments, expertMap] = await Promise.all([
     getBookingIntake(supabase, booking.id),
     getPaymentsForBooking(supabase, booking.id),
-    getExpertSlugForBooking(supabase, booking.id),
+    getExpertDisplayMapForBookings(supabase, [booking]),
   ]);
 
-  const expertProfile = expertSlug ? await getPublicExpertProfile(supabase, expertSlug) : null;
+  const expert = expertMap.get(booking.expert_profile_id);
   const latestPaymentStatus = (payments[0]?.payment_status as PaymentStatus | undefined) ?? null;
 
   return {
     booking,
     intake,
-    expertName: expertProfile?.fullName ?? "Unknown expert",
-    expertSlug,
-    expertPhotoUrl: expertProfile?.photoUrl ?? null,
+    expertName: expert?.fullName ?? "Unknown expert",
+    expertSlug: expert?.slug ?? null,
+    expertPhotoUrl: expert?.photoUrl ?? null,
     payments,
     derivedState: effectiveDerivedState(booking, latestPaymentStatus),
   };
@@ -261,12 +310,19 @@ export type CustomerPaymentHistoryRow = {
 const PAYMENT_HISTORY_LIMIT = 50;
 
 /** Payment history (spec section 15) -- reads the generic `payments` table
- * directly (payments_select_own, 037) so this needs no change when a
- * future Chapa payment_method starts appearing in the same rows. */
-export async function getCustomerPaymentHistory(supabase: TypedClient): Promise<CustomerPaymentHistoryRow[]> {
+ * directly, filtered explicitly by `.eq("customer_id", userId)` (same
+ * defense-in-depth reasoning as the booking queries above -- payments has
+ * its own payments_select_admin policy an admin dual-identity account
+ * could otherwise pull in). Method-agnostic, so this needs no change when
+ * a future Chapa payment_method starts appearing in the same rows. */
+export async function getCustomerPaymentHistory(
+  supabase: TypedClient,
+  userId: string,
+): Promise<CustomerPaymentHistoryRow[]> {
   const { data: payments } = await supabase
     .from("payments")
     .select("*")
+    .eq("customer_id", userId)
     .order("submitted_at", { ascending: false })
     .limit(PAYMENT_HISTORY_LIMIT);
 

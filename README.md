@@ -993,13 +993,16 @@ lib/
                auth.ts (requireApprovedExpertPage -- generalized in Phase 7
                to take the current path instead of a hardcoded redirect),
                sessions.ts (confirmed/completed session reads +
-               get_customer_context_for_booking wrapper, Phase 7),
+               get_customer_context_for_booking wrapper, Phase 7 --
+               explicitly filters expert_profile_id/booking_status in
+               addition to RLS, browser-test repair migration 040),
                presentation.ts (expert-timezone-aware date formatting, Phase 7)
   dashboard/   presentation.ts (derived-state date formatting + the one
                next-action mapping), data.ts (requireCustomerPage, overview/
                My Sessions/session-detail/payment-history reads -- batches
-               expert-name lookups per unique expert, never per booking,
-               Phase 7)
+               expert-name lookups per unique expert via get_expert_
+               context_for_booking (040), never per booking; every query
+               explicitly filters customer_id in addition to RLS, Phase 7)
   admin/       data.ts (requireAdminPage/requireAdminForAction, expert list/
                detail reads), actions.ts (review + publish server actions)
   public/      data.ts (public directory/profile reads through the 3
@@ -1055,7 +1058,10 @@ supabase/
                day-of-month + overrides model, 031 the pre-Phase-5
                public-data-functions repair, 032-035 the Phase 5 booking
                engine, 036-038 the Phase 6 manual-payment engine, 039 the
-               Phase 7 expert session-access RLS + customer-context function)
+               Phase 7 expert session-access RLS + customer-context
+               function, 040 the Phase 7 browser-test repair --
+               get_expert_context_for_booking() + the booked-customer
+               photo storage policy)
   seed.sql     industries + expertise categories
 proxy.ts       Next.js 16's renamed middleware convention (route protection
                + session refresh) — protects /dashboard, /expert, /dev,
@@ -1417,6 +1423,52 @@ rebuild or merge the two.
 matching every earlier phase's posture: a session reference belonging to
 someone else, or a booking that doesn't exist at all, are indistinguishable
 responses.
+
+**Browser-test repair (migration 040):** three real bugs, all around
+dual-identity accounts (one person who is both a customer and a published
+expert), found by actually clicking through the shipped Phase 7 UI rather
+than only live SQL testing:
+
+1. *"Unknown Expert" on the customer dashboard.* The original expert
+   resolution went through the PUBLIC directory RPC pair (`get_expert_
+   slug_for_booking` + `get_expert_profile_public`), which intentionally
+   returns nothing for a non-published expert -- correct for `/experts`,
+   wrong for an existing booking, which must keep showing its expert
+   regardless of that expert's current publish state. Fixed with a new
+   booking-ownership-gated function, `get_expert_context_for_booking()`
+   (040), plus a matching storage policy for the photo.
+2. *Expert dashboard showing the wrong identity* and 3. *an
+   awaiting_payment booking visible to the expert* were the same root
+   cause, not two bugs: `lib/expert/sessions.ts`'s three reads
+   (`getExpertSessions`/`getExpertNextSession`/`getExpertSessionDetail`)
+   ran a bare `select *` against `bookings`, trusting `bookings_select_
+   own_expert` (039) alone to scope the result. Permissive RLS policies
+   are OR'd together, and `bookings_select_own` (033, no status filter at
+   all) is *also* permissive for the same caller whenever they happen to
+   be the CUSTOMER on some other booking -- exactly the dual-identity
+   case. Fixed by adding explicit `expert_profile_id = <this expert's own
+   id>` and `booking_status IN ('confirmed','completed')` filters in
+   application code, in addition to (never instead of) RLS; the detail
+   read additionally re-verifies both conditions again after the fetch,
+   returning `notFound()` on any mismatch rather than trusting the row
+   RLS let through. The identical defense-in-depth filter was added to
+   the customer-side reads in `lib/dashboard/data.ts` (explicit
+   `customer_id = userId` everywhere) and, as the same vulnerability
+   class, to the Phase 5/6 `/booking/[reference]` and `/booking/
+   [reference]/payment` pages (an explicit `booking.customer_id ===
+   user.id` re-check after the RLS-scoped fetch).
+
+Live-tested against PIVOTROOM-DEMO with two genuinely distinct real
+accounts (not a temporarily-edited single dual-identity row this time):
+an awaiting_payment booking is visible on its owner's customer dashboard
+and absent from every expert query; a confirmed booking is visible on its
+expert's `/expert/sessions` and correctly resolves the actual customer's
+name, never the expert's own; a customer's booking with a *different*
+expert_profile_id is absent from the first expert's session list; and
+`get_expert_context_for_booking()` keeps resolving the correct expert
+even after that expert was temporarily suspended, confirmed via both the
+function directly and the storage photo policy. All temporary test data
+was restored to its original state immediately after.
 
 ## Explicitly not implemented (future phases)
 

@@ -32,9 +32,9 @@ export default async function DashboardSessionsPage({
   const tab: SessionTab = isValidTab(params.tab) ? params.tab : "upcoming";
 
   const supabase = await createClient();
-  await requireCustomerPage(supabase, "/dashboard/sessions");
+  const { userId } = await requireCustomerPage(supabase, "/dashboard/sessions");
 
-  const sessions = await getCustomerSessions(supabase, tab);
+  const sessions = await getCustomerSessions(supabase, userId, tab);
 
   return (
     <div>
