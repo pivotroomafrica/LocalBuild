@@ -69,6 +69,24 @@ export default async function ExpertSessionDetailPage({
           />
           <Field label="Booking reference" value={booking.booking_reference} />
         </dl>
+        <div className="mt-3 text-xs text-[var(--color-text-muted)]">
+          {booking.session_format === "online" ? (
+            booking.calendar_meeting_url ? (
+              <a
+                href={booking.calendar_meeting_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-medium text-[var(--color-brand)] hover:underline"
+              >
+                Join Google Meet
+              </a>
+            ) : (
+              "Meeting details are being prepared."
+            )
+          ) : (
+            "Meeting location will be provided separately."
+          )}
+        </div>
       </section>
 
       {customer ? (

@@ -15,9 +15,13 @@ import type { PaymentStatus } from "@/types/payment";
  * same response as a reference that doesn't exist at all (spec section
  * 52).
  *
- * Never shows a fake meeting URL or address -- Phase 7 builds no Google
- * Meet/Calendar/Zoom integration and no in-person location field, so this
- * always shows a plain "will be provided" note instead of inventing one.
+ * Never shows a fake meeting URL -- booking.calendar_meeting_url (Phase 9,
+ * 044) only ever gets a real Google Meet link the calendar_create job
+ * actually received from Google, and only for an online session; until
+ * then (or for in-person, which never gets one) this shows a plain
+ * "being prepared"/"will be provided" note instead of inventing one.
+ * There is still no in-person location field, so that side is unchanged
+ * from Phase 7.
  */
 export default async function DashboardSessionDetailPage({
   params,
@@ -66,11 +70,26 @@ export default async function DashboardSessionDetailPage({
           />
           <Field label="Booking reference" value={booking.booking_reference} />
         </dl>
-        <p className="mt-3 text-xs text-[var(--color-text-muted)]">
-          {booking.session_format === "online"
-            ? "Meeting details will appear here before your session."
-            : "Meeting location will be provided before your session."}
-        </p>
+        <div className="mt-3 text-xs text-[var(--color-text-muted)]">
+          {booking.session_format === "online" ? (
+            booking.calendar_meeting_url ? (
+              <a
+                href={booking.calendar_meeting_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-medium text-[var(--color-brand)] hover:underline"
+              >
+                Join Google Meet
+              </a>
+            ) : booking.booking_status === "confirmed" ? (
+              "Meeting details are being prepared."
+            ) : (
+              "Meeting details will appear here before your session."
+            )
+          ) : (
+            "Meeting location will be provided before your session."
+          )}
+        </div>
       </section>
 
       {intake ? (

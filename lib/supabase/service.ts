@@ -11,11 +11,17 @@ import type { Database } from "@/types/database";
  * granted EXECUTE to service_role only -- never anon/authenticated.
  *
  * Never imported from a "use client" file or any code path reachable
- * from the browser. Only used to call the narrow, purpose-built
- * SECURITY DEFINER functions that expect a service-role caller
- * (finalize_chapa_payment) -- never used to bypass RLS for a general
- * table read/write that a real user session should be going through
- * instead.
+ * from the browser. Used for two purposes: calling the narrow,
+ * purpose-built SECURITY DEFINER functions that expect a service-role
+ * caller (finalize_chapa_payment, 042), and -- as of Phase 9 -- the
+ * integration_jobs worker (lib/jobs/*), which also has no user session
+ * (a cron-triggered HTTP call has no cookies either) and legitimately
+ * needs to read/claim/complete outbox rows and write bookings.calendar_*
+ * state directly, since no real user should ever be able to do either of
+ * those (integration_jobs has no authenticated-role grant at all, and
+ * calendar_* columns are never client-writable). Never used to bypass
+ * RLS for a table read/write a real user session should be going
+ * through instead.
  */
 export function createServiceRoleClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

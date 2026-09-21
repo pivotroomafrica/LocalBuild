@@ -344,3 +344,54 @@ export async function restoreExpertAction(
   revalidateExpertPages(expertProfileId);
   return { success: true };
 }
+
+/**
+ * Phase 9 (spec section 33) -- retries one FAILED integration_jobs row.
+ * admin_retry_integration_job() (044) itself re-checks is_admin() and
+ * status = 'failed' server-side regardless of what this action assumes;
+ * a job that isn't currently failed (already retried by someone else,
+ * already completed) is a safe no-op there, not an error here.
+ */
+export async function adminRetryIntegrationJobAction(
+  _prevState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const supabase = await createClient();
+  const auth = await requireAdminForAction(supabase);
+  if (!auth.ok) return { error: auth.error };
+
+  const jobId = String(formData.get("job_id") ?? "");
+  const bookingReference = String(formData.get("booking_reference") ?? "");
+  if (!jobId) return { error: GENERIC_ERROR };
+
+  const { error } = await supabase.rpc("admin_retry_integration_job", { p_job_id: jobId });
+  if (error) return { error: GENERIC_ERROR };
+
+  if (bookingReference) revalidatePath(`/admin/bookings/${bookingReference}`);
+  return { success: true };
+}
+
+/**
+ * Phase 9 (spec section 10) -- controlled backfill for a booking
+ * confirmed before Phase 9 shipped. Explicit, one booking at a time;
+ * admin_backfill_booking_integrations() (044) itself re-checks is_admin()
+ * and booking_status = 'confirmed'.
+ */
+export async function adminBackfillBookingIntegrationsAction(
+  _prevState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const supabase = await createClient();
+  const auth = await requireAdminForAction(supabase);
+  if (!auth.ok) return { error: auth.error };
+
+  const bookingId = String(formData.get("booking_id") ?? "");
+  const bookingReference = String(formData.get("booking_reference") ?? "");
+  if (!bookingId) return { error: GENERIC_ERROR };
+
+  const { error } = await supabase.rpc("admin_backfill_booking_integrations", { p_booking_id: bookingId });
+  if (error) return { error: error.message.includes("confirmed") ? error.message : GENERIC_ERROR };
+
+  if (bookingReference) revalidatePath(`/admin/bookings/${bookingReference}`);
+  return { success: true };
+}

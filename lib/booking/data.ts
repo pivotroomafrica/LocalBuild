@@ -3,6 +3,7 @@ import type { Database } from "@/types/database";
 import type { Booking, BookingIntake, BookableSlot, BookingStatus, SessionFormat } from "@/types/booking";
 import { BOOKING_STATUS_LABELS } from "@/types/booking";
 import type { Payment, PaymentStatus } from "@/types/payment";
+import type { IntegrationJobType, IntegrationJobStatus } from "@/types/notifications";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -309,6 +310,15 @@ export async function getAdminBookingList(
     .filter((row) => tab === "all" || row.bookingStatus === tab);
 }
 
+export type AdminIntegrationJobRow = {
+  id: string;
+  jobType: IntegrationJobType;
+  status: IntegrationJobStatus;
+  attemptCount: number;
+  lastError: string | null;
+  completedAt: string | null;
+};
+
 export type AdminBookingDetail = {
   booking: Booking;
   intake: BookingIntake | null;
@@ -316,6 +326,7 @@ export type AdminBookingDetail = {
   expertName: string;
   expertSlug: string | null;
   payments: Payment[];
+  integrationJobs: AdminIntegrationJobRow[];
 };
 
 /** Admin booking detail (spec section 39) -- booking + intake + payment
@@ -333,16 +344,26 @@ export async function getAdminBookingDetail(
     .maybeSingle();
   if (!booking) return null;
 
-  const [{ data: intake }, { data: customer }, { data: expertProfile }, { data: payments }] = await Promise.all([
-    supabase.from("booking_intake").select("*").eq("booking_id", booking.id).maybeSingle(),
-    supabase.from("profiles").select("full_name").eq("id", booking.customer_id).maybeSingle(),
-    supabase
-      .from("expert_profiles")
-      .select("slug, profiles!expert_profiles_user_id_fkey(full_name)")
-      .eq("id", booking.expert_profile_id)
-      .maybeSingle(),
-    supabase.from("payments").select("*").eq("booking_id", booking.id).order("submitted_at", { ascending: false }),
-  ]);
+  const [{ data: intake }, { data: customer }, { data: expertProfile }, { data: payments }, { data: jobs }] =
+    await Promise.all([
+      supabase.from("booking_intake").select("*").eq("booking_id", booking.id).maybeSingle(),
+      supabase.from("profiles").select("full_name").eq("id", booking.customer_id).maybeSingle(),
+      supabase
+        .from("expert_profiles")
+        .select("slug, profiles!expert_profiles_user_id_fkey(full_name)")
+        .eq("id", booking.expert_profile_id)
+        .maybeSingle(),
+      supabase.from("payments").select("*").eq("booking_id", booking.id).order("submitted_at", { ascending: false }),
+      // Phase 9 (spec section 32) -- integration_jobs_select_admin (044)
+      // is what actually scopes this to admins only; a non-admin caller
+      // of this same function would just get an empty array, same as any
+      // other admin-only read in this codebase.
+      supabase
+        .from("integration_jobs")
+        .select("id, job_type, status, attempt_count, last_error, completed_at")
+        .eq("booking_id", booking.id)
+        .order("created_at", { ascending: true }),
+    ]);
 
   const expertProfileTyped = expertProfile as unknown as {
     slug: string;
@@ -356,5 +377,13 @@ export async function getAdminBookingDetail(
     expertName: expertProfileTyped?.profiles?.full_name ?? "Unknown",
     expertSlug: expertProfileTyped?.slug ?? null,
     payments: payments ?? [],
+    integrationJobs: (jobs ?? []).map((job) => ({
+      id: job.id,
+      jobType: job.job_type as IntegrationJobType,
+      status: job.status as IntegrationJobStatus,
+      attemptCount: job.attempt_count,
+      lastError: job.last_error,
+      completedAt: job.completed_at,
+    })),
   };
 }

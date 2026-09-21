@@ -57,6 +57,10 @@ export type Database = {
           base_price: number
           booking_reference: string
           booking_status: string
+          calendar_event_id: string | null
+          calendar_meeting_url: string | null
+          calendar_sync_status: string
+          calendar_synced_at: string | null
           created_at: string
           currency: string
           customer_id: string
@@ -76,6 +80,10 @@ export type Database = {
           base_price: number
           booking_reference: string
           booking_status?: string
+          calendar_event_id?: string | null
+          calendar_meeting_url?: string | null
+          calendar_sync_status?: string
+          calendar_synced_at?: string | null
           created_at?: string
           currency?: string
           customer_id: string
@@ -95,6 +103,10 @@ export type Database = {
           base_price?: number
           booking_reference?: string
           booking_status?: string
+          calendar_event_id?: string | null
+          calendar_meeting_url?: string | null
+          calendar_sync_status?: string
+          calendar_synced_at?: string | null
           created_at?: string
           currency?: string
           customer_id?: string
@@ -612,6 +624,75 @@ export type Database = {
         }
         Relationships: []
       }
+      integration_jobs: {
+        Row: {
+          attempt_count: number
+          booking_id: string
+          completed_at: string | null
+          created_at: string
+          dedupe_key: string
+          id: string
+          job_type: string
+          last_attempt_at: string | null
+          last_error: string | null
+          payload: Json
+          payment_id: string | null
+          provider_id: string | null
+          scheduled_for: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          booking_id: string
+          completed_at?: string | null
+          created_at?: string
+          dedupe_key: string
+          id?: string
+          job_type: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          payload?: Json
+          payment_id?: string | null
+          provider_id?: string | null
+          scheduled_for?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          booking_id?: string
+          completed_at?: string | null
+          created_at?: string
+          dedupe_key?: string
+          id?: string
+          job_type?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          payload?: Json
+          payment_id?: string | null
+          provider_id?: string | null
+          scheduled_for?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_jobs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integration_jobs_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount_paid: number
@@ -766,8 +847,16 @@ export type Database = {
         }
         Returns: string
       }
+      admin_backfill_booking_integrations: {
+        Args: { p_booking_id: string }
+        Returns: undefined
+      }
       admin_release_booking_reservation: {
         Args: { p_booking_id: string }
+        Returns: undefined
+      }
+      admin_retry_integration_job: {
+        Args: { p_job_id: string }
         Returns: undefined
       }
       advance_booking_to_awaiting_payment: {
@@ -880,6 +969,25 @@ export type Database = {
           start_at: string
         }[]
       }
+      get_booking_notification_context: {
+        Args: { p_booking_id: string }
+        Returns: {
+          booking_reference: string
+          customer_email: string
+          customer_full_name: string
+          customer_id: string
+          customer_timezone: string
+          discussion_topic: string
+          duration_minutes: number
+          end_at: string
+          expert_email: string
+          expert_full_name: string
+          expert_timezone: string
+          expert_user_id: string
+          session_format: string
+          start_at: string
+        }[]
+      }
       get_customer_context_for_booking: {
         Args: { p_booking_id: string }
         Returns: {
@@ -954,6 +1062,7 @@ export type Database = {
         Args: { p_booking_id: string }
         Returns: string
       }
+      integration_max_attempts: { Args: never; Returns: number }
       is_admin: { Args: never; Returns: boolean }
       is_booked_expert_photo: {
         Args: { object_name: string }
@@ -973,6 +1082,14 @@ export type Database = {
         Returns: number
       }
       payment_rejection_grace_minutes: { Args: never; Returns: number }
+      register_booking_confirmation_jobs: {
+        Args: { p_booking_id: string }
+        Returns: undefined
+      }
+      register_payment_rejected_job: {
+        Args: { p_payment_id: string }
+        Returns: undefined
+      }
       reject_manual_payment: {
         Args: { p_payment_id: string; p_reason: string }
         Returns: undefined
@@ -1003,6 +1120,7 @@ export type Database = {
         }
         Returns: string
       }
+      session_reminder_offsets_minutes: { Args: never; Returns: number[] }
       set_expert_availability_timezone: {
         Args: { p_timezone: string }
         Returns: undefined
@@ -1184,3 +1302,9 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const

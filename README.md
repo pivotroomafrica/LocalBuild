@@ -1865,6 +1865,232 @@ paid manually" action (Chapa success is only ever established via the
 provider's own Verify Transaction API; an exceptional manual-resolution
 action for a `requires_review` payment was deliberately not built).
 
+## Transactional Notifications + Google Calendar + Google Meet (Phase 9)
+
+Notifications and Calendar/Meet are **side effects** of booking
+confirmation, never a dependency of it: payment success -> booking
+`confirmed` is unchanged and succeeds independently of email/Calendar/Meet
+delivery; a Calendar or email failure never rolls back a confirmed
+booking, only marks that one side effect failed and retries it. Booking,
+payment, and availability remain the sole source of truth, exactly as
+before.
+
+**Architecture -- a durable outbox, not a bigger transaction.** The
+moment a booking is confirmed (inside `verify_manual_payment()` or
+`finalize_chapa_payment()`, both already one atomic transaction each),
+that same transaction also inserts rows into a new `integration_jobs`
+table via `register_booking_confirmation_jobs()` -- a plain `INSERT`, not
+an external call, so it's safe to run inside the existing transaction.
+The actual external calls (Resend, Google) happen afterward, from a
+separate worker invoked over HTTP, never inside a DB transaction. Both
+confirmation paths call the exact same registration function -- one
+booking-confirmation lifecycle, not two parallel integrations; live-
+verified that `finalize_chapa_payment()` (Chapa) and `verify_manual_payment()`
+(manual) each register the identical 7-job set (3 immediate + 2 reminder
+offsets x customer/expert) for a booking whose session is far enough out
+for both reminder windows to still be in the future.
+
+**Idempotency -- one mechanism, everywhere.** `integration_jobs.dedupe_key`
+carries a single unique index; every registration insert uses
+`ON CONFLICT (dedupe_key) DO NOTHING`. Running confirmation twice, or
+re-running the worker after everything already completed, produces zero
+duplicate rows, calendar events, Meet rooms, or emails -- live-verified:
+calling `register_booking_confirmation_jobs()` twice for the same booking
+left exactly 7 rows, not 14. The Google Calendar handler adds a second,
+independent layer on top: it checks `bookings.calendar_event_id` before
+calling Google at all, so an already-synced booking short-circuits
+without a network call; Google's own Calendar API additionally receives a
+stable `conferenceData.createRequest.requestId` (the booking reference)
+so a retried request after a timeout can't create a second event/Meet on
+Google's side either.
+
+**Job types (all in one `integration_jobs` table, deliberately not a
+family of `email_logs`/`notification_jobs`/`calendar_jobs` tables):**
+`booking_confirmation_email_customer`, `booking_confirmation_email_expert`,
+`calendar_create`, `session_reminder_customer`, `session_reminder_expert`,
+`payment_rejected_email`. Each row tracks `status`
+(`pending`/`processing`/`completed`/`failed`), `attempt_count`,
+`scheduled_for`, and a sanitized `last_error` (never a raw provider
+error, access token, or auth header).
+
+**Reminders -- computed once, not scanned for.** `session_reminder_offsets_minutes()`
+(policy-constant function, `{1440, 60}` = 24h/1h) is read at confirmation
+time; each offset's fire time is `booking.start_at - offset`. Any offset
+whose fire time has already passed is skipped entirely -- a booking
+confirmed 3 hours before its start gets only the 1h reminder, never a
+nonsensical immediate "24h" one; a booking confirmed 20 minutes before
+its start gets no reminders at all. Live-verified both edge cases exactly
+as described. The same generic worker later picks up reminder jobs when
+their (future) `scheduled_for` arrives -- no second "scan for due
+reminders" job type.
+
+**Retry policy:** capped backoff (`BACKOFF_MINUTES = [1, 5, 30, 120]`
+indexed by `attempt_count`), `integration_max_attempts()` = 5. After
+exhaustion a job becomes permanently `failed` and is visible (with its
+sanitized error) on `/admin/bookings/[reference]`, where an admin can
+retry it via `admin_retry_integration_job()` -- admin-only
+(`is_admin()`-checked, live-verified: rejected for a non-admin caller
+with `42501`), and only ever moves a genuinely `failed` job back to
+`pending` (a `pending`/`processing`/`completed` job is never touched, so
+retry can't force a second email/event for a job that already succeeded).
+
+**Google Calendar strategy -- one Pivotroom-owned organizer account, not
+per-expert OAuth.** A single Google account, authorized once via a
+one-time OAuth consent flow (`GOOGLE_REFRESH_TOKEN`), creates every
+booking's Calendar event and invites both the customer and the expert as
+attendees. Rejected alternatives: a service account + Workspace
+domain-wide delegation (needs Workspace admin access and only matters
+when impersonating *other* users -- Phase 9 never does, since there's
+exactly one organizer) and per-expert OAuth (needs a whole in-app
+"Connect your Google Calendar" flow + callback security work for zero V1
+benefit when nobody's own calendar is actually being read). Online
+sessions request a Google Meet link via
+`conferenceData.createRequest`/`conferenceDataVersion=1`; in-person
+bookings omit that parameter entirely, so there is no code path that
+could ever produce a Meet link for one. `calendar_event_id`,
+`calendar_meeting_url`, `calendar_sync_status`
+(`not_synced`/`pending`/`synced`/`failed`), and `calendar_synced_at` live
+directly on `bookings` (migration 044) -- read access rides the existing
+`bookings` RLS policies, no new table or new RLS needed for the
+dashboards.
+
+**Booking confirmation emails:** customer gets expert name, date/time in
+*their own* timezone, duration, format, booking reference, the Meet link
+if already synced (else "Meeting details are being prepared."), and a
+"View Session" link to their dashboard. Expert gets the mirror (customer
+name, date/time in the expert's timezone, duration, format, booking
+reference, discussion topic) -- **never** payment details, amount, or
+transaction reference. Payment rejection produces exactly one email
+(booking reference, the admin's rejection reason, the correction grace
+deadline, a CTA back to the payment page) -- manual-payment "verified"
+and "booking confirmed" are deliberately folded into one confirmation
+email rather than sent as two near-duplicates.
+
+**Email/Calendar addresses are always resolved server-side.**
+`get_booking_notification_context()` (migration 044) reads both parties'
+emails from `auth.users` (the same pattern `handle_new_user()` has used
+since migration 001 -- email is deliberately never duplicated into
+`public.profiles`) and is granted to `service_role` only; live-verified
+`permission denied` for `authenticated` (even as the admin fixture) and
+implicitly for `anon`. No job's recipient or attendee list is ever
+client-supplied.
+
+**Scheduler:** `pg_cron` + `pg_net` (both enabled by migration 044,
+confirmed available on this Supabase project beforehand) call the
+protected worker endpoint (`POST /api/jobs/process`) on a schedule --
+decoupled from wherever the Next.js app happens to be hosted. The actual
+`cron.schedule(...)` call needs this deployment's real public URL and
+worker secret, neither of which exist yet in this sandbox; see "What
+still needs configuring" below for the exact command. The worker route
+itself requires a shared secret (`INTEGRATION_WORKER_SECRET`, header
+`x-worker-secret`, compared via `crypto.timingSafeEqual`) -- there is no
+unauthenticated public job-runner endpoint.
+
+**Provider abstraction, test doubles, mock mode (`INTEGRATIONS_MODE=mock`,
+mirrors `CHAPA_MODE=mock` exactly):** `lib/email/` (`EmailProvider`
+interface, `ResendEmailProvider`, `FakeEmailProvider`, `factory.ts`) and
+`lib/calendar/` (`CalendarProvider` interface, `GoogleCalendarProvider`,
+`FakeCalendarProvider`, `factory.ts`). `app/api/test/integrations-mock/*`
+(scenario/state/reset) are 404 outside mock mode, never reachable in
+production -- the same discipline as `/api/test/chapa-mock/*`.
+
+**Key files:** `supabase/migrations/044_phase9_integration_jobs.sql`
+(`integration_jobs` table + `bookings.calendar_*` columns +
+`register_booking_confirmation_jobs`/`register_payment_rejected_job`/
+`get_booking_notification_context`/`admin_retry_integration_job`/
+`admin_backfill_booking_integrations`, plus `CREATE OR REPLACE` of
+`verify_manual_payment`/`reject_manual_payment`/`finalize_chapa_payment`
+to call the new registration functions), `lib/email/*`, `lib/calendar/*`,
+`lib/jobs/*` (`config.ts` retry policy, `data.ts` claim/complete/fail
+helpers, `emailTemplates.ts`, `handlers.ts` per-job-type logic,
+`worker.ts` the poll-claim-execute loop), `app/api/jobs/process/route.ts`,
+`components/admin/AdminRetryJobButton.tsx`,
+`components/admin/AdminBackfillIntegrationsButton.tsx`, dashboard changes
+to `app/dashboard/sessions/[reference]/page.tsx` and
+`app/expert/sessions/[reference]/page.tsx` (Meet link once synced,
+"being prepared" before), and `app/admin/bookings/[reference]/page.tsx`
+(Calendar/Meet/email status + retry + one-booking-at-a-time backfill for
+bookings confirmed before this phase existed).
+
+**Testing:** `e2e/specs/phase9.spec.ts` covers job registration + worker
+idempotency, online-gets-Meet/in-person-does-not, calendar-failure
+behavior (booking stays confirmed, admin sees Failed + Retry), and
+Resend-failure behavior (booking stays confirmed, jobs retry-pending) --
+against `FakeEmailProvider`/`FakeCalendarProvider`
+(`INTEGRATIONS_MODE=mock`, `npm run test:e2e:phase9`); like the rest of
+this suite, written and `tsc`/`eslint`-checked but not executed in this
+sandbox (no network access to run `next dev`/Supabase from here). The
+substantive verification came from live SQL testing against
+PIVOTROOM-DEMO: idempotent double-registration, the past-reminder-window
+skip logic (both the "3 hours before" and "20 minutes before" edge
+cases), RLS on `integration_jobs` (admin-only `SELECT` -- live-verified 0
+rows for both the owning customer and the owning expert, 7 for admin),
+`admin_retry_integration_job`/`admin_backfill_booking_integrations`
+admin-only authorization, `get_booking_notification_context` being
+genuinely unreachable by `authenticated`, and full live regression passes
+through the real `verify_manual_payment()`, `reject_manual_payment()`,
+and `finalize_chapa_payment()` (including its idempotent-retry branch)
+confirming all three still correctly confirm/reject/finalize *and*
+register the right Phase 9 jobs. Security Advisor shows no new
+CRITICAL/HIGH findings (only the same class of pre-existing WARNs from
+every earlier phase, plus one platform-level WARN -- `pg_net`'s extension
+registration living in `public` rather than a dedicated schema -- which
+is not fixable at the application layer since `pg_net` does not support
+`ALTER EXTENSION ... SET SCHEMA` on this Postgres image; its actual
+callable surface, `net.http_post`/`http_get`/etc., was already in its own
+`net` schema regardless). `tsc --noEmit`, `eslint .`, and `next build`
+all pass.
+
+**PENDING (not executed, reported honestly):** a real Resend send and a
+real Google Calendar + Meet creation (an actual test online booking,
+confirming the event exists with the correct time, both parties invited,
+and the Meet link works) were not run -- this project has no real Resend
+API key or Google OAuth refresh token configured yet, and this sandbox's
+network egress to `resend.com`/`developers.google.com` is policy-blocked
+(the same limitation as Chapa in Phase 8). The Calendar API's Meet-creation
+mechanics (`conferenceData.createRequest` + `conferenceDataVersion=1`)
+were cross-referenced via web search across multiple independent sources,
+not fetched directly from Google's own current docs, for the same reason
+-- re-verify against the current official docs before enabling live mode.
+
+**What still needs configuring before this goes live:** a Resend account
++ verified sending domain (`RESEND_API_KEY`, `PIVOTROOM_EMAIL_FROM`,
+optionally `PIVOTROOM_REPLY_TO`); a Google Cloud project with the
+Calendar API enabled, an OAuth client (`GOOGLE_CLIENT_ID`/
+`GOOGLE_CLIENT_SECRET`), and a one-time OAuth consent flow for the single
+Pivotroom-owned organizer account to obtain `GOOGLE_REFRESH_TOKEN` (scope
+`https://www.googleapis.com/auth/calendar.events` only -- never
+Gmail/Drive); a strong random `INTEGRATION_WORKER_SECRET`; and, once a
+real production URL exists, running (once, from the SQL editor or a
+migration) something equivalent to:
+
+```sql
+select cron.schedule(
+  'process-integration-jobs',
+  '* * * * *', -- every minute
+  $$
+  select net.http_post(
+    url := 'https://<your-domain>/api/jobs/process',
+    headers := jsonb_build_object('x-worker-secret', '<INTEGRATION_WORKER_SECRET value>'),
+    body := '{}'::jsonb
+  );
+  $$
+);
+```
+
+See `.env.example`'s Phase 9 section for every variable and what each one
+does.
+
+**Explicitly out of scope for Phase 9** (per this phase's own spec):
+rescheduling, customer/expert cancellation, refunds, expert payouts,
+commission settlement, referral payouts, ratings, reviews, chat, SMS,
+WhatsApp, Telegram, and push notifications. No RSVP sync -- a booking's
+status never depends on Google Calendar attendee accept/decline state,
+and deleting the calendar invite from a personal calendar never cancels
+the Pivotroom booking. No read access to an expert's full Google Calendar
+(no busy/free or history integration) -- Phase 4's own availability
+engine remains the sole availability source.
+
 ## Explicitly not implemented (future phases)
 
 **Availability (Phase 4) items, still standing:** raw recurrence text
@@ -1881,16 +2107,16 @@ message.
 
 **Booking (Phase 5) items, still standing:** booking cancellation, booking
 rescheduling ("Change date" or similar), an admin booking CRM beyond the
-simple payment queue and the Phase 7 read-only bookings list, Google
-Calendar/Outlook/Calendly/Cal.com/Google Meet API integration, OAuth
-connection, or calendar event creation of any kind (the schema is only
-designed to allow this later -- neither `bookings` nor `payments` owns
-any calendar-event columns), email/WhatsApp booking notifications
-(PostHog analytics events are wired conceptually but not active in this
-codebase), reviews, ratings, session/booking counts. (A customer/expert
-booking dashboard and a "My Sessions" list, previously listed here as not
-yet built, now exist -- see "Customer & Expert Session Dashboards (Phase
-7)" above.)
+simple payment queue and the Phase 7 read-only bookings list, Outlook/
+Calendly/Cal.com integration, WhatsApp/SMS/Telegram/push booking
+notifications (PostHog analytics events are wired conceptually but not
+active in this codebase), reviews, ratings, session/booking counts. (A
+customer/expert booking dashboard and a "My Sessions" list, previously
+listed here as not yet built, now exist -- see "Customer & Expert Session
+Dashboards (Phase 7)" above. Booking-confirmation email and Google
+Calendar/Meet event creation, previously listed here as not yet built,
+now exist -- see "Transactional Notifications + Google Calendar + Google
+Meet (Phase 9)" above.)
 
 **Payment (Phase 6) boundary -- Phase 6 stops at `confirmed`,
 explicitly:** (Chapa integration is no longer out of scope -- see
@@ -1905,10 +2131,12 @@ platform commission, transaction fees, expert payouts/earnings, a
 per-price payment-method policy (e.g. "manual only above 300,000 ETB" --
 manual transfer is simply available for every booking in this
 milestone), refunds (a rejected/mistaken verification has no undo path
-in this codebase), email/WhatsApp payment notifications, Google
-Calendar/Google Meet integration of any kind, a customer/expert payment
-dashboard beyond the booking-reference payment page and the simple admin
-queue, and a self-service or automatic path to `booking_status =
+in this codebase), WhatsApp/SMS/Telegram payment notifications (a
+booking-confirmation and payment-rejection email now exist -- see
+"Transactional Notifications + Google Calendar + Google Meet (Phase 9)"
+above), a customer/expert payment dashboard beyond the booking-reference
+payment page and the simple admin queue, and a self-service or automatic
+path to `booking_status =
 'confirmed'` or `payment_status = 'verified'` from anywhere but
 `verify_manual_payment()`. A booking can only ever reach `held`,
 `awaiting_payment`, `confirmed`, or `expired`; a payment can only ever
@@ -1918,13 +2146,15 @@ reach `pending_verification`, `verified`, or `rejected` -- through Phase
 **Session dashboard (Phase 7) boundary, explicitly:** rescheduling,
 cancellation, refunds, payouts, expert earnings/commission reporting,
 referral payouts, ratings, reviews, chat/direct messaging, support
-tickets, and any email/WhatsApp/SMS/Telegram notification or Google
-Calendar/Meet/Zoom integration remain entirely unbuilt -- Phase 7 is
-read-only session/payment visibility for customer, expert, and admin,
-nothing more.
+tickets, and any WhatsApp/SMS/Telegram notification remain entirely
+unbuilt. (Email confirmation/reminder notifications and Google
+Calendar/Meet event creation, previously listed here as not yet built,
+now exist -- see "Transactional Notifications + Google Calendar + Google
+Meet (Phase 9)" above. Zoom integration remains out of scope entirely --
+Phase 9 builds Google Meet only.)
 
-**Still standing from earlier phases regardless:** notifications (email/
-WhatsApp) of any kind, testimonials, badges, referrals, gift-a-session,
+**Still standing from earlier phases regardless:** WhatsApp/SMS/Telegram/
+push notifications, testimonials, badges, referrals, gift-a-session,
 AI matching/generation/recommendations/search/chatbot, community/
 messaging, analytics dashboards, CV/certificate uploads. Do not assume
 any of this exists.
