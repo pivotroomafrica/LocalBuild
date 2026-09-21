@@ -103,7 +103,10 @@ export async function startChapaPaymentAction(
     txRef,
     callbackUrl: `${appUrl}/api/payments/chapa/webhook`,
     returnUrl: `${appUrl}/booking/${encodeURIComponent(bookingReference)}/payment/chapa/return?tx_ref=${encodeURIComponent(txRef)}`,
-    title: "Pivotroom Session",
+    // Chapa's customization.title has a real, live-confirmed 16-character
+    // limit ("Pivotroom Session" = 18 chars was rejected during Phase 8
+    // real-provider testing) -- "Pivotroom" (9 chars) stays safely under it.
+    title: "Pivotroom",
     description: `Booking ${bookingReference}`,
   });
 
