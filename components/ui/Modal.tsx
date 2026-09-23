@@ -50,9 +50,9 @@ export function Modal({ open, onClose, title, children, closeOnEscape = true }: 
         role="dialog"
         aria-modal="true"
         aria-labelledby="pivotroom-modal-title"
-        className="w-full max-w-md rounded-lg bg-[var(--color-surface)] p-5 shadow-lg"
+        className="w-full max-w-md rounded-[var(--radius-card)] bg-[var(--color-surface)] p-6 shadow-lg"
       >
-        <h2 id="pivotroom-modal-title" className="text-sm font-semibold text-[var(--color-text)]">
+        <h2 id="pivotroom-modal-title" className="font-display text-lg font-bold text-[var(--color-text)]">
           {title}
         </h2>
         <div className="mt-3">{children}</div>
