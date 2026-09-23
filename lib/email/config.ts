@@ -5,24 +5,29 @@
  */
 
 export function getResendApiKey(): string {
-  const key = process.env.RESEND_API_KEY;
+  const key = process.env.RESEND_API_KEY?.trim();
   if (!key) throw new Error("RESEND_API_KEY is not configured.");
   return key;
 }
 
 /** "Pivotroom <bookings@pivotroom.africa>"-style sender -- from env, not
  * hard-coded (spec section 12: domain verification/config may differ per
- * deployment). */
+ * deployment). Trimmed -- env values typed/pasted across different local
+ * editors can silently pick up a trailing space or stray line-ending
+ * character, which Resend's strict address-format validation rejects
+ * (observed live: an otherwise-valid reply_to address rejected with
+ * "Invalid `reply_to` field" until trimmed). */
 export function getEmailFrom(): string {
-  const from = process.env.PIVOTROOM_EMAIL_FROM;
+  const from = process.env.PIVOTROOM_EMAIL_FROM?.trim();
   if (!from) throw new Error("PIVOTROOM_EMAIL_FROM is not configured.");
   return from;
 }
 
 /** Optional -- omitted from the Resend payload entirely when unset,
- * never sent as an empty string. */
+ * never sent as an empty string. Trimmed for the same reason as
+ * getEmailFrom() above. */
 export function getReplyTo(): string | undefined {
-  return process.env.PIVOTROOM_REPLY_TO || undefined;
+  return process.env.PIVOTROOM_REPLY_TO?.trim() || undefined;
 }
 
 /** Explicit kill-switch (spec section 67) -- defaults to enabled (same
