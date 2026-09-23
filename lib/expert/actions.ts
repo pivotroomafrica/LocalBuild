@@ -446,3 +446,116 @@ export async function submitApplicationAction(
   revalidatePath("/expert/application");
   return { success: true };
 }
+
+// =========================================================================
+// Phase 10: expert reschedule request + expert cancellation (spec sections
+// 21-24, 39-42) -- session-management actions, distinct from the
+// application-flow actions above. The expert can REQUEST a reschedule but
+// never force one directly: request_expert_reschedule() (045) only ever
+// writes to booking_change_requests, never to bookings itself. The expert
+// CAN cancel their own confirmed session outright (bypassing the
+// customer's 24-hour cutoff), since only the expert can know they
+// genuinely cannot provide it -- a mandatory reason is required either
+// way.
+// =========================================================================
+
+export type SessionActionState = {
+  error?: string;
+  success?: boolean;
+};
+
+/**
+ * request_expert_reschedule() (045) itself re-derives the expert's
+ * ownership of this booking from auth.uid(), and re-checks
+ * booking_status = 'confirmed' and that no other pending request already
+ * exists for this booking (enforced by a partial unique index) -- this
+ * action only forwards the call and surfaces those pre-vetted messages.
+ */
+export async function requestExpertRescheduleAction(
+  _prevState: SessionActionState,
+  formData: FormData,
+): Promise<SessionActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be logged in to do that." };
+
+  const bookingReference = String(formData.get("booking_reference") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim();
+  const proposedStartAt = String(formData.get("proposed_start_at") ?? "").trim();
+  if (!bookingReference || !reason) return { error: "Please explain why a new time is needed." };
+
+  const { error } = await supabase.rpc("request_expert_reschedule", {
+    p_booking_reference: bookingReference,
+    p_reason: reason,
+    p_proposed_start_at: proposedStartAt || undefined,
+  });
+
+  if (error) {
+    const message = error.message.toLowerCase();
+    if (
+      message.includes("logged in") ||
+      message.includes("booking not found") ||
+      message.includes("not confirmed") ||
+      message.includes("own booking") ||
+      message.includes("already been requested") ||
+      message.includes("pending")
+    ) {
+      return { error: error.message };
+    }
+    return { error: "We couldn't send that request. Please try again." };
+  }
+
+  revalidatePath(`/expert/sessions/${bookingReference}`);
+  revalidatePath("/expert/sessions");
+  revalidatePath("/expert/dashboard");
+  return { success: true };
+}
+
+/**
+ * cancel_expert_booking() (045) itself re-derives the expert's ownership
+ * of this booking, re-checks booking_status = 'confirmed', and bypasses
+ * the customer's own 24-hour cutoff entirely -- an expert genuinely
+ * unable to provide a confirmed session is never blocked by that window.
+ * Does NOT touch payment_status or issue any refund, same as the
+ * customer-facing cancelCustomerBookingAction.
+ */
+export async function cancelExpertBookingAction(
+  _prevState: SessionActionState,
+  formData: FormData,
+): Promise<SessionActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be logged in to do that." };
+
+  const bookingReference = String(formData.get("booking_reference") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!bookingReference || !reason) return { error: "Please provide a reason for cancelling." };
+
+  const { error } = await supabase.rpc("cancel_expert_booking", {
+    p_booking_reference: bookingReference,
+    p_reason: reason,
+  });
+
+  if (error) {
+    const message = error.message.toLowerCase();
+    if (
+      message.includes("logged in") ||
+      message.includes("booking not found") ||
+      message.includes("not confirmed") ||
+      message.includes("own booking") ||
+      message.includes("reason")
+    ) {
+      return { error: error.message };
+    }
+    return { error: "We couldn't complete that. Please try again." };
+  }
+
+  revalidatePath(`/expert/sessions/${bookingReference}`);
+  revalidatePath("/expert/sessions");
+  revalidatePath("/expert/dashboard");
+  return { success: true };
+}

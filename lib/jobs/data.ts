@@ -130,6 +130,75 @@ export async function markCalendarFailed(bookingId: string): Promise<void> {
   await supabase.from("bookings").update({ calendar_sync_status: "failed" }).eq("id", bookingId);
 }
 
+export type RescheduleContext = {
+  oldStartAt: string;
+  oldEndAt: string;
+  newStartAt: string;
+  newEndAt: string;
+  reason: string | null;
+};
+
+/** For calendar_update/reschedule_email_* jobs -- reads the exact
+ * booking_reschedules row by id (parsed from the job's own dedupe_key,
+ * e.g. "reschedule_email_customer:<reschedule_id>") so a booking
+ * rescheduled more than once always renders the CORRECT old/new pair for
+ * this specific reschedule event, never just "whatever is most recent". */
+export async function getRescheduleContext(rescheduleId: string): Promise<RescheduleContext | null> {
+  const supabase = createServiceRoleClient();
+  const { data } = await supabase
+    .from("booking_reschedules")
+    .select("old_start_at, old_end_at, new_start_at, new_end_at, reason")
+    .eq("id", rescheduleId)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    oldStartAt: data.old_start_at,
+    oldEndAt: data.old_end_at,
+    newStartAt: data.new_start_at,
+    newEndAt: data.new_end_at,
+    reason: data.reason,
+  };
+}
+
+export type CancellationContext = {
+  reason: string;
+  financialFollowupRequired: boolean;
+};
+
+/** For calendar_cancel/cancellation_email_* jobs -- same "parse the id
+ * out of dedupe_key" approach as getRescheduleContext(). */
+export async function getCancellationContext(cancellationId: string): Promise<CancellationContext | null> {
+  const supabase = createServiceRoleClient();
+  const { data } = await supabase
+    .from("booking_cancellations")
+    .select("reason, financial_followup_required")
+    .eq("id", cancellationId)
+    .maybeSingle();
+  if (!data) return null;
+  return { reason: data.reason, financialFollowupRequired: data.financial_followup_required };
+}
+
+export type PendingChangeRequestContext = {
+  reason: string;
+};
+
+/** For reschedule_request_email_customer -- the most recent PENDING
+ * request for this booking (there can be at most one, enforced by the
+ * partial unique index in 045). */
+export async function getPendingChangeRequestContext(bookingId: string): Promise<PendingChangeRequestContext | null> {
+  const supabase = createServiceRoleClient();
+  const { data } = await supabase
+    .from("booking_change_requests")
+    .select("reason")
+    .eq("booking_id", bookingId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  return { reason: data.reason };
+}
+
 export type PaymentRejectionContext = {
   bookingReference: string;
   customerEmail: string;

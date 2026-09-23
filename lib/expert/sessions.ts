@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
-import type { Booking, BookingIntake, BookingStatus, SessionFormat } from "@/types/booking";
+import type { Booking, BookingIntake, BookingStatus, SessionFormat, BookingReschedule, BookingChangeRequest } from "@/types/booking";
+import { getBookingRescheduleHistory, getPendingChangeRequest } from "@/lib/booking/data";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -149,6 +150,12 @@ export type ExpertSessionDetail = {
   booking: Booking;
   intake: BookingIntake | null;
   customer: CustomerContext | null;
+  // Phase 10 (spec sections 6, 21-24) -- so the expert can see their own
+  // reschedule request's current status and the booking's reschedule
+  // audit trail, needed to render requestExpertRescheduleAction/
+  // cancelExpertBookingAction (lib/expert/actions.ts) appropriately.
+  rescheduleHistory: BookingReschedule[];
+  pendingChangeRequest: BookingChangeRequest | null;
 };
 
 /**
@@ -193,10 +200,12 @@ export async function getExpertSessionDetail(
     return null;
   }
 
-  const [{ data: intake }, customer] = await Promise.all([
+  const [{ data: intake }, customer, rescheduleHistory, pendingChangeRequest] = await Promise.all([
     supabase.from("booking_intake").select("*").eq("booking_id", booking.id).maybeSingle(),
     getCustomerContextForBooking(supabase, booking.id),
+    getBookingRescheduleHistory(supabase, booking.id),
+    getPendingChangeRequest(supabase, booking.id),
   ]);
 
-  return { booking, intake: intake ?? null, customer };
+  return { booking, intake: intake ?? null, customer, rescheduleHistory, pendingChangeRequest };
 }

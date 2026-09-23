@@ -1,4 +1,12 @@
-import type { CalendarProvider, CreateEventParams, CreateEventResult } from "./provider";
+import type {
+  CalendarProvider,
+  CreateEventParams,
+  CreateEventResult,
+  UpdateEventParams,
+  UpdateEventResult,
+  CancelEventParams,
+  CancelEventResult,
+} from "./provider";
 import { getGoogleClientId, getGoogleClientSecret, getGoogleRefreshToken, getGoogleCalendarId } from "./config";
 
 /**
@@ -121,6 +129,78 @@ export class GoogleCalendarProvider implements CalendarProvider {
         : null;
 
       return { ok: true, eventId: json.id, meetingUrl };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : "Unknown error contacting Google Calendar." };
+    }
+  }
+
+  /**
+   * Phase 10 reschedule (spec sections 54-56): PATCH the SAME event by
+   * id, changing only start/end -- never a new event, never touches
+   * conferenceData/attendees, so an existing Meet link keeps working
+   * unchanged.
+   *
+   * PATCH https://www.googleapis.com/calendar/v3/calendars/{calendarId}/
+   *   events/{eventId}?sendUpdates=all
+   *   Body: { start: {dateTime, timeZone: "UTC"}, end: {dateTime, timeZone: "UTC"} }
+   */
+  async updateEvent(params: UpdateEventParams): Promise<UpdateEventResult> {
+    try {
+      const accessToken = await getAccessToken();
+      const calendarId = encodeURIComponent(getGoogleCalendarId());
+      const eventId = encodeURIComponent(params.eventId);
+
+      const response = await fetch(`${CALENDAR_BASE_URL}/calendars/${calendarId}/events/${eventId}?sendUpdates=all`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          start: { dateTime: params.startAt, timeZone: "UTC" },
+          end: { dateTime: params.endAt, timeZone: "UTC" },
+        }),
+      });
+
+      if (!response.ok) {
+        const json = (await response.json().catch(() => null)) as GoogleEventResponse | null;
+        return { ok: false, error: json?.error?.message ?? `Google Calendar event update failed (HTTP ${response.status}).` };
+      }
+
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : "Unknown error contacting Google Calendar." };
+    }
+  }
+
+  /**
+   * Phase 10 cancellation (spec sections 57-58): deletes the existing
+   * event outright -- never a replacement, never a second call for the
+   * same booking (the handler checks calendar_event_id first).
+   *
+   * DELETE https://www.googleapis.com/calendar/v3/calendars/{calendarId}/
+   *   events/{eventId}?sendUpdates=all
+   */
+  async cancelEvent(params: CancelEventParams): Promise<CancelEventResult> {
+    try {
+      const accessToken = await getAccessToken();
+      const calendarId = encodeURIComponent(getGoogleCalendarId());
+      const eventId = encodeURIComponent(params.eventId);
+
+      const response = await fetch(`${CALENDAR_BASE_URL}/calendars/${calendarId}/events/${eventId}?sendUpdates=all`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      // Google returns 410 Gone for an event already deleted (e.g. a
+      // retried cancellation) -- treated as success, not a failure, so a
+      // retry can never get permanently stuck.
+      if (!response.ok && response.status !== 410 && response.status !== 404) {
+        const json = (await response.json().catch(() => null)) as GoogleEventResponse | null;
+        return { ok: false, error: json?.error?.message ?? `Google Calendar event cancellation failed (HTTP ${response.status}).` };
+      }
+
+      return { ok: true };
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : "Unknown error contacting Google Calendar." };
     }

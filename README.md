@@ -2091,6 +2091,261 @@ the Pivotroom booking. No read access to an expert's full Google Calendar
 (no busy/free or history integration) -- Phase 4's own availability
 engine remains the sole availability source.
 
+## Rescheduling + Cancellation (Phase 10)
+
+Customer self-service rescheduling and cancellation of a **confirmed**
+booking, an expert's own request-only reschedule + outright cancel, and an
+admin override/fallback for both -- built entirely on the same
+architecture Phase 5-9 already established: the Phase 5 exclusion
+constraints for double-booking protection, the Phase 4/5 slot-finding
+engine for availability, and the Phase 9 outbox/dedupe-key pattern for
+calendar/email side effects. No new mechanism was introduced for any of
+these; each Phase 10 capability reuses the existing one.
+
+**24-hour cutoff, enforced against server time only.** A customer can
+reschedule or cancel their own confirmed booking up to
+`customer_reschedule_cutoff_hours()`/`customer_cancel_cutoff_hours()` (both
+24) before `start_at` -- checked with `now()` inside the `SECURITY
+DEFINER` function itself, never trusted from a client-supplied timestamp
+or the browser's clock. `isReschedulableByCustomer()`/
+`isCancellableByCustomer()` (`lib/booking/data.ts`) mirror the same 24-hour
+constant purely so the UI can show/hide the buttons without a wasted round
+trip -- live-verified this is display-only: a direct RPC call from inside
+the cutoff window is rejected server-side regardless of what the UI would
+have shown.
+
+**Expert can REQUEST, never force, a reschedule; expert CAN cancel
+outright.** `request_expert_reschedule()` only ever inserts into a new
+`booking_change_requests` table (`status` starts `pending`) -- there is no
+code path from an expert action to a `bookings` row changing. At most one
+pending request per booking (a partial unique index), live-verified: a
+second request while one is pending is rejected. The booking only actually
+moves through the customer's own `reschedule_booking()` (or admin's
+`admin_reschedule_booking()`), which opportunistically flips any pending
+request to `accepted` the moment it succeeds -- live-verified end to end:
+expert requests, customer picks a new time via the normal reschedule flow,
+the request row flips to `accepted` automatically, with no separate
+"accept" action anywhere. `decline_expert_reschedule_request()` is the
+customer-only alternative when they'd rather keep the current time --
+live-verified declining flips the request to `declined` and leaves the
+booking untouched. An expert's cancellation
+(`cancel_expert_booking()`), unlike their reschedule, bypasses the
+customer's own 24-hour cutoff outright (a mandatory reason is required) --
+the expert genuinely cannot provide the session, so there is nothing for a
+cutoff to protect; live-verified against a booking 6 hours out.
+
+**Admin override/fallback.** `admin_reschedule_booking()`/
+`admin_cancel_booking()` bypass the customer's cutoff with a mandatory
+reason (`admin_override = true` recorded on the audit row), but **can
+never bypass double-booking protection** -- live-verified: an admin
+reschedule into a slot another confirmed booking already occupies for the
+same expert is rejected with the same friendly `"That time is not
+available."`/exclusion-violation error a customer would get, even though
+the cutoff bypass itself succeeded moments earlier in the same test
+session.
+
+**Reschedule payload is fixed, not client-configurable.** Same booking
+reference, same expert, same duration, same format, same price -- none of
+these are parameters to `reschedule_booking()`/`admin_reschedule_booking()`
+at all, so there is no code path that could ever accept a client override
+for any of them. Live-verified: after a successful reschedule,
+`expert_profile_id`/`duration_minutes`/`session_format`/`base_price` on
+the booking row are byte-for-byte identical to before, only `start_at`/
+`end_at` changed.
+
+**Double-booking protection reuses the existing Phase 5 exclusion
+constraints, unchanged.** `bookings_no_overlapping_customer_time`/
+`bookings_no_overlapping_expert_time` are `EXCLUDE USING gist` constraints
+that already re-validate on `UPDATE` and automatically exclude the row
+being updated from its own comparison -- so wrapping
+`reschedule_booking()`'s `UPDATE bookings SET start_at = ...` in the same
+`BEGIN ... EXCEPTION WHEN exclusion_violation THEN raise` pattern
+`create_booking_hold()`'s `INSERT` already uses gives reschedule real,
+concurrency-safe double-booking protection for free. Live-verified: a
+reschedule attempt into a slot another confirmed booking already occupies
+for the same expert fails cleanly with a customer-facing "That time was
+just taken." message, and the original booking is left completely
+unchanged (no partial `booking_reschedules` row, no partial `start_at`
+update) -- atomicity confirmed by re-reading the row after the failure.
+
+**`get_bookable_slots()` gained one optional parameter,
+`p_exclude_booking_id`,** so a booking being rescheduled doesn't block its
+own candidate slots out of its own search, while every OTHER booking still
+blocks time exactly as before. The original 6-parameter call (used by the
+Phase 5 booking flow) is untouched and still works -- live-verified
+unchanged. Adding a parameter required `DROP FUNCTION` + `CREATE FUNCTION`
+rather than `CREATE OR REPLACE` (Postgres error `42P13` otherwise), same
+fix applied to `get_booking_notification_context()` (which gained a
+`booking_status` output column for the Phase 9 reminder-handler defense-in
+-depth below).
+
+**Financial boundary -- explicitly, deliberately, no exceptions: Phase 10
+implements NO refund of any kind.** No Chapa refund API call, no manual
+bank refund workflow, no payout adjustment, no refund amount calculation.
+A cancelled paid booking gets only an objective
+`financial_followup_required` boolean
+(`exists(select 1 from payments where booking_id = ... and payment_status
+= 'verified')`, computed once at cancellation time) for a future Phase 11
+to act on -- never interpreted, displayed as a dollar amount, or acted on
+further here. `payments.payment_status` is **never written** by any Phase
+10 function; live-verified across every cancellation scenario tested
+(with and without a verified payment, customer/expert/admin actor) that
+`payment_status` reads identically before and after.
+
+**Append-only audit trail, immutable by construction.** `booking_reschedules`
+and `booking_cancellations` (plus `booking_change_requests` for expert
+requests) get exactly one RLS policy each -- `SELECT`, scoped to
+`is_admin()` or the booking's own customer/expert -- and no `INSERT`/
+`UPDATE`/`DELETE` policy at all. Table-level `GRANT`s to `authenticated`/
+`anon` exist (Supabase's own schema-wide default privileges, applied to
+every new table), but that is irrelevant here: with RLS enabled and zero
+permissive policies for those operations, Postgres denies them outright
+regardless of the grant. Live-verified directly: as the row's own owning
+customer, a raw `INSERT` into `booking_reschedules` fails with `new row
+violates row-level security policy`, a raw `UPDATE` matches and changes
+zero rows, and a raw `DELETE` matches and removes zero rows -- the only
+way any row in these three tables is ever written is through the
+`SECURITY DEFINER` RPCs themselves.
+
+**Calendar continuity.** Reschedule calls `updateEvent()` (Google Calendar
+`PATCH .../events/{eventId}?sendUpdates=all`, only `start`/`end` in the
+body -- attendees and `conferenceData` are never touched, so the existing
+Meet link survives unchanged) against the SAME event id already stored on
+the booking; cancellation calls `cancelEvent()` (`DELETE
+.../events/{eventId}?sendUpdates=all`, treating HTTP 404/410 as success so
+a retried cancellation against an already-deleted event can't get stuck
+failing). Both handlers check `bookings.calendar_event_id` first and no-op
+safely (`{ok: true, providerId: null}`) if no event exists yet -- never an
+error, and the reschedule/cancellation itself has already succeeded in the
+DB regardless of calendar outcome, same never-roll-back posture as Phase
+9.
+
+**Reminders rebuilt correctly across possibly-repeated reschedules, and
+suppressed entirely on cancellation.** `register_booking_reschedule_jobs()`
+reuses the exact same `dedupe_key` per (offset, booking) forever
+(`'reminder_customer_1440:' || booking_id`, etc.) and
+`ON CONFLICT (dedupe_key) DO UPDATE`s it back to `pending` at the new fire
+time whenever that offset is still in the future for the new `start_at` --
+even resurrecting an already-`completed` row, live-verified: a reminder
+job manually marked `completed` before a reschedule came back exactly
+`pending` with the correct new `scheduled_for` and a reset `attempt_count`
+after the reschedule succeeded. If the new fire time has already passed,
+the row is deleted outright instead. `register_booking_cancellation_jobs()`
+deletes every pending `session_reminder_customer`/`session_reminder_expert`
+row for the booking outright -- live-verified zero pending reminder rows
+remain immediately after cancellation. A second layer of defense-in-depth
+lives in the handlers themselves: `get_booking_notification_context()` now
+returns `booking_status`, and both reminder handlers short-circuit
+(`{ok: true, providerId: null}`) if it isn't `'confirmed'`, covering the
+race where a reminder job was already claimed/in-flight the instant a
+cancellation lands.
+
+**Per-event job resolution via the dedupe_key, not "most recent."** A
+booking can be rescheduled or cancelled more than once, so each
+`calendar_update`/`reschedule_email_*`/`calendar_cancel`/
+`cancellation_email_*` job encodes the specific `booking_reschedules`/
+`booking_cancellations` row's own id into its `dedupe_key`
+(`'calendar_update:' || reschedule_id`, etc.) -- `parseEventIdFromDedupeKey()`
+(`lib/jobs/handlers.ts`) parses it back out at execution time, and
+`getRescheduleContext()`/`getCancellationContext()` (`lib/jobs/data.ts`)
+fetch the exact historical row by that id, never just "whatever is most
+recent for this booking." Live-verified: after a successful reschedule,
+`calendar_update`/`reschedule_email_customer`/`reschedule_email_expert`
+jobs were registered with `dedupe_key`s correctly suffixed by that
+specific `booking_reschedules` row's own id.
+
+**Authorization, live-verified from every angle:** a customer cannot
+reschedule, cancel, or decline a request on another customer's booking
+(`reschedule_booking`/`cancel_customer_booking`/
+`decline_expert_reschedule_request` all resolve to the same generic
+`"Booking not found."` a nonexistent reference would, never leaking
+existence); an expert cannot cancel or request-reschedule another expert's
+booking (same `"Booking not found."`); a non-admin caller of
+`admin_reschedule_booking`/`admin_cancel_booking` gets `"Not authorized."`;
+and a dual-identity test account (simultaneously a customer AND an
+approved, published expert on different bookings) was live-verified
+blocked from `cancel_expert_booking()` on a booking where it is neither
+party -- scoped strictly by the actual booking relationship, never by
+role alone.
+
+**Key files:** `supabase/migrations/045_phase10_reschedule_cancellation.sql`
+(`booking_reschedules`/`booking_cancellations`/`booking_change_requests`
+tables + RLS + the one-pending-request partial unique index,
+`customer_reschedule_cutoff_hours()`/`customer_cancel_cutoff_hours()`,
+`reschedule_booking()`/`admin_reschedule_booking()`/
+`cancel_customer_booking()`/`cancel_expert_booking()`/
+`admin_cancel_booking()`/`request_expert_reschedule()`/
+`decline_expert_reschedule_request()`, `register_booking_reschedule_jobs()`/
+`register_booking_cancellation_jobs()`, plus the `DROP`+`CREATE` of
+`get_bookable_slots()`/`get_booking_notification_context()`);
+`lib/booking/reschedule.ts` (`fetchRescheduleSlotsAction`,
+`rescheduleBookingAction`, `declineExpertRescheduleRequestAction`),
+`lib/booking/cancellation.ts` (`cancelCustomerBookingAction`, cancellation
+reason categories), `isReschedulableByCustomer`/`isCancellableByCustomer`
+(`lib/booking/data.ts`), new actions in `lib/expert/actions.ts`
+(`requestExpertRescheduleAction`, `cancelExpertBookingAction`) and
+`lib/admin/actions.ts` (`adminRescheduleBookingAction`,
+`adminCancelBookingAction`); calendar `updateEvent()`/`cancelEvent()`
+(`lib/calendar/google.ts`, `lib/calendar/fake.ts`,
+`lib/calendar/provider.ts`), 5 new email templates
+(`lib/jobs/emailTemplates.ts`), 6 new job handlers + the reminder
+defense-in-depth check (`lib/jobs/handlers.ts`); UI --
+`components/booking/RescheduleModal.tsx`,
+`components/booking/CancelBookingModal.tsx`,
+`components/booking/SessionActionsPanel.tsx` (customer),
+`components/expert/ExpertSessionActionsPanel.tsx` (expert),
+`components/admin/AdminRescheduleModal.tsx`,
+`components/admin/AdminRescheduleButton.tsx`,
+`components/admin/AdminCancelBookingButton.tsx` (admin), wired into
+`app/dashboard/sessions/[reference]/page.tsx`,
+`app/expert/sessions/[reference]/page.tsx`, and
+`app/admin/bookings/[reference]/page.tsx` (reschedule history + current
+cancellation + any pending expert request, on all three).
+
+**Testing:** `e2e/specs/phase10.spec.ts` covers a full customer reschedule
+(expert/duration/format/price preserved), the 24-hour cutoff hiding the
+buttons, a paid cancellation's `financial_followup_required`/untouched
+`payment_status`, reminder-job cleanup on cancellation, expert
+request-only behavior, expert cancellation bypassing the cutoff, and
+cross-customer authorization -- against the real Supabase project (`npm
+run test:e2e:phase10`); like the rest of this suite, written and
+`tsc`/`eslint`-checked but not executed in this sandbox (no network access
+to run `next dev` from here). The substantive verification came from
+extensive live SQL testing directly against PIVOTROOM-DEMO, summarized in
+every bullet above -- cutoff enforcement, successful reschedule with
+payload-integrity checks, reminder resurrection-and-reschedule, the
+exclusion-constraint conflict path (both customer- and admin-initiated,
+proving admin genuinely cannot bypass it), atomicity on a failed
+reschedule, cancellation with and without a verified payment, reminder
+suppression, the full expert-request -> customer-reschedule
+auto-accept -> decline-alternative flow, expert-cancel-bypasses-cutoff,
+non-admin-blocked-from-admin-functions, admin-bypasses-cutoff-but-not-
+double-booking, RLS `SELECT` scoping (owner sees, non-owner sees 0 rows),
+structural immutability of all three audit tables (`INSERT`/`UPDATE`/
+`DELETE` all denied by RLS), dual-identity role-vs-relationship scoping,
+and a Phase 1-9 regression spot-check (the original 6-parameter
+`get_bookable_slots()` call, `get_booking_notification_context()` against
+a real pre-existing confirmed booking) confirming nothing upstream broke.
+Security Advisor shows no new CRITICAL/HIGH findings -- only the same
+class of pre-existing WARNs already accepted in Phase 9 (every
+`SECURITY DEFINER` RPC being callable by `authenticated`/`anon`, which is
+the intentional, audited pattern this entire project uses; the `pg_net`
+public-schema WARN; leaked-password-protection). `tsc --noEmit`,
+`eslint .`, and `next build` all pass.
+
+**Explicitly out of scope for Phase 10** (per this phase's own spec, and
+per the financial boundary above): any refund of any kind (Chapa API
+call, manual bank refund, payout adjustment, or refund amount
+calculation -- reserved for Phase 11), expert payouts, commission
+settlement, referral payouts, ratings, reviews, a reschedule/cancellation
+policy admin can configure per-expert (the 24-hour cutoffs are global
+policy constants, same posture as the Phase 5 booking-policy constants),
+a "reschedule limit" (a booking can be rescheduled any number of times),
+SMS/WhatsApp/Telegram/push notifications for any Phase 10 event, and a
+customer- or expert-facing history/audit UI beyond the simple reschedule-
+history list and current-cancellation display already built into the
+three session-detail pages.
+
 ## Explicitly not implemented (future phases)
 
 **Availability (Phase 4) items, still standing:** raw recurrence text
@@ -2105,9 +2360,8 @@ history table, an "Unsuspend" step distinct from Restore, and an internal
 admin-notes system separate from the one applicant-visible review
 message.
 
-**Booking (Phase 5) items, still standing:** booking cancellation, booking
-rescheduling ("Change date" or similar), an admin booking CRM beyond the
-simple payment queue and the Phase 7 read-only bookings list, Outlook/
+**Booking (Phase 5) items, still standing:** an admin booking CRM beyond
+the simple payment queue and the Phase 7 read-only bookings list, Outlook/
 Calendly/Cal.com integration, WhatsApp/SMS/Telegram/push booking
 notifications (PostHog analytics events are wired conceptually but not
 active in this codebase), reviews, ratings, session/booking counts. (A
@@ -2116,7 +2370,9 @@ listed here as not yet built, now exist -- see "Customer & Expert Session
 Dashboards (Phase 7)" above. Booking-confirmation email and Google
 Calendar/Meet event creation, previously listed here as not yet built,
 now exist -- see "Transactional Notifications + Google Calendar + Google
-Meet (Phase 9)" above.)
+Meet (Phase 9)" above. Booking cancellation and rescheduling, previously
+listed here as not yet built, now exist -- see "Rescheduling + Cancellation
+(Phase 10)" below.)
 
 **Payment (Phase 6) boundary -- Phase 6 stops at `confirmed`,
 explicitly:** (Chapa integration is no longer out of scope -- see
@@ -2143,15 +2399,16 @@ path to `booking_status =
 reach `pending_verification`, `verified`, or `rejected` -- through Phase
 6 code.
 
-**Session dashboard (Phase 7) boundary, explicitly:** rescheduling,
-cancellation, refunds, payouts, expert earnings/commission reporting,
-referral payouts, ratings, reviews, chat/direct messaging, support
-tickets, and any WhatsApp/SMS/Telegram notification remain entirely
-unbuilt. (Email confirmation/reminder notifications and Google
-Calendar/Meet event creation, previously listed here as not yet built,
-now exist -- see "Transactional Notifications + Google Calendar + Google
-Meet (Phase 9)" above. Zoom integration remains out of scope entirely --
-Phase 9 builds Google Meet only.)
+**Session dashboard (Phase 7) boundary, explicitly:** refunds, payouts,
+expert earnings/commission reporting, referral payouts, ratings, reviews,
+chat/direct messaging, support tickets, and any WhatsApp/SMS/Telegram
+notification remain entirely unbuilt. (Email confirmation/reminder
+notifications and Google Calendar/Meet event creation, previously listed
+here as not yet built, now exist -- see "Transactional Notifications +
+Google Calendar + Google Meet (Phase 9)" above. Zoom integration remains
+out of scope entirely -- Phase 9 builds Google Meet only. Rescheduling and
+cancellation, previously listed here as not yet built, now exist -- see
+"Rescheduling + Cancellation (Phase 10)" below.)
 
 **Still standing from earlier phases regardless:** WhatsApp/SMS/Telegram/
 push notifications, testimonials, badges, referrals, gift-a-session,

@@ -5,6 +5,7 @@ import { requireApprovedExpertPage } from "@/lib/expert/auth";
 import { getExpertSessionDetail } from "@/lib/expert/sessions";
 import { formatExpertSessionDateTime } from "@/lib/expert/presentation";
 import { BookingStatusPill } from "@/components/session/StatusPill";
+import { ExpertSessionActionsPanel } from "@/components/expert/ExpertSessionActionsPanel";
 import { SESSION_FORMAT_LABELS } from "@/types/booking";
 import { EXPERT_EXPERIENCE_RANGE_LABELS, type ExpertExperienceRange } from "@/types/expert";
 
@@ -42,7 +43,7 @@ export default async function ExpertSessionDetailPage({
   const detail = await getExpertSessionDetail(supabase, expertProfileId, reference);
   if (!detail) notFound();
 
-  const { booking, intake, customer } = detail;
+  const { booking, intake, customer, rescheduleHistory, pendingChangeRequest } = detail;
 
   return (
     <div className="flex flex-col gap-8">
@@ -57,6 +58,33 @@ export default async function ExpertSessionDetailPage({
           <BookingStatusPill status={booking.booking_status as "confirmed" | "completed"} />
         </div>
       </div>
+
+      {booking.booking_status === "confirmed" ? (
+        <ExpertSessionActionsPanel
+          bookingReference={booking.booking_reference}
+          hasPendingRequest={pendingChangeRequest !== null}
+        />
+      ) : null}
+
+      {rescheduleHistory.length > 0 ? (
+        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Reschedule History</h2>
+          <ul className="flex flex-col gap-3">
+            {rescheduleHistory.map((reschedule) => (
+              <li key={reschedule.id} className="rounded-md bg-[var(--color-bg)] p-3 text-sm">
+                <p className="text-[var(--color-text)]">
+                  {formatExpertSessionDateTime(reschedule.old_start_at, booking.expert_timezone)} &rarr;{" "}
+                  {formatExpertSessionDateTime(reschedule.new_start_at, booking.expert_timezone)}
+                </p>
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                  By {reschedule.actor_type}
+                  {reschedule.reason ? ` — ${reschedule.reason}` : ""}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
         <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Session</h2>

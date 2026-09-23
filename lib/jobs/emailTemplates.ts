@@ -354,6 +354,228 @@ export function sessionReminderExpertEmail(params: {
   return { subject, html, text };
 }
 
+// =========================================================================
+// reschedule_email_customer / reschedule_email_expert (spec sections
+// 63-64) -- current/new time, never payment details.
+// =========================================================================
+export function sessionRescheduledCustomerEmail(params: {
+  expertName: string;
+  oldStartAt: string;
+  newStartAt: string;
+  customerTimezone: string | null;
+  durationMinutes: number;
+  sessionFormat: string;
+  bookingReference: string;
+  meetingUrl: string | null;
+  appUrl: string;
+}): EmailContent {
+  const oldDateTime = formatSessionDateTime(params.oldStartAt, params.customerTimezone);
+  const newDateTime = formatSessionDateTime(params.newStartAt, params.customerTimezone);
+  const formatLabel = SESSION_FORMAT_LABELS[params.sessionFormat as "online" | "in_person"] ?? params.sessionFormat;
+  const ctaUrl = `${params.appUrl}/dashboard/sessions/${encodeURIComponent(params.bookingReference)}`;
+
+  const html = renderShell({
+    heading: "Your session has been rescheduled",
+    bodyHtml: `
+      <p style="margin:0;">Your session with ${escapeHtml(params.expertName)} has a new date and time.</p>
+      ${fieldsTableHtml(
+        fieldRowHtml("Previous time", oldDateTime) +
+          fieldRowHtml("New time", newDateTime) +
+          fieldRowHtml("Duration", `${params.durationMinutes} minutes`) +
+          fieldRowHtml("Format", formatLabel) +
+          fieldRowHtml("Booking reference", params.bookingReference),
+      )}
+      ${meetingDetailsHtml(params.sessionFormat, params.meetingUrl)}
+    `,
+    ctaLabel: "View Session",
+    ctaUrl,
+  });
+
+  const text = formatText(
+    "Your Pivotroom session has been rescheduled",
+    "",
+    `Expert: ${params.expertName}`,
+    `Previous time: ${oldDateTime}`,
+    `New time: ${newDateTime}`,
+    `Duration: ${params.durationMinutes} minutes`,
+    `Format: ${formatLabel}`,
+    `Booking reference: ${params.bookingReference}`,
+    "",
+    `View your session: ${ctaUrl}`,
+  );
+
+  return { subject: "Your Pivotroom session has been rescheduled", html, text };
+}
+
+export function sessionRescheduledExpertEmail(params: {
+  customerName: string;
+  oldStartAt: string;
+  newStartAt: string;
+  expertTimezone: string | null;
+  durationMinutes: number;
+  sessionFormat: string;
+  bookingReference: string;
+  meetingUrl: string | null;
+  appUrl: string;
+}): EmailContent {
+  const oldDateTime = formatSessionDateTime(params.oldStartAt, params.expertTimezone);
+  const newDateTime = formatSessionDateTime(params.newStartAt, params.expertTimezone);
+  const formatLabel = SESSION_FORMAT_LABELS[params.sessionFormat as "online" | "in_person"] ?? params.sessionFormat;
+  const ctaUrl = `${params.appUrl}/expert/sessions/${encodeURIComponent(params.bookingReference)}`;
+
+  const html = renderShell({
+    heading: "A session has been rescheduled",
+    bodyHtml: `
+      <p style="margin:0;">Your confirmed session with ${escapeHtml(params.customerName)} has a new date and time.</p>
+      ${fieldsTableHtml(
+        fieldRowHtml("Previous time", oldDateTime) +
+          fieldRowHtml("New time", newDateTime) +
+          fieldRowHtml("Duration", `${params.durationMinutes} minutes`) +
+          fieldRowHtml("Format", formatLabel) +
+          fieldRowHtml("Booking reference", params.bookingReference),
+      )}
+      ${meetingDetailsHtml(params.sessionFormat, params.meetingUrl)}
+    `,
+    ctaLabel: "View Session",
+    ctaUrl,
+  });
+
+  const text = formatText(
+    "A confirmed Pivotroom session has been rescheduled",
+    "",
+    `Customer: ${params.customerName}`,
+    `Previous time: ${oldDateTime}`,
+    `New time: ${newDateTime}`,
+    `Duration: ${params.durationMinutes} minutes`,
+    `Format: ${formatLabel}`,
+    `Booking reference: ${params.bookingReference}`,
+    "",
+    `View session: ${ctaUrl}`,
+  );
+
+  return { subject: "A confirmed Pivotroom session has been rescheduled", html, text };
+}
+
+// =========================================================================
+// cancellation_email_customer / cancellation_email_expert (spec sections
+// 45-46) -- never claims a refund, never includes payment amounts.
+// =========================================================================
+export function sessionCancelledCustomerEmail(params: {
+  expertName: string;
+  startAt: string;
+  customerTimezone: string | null;
+  bookingReference: string;
+  financialFollowupRequired: boolean;
+  appUrl: string;
+}): EmailContent {
+  const dateTime = formatSessionDateTime(params.startAt, params.customerTimezone);
+  const ctaUrl = `${params.appUrl}/dashboard/sessions/${encodeURIComponent(params.bookingReference)}`;
+  const followupLine = params.financialFollowupRequired
+    ? "If financial follow-up is applicable, Pivotroom will handle it separately."
+    : "";
+
+  const html = renderShell({
+    heading: "Your session has been cancelled",
+    bodyHtml: `
+      <p style="margin:0;">Your session with ${escapeHtml(params.expertName)} has been cancelled.</p>
+      ${fieldsTableHtml(fieldRowHtml("Expert", params.expertName) + fieldRowHtml("Date & time", dateTime) + fieldRowHtml("Booking reference", params.bookingReference))}
+      ${followupLine ? `<p style="margin:12px 0 0 0;">${escapeHtml(followupLine)}</p>` : ""}
+    `,
+    ctaLabel: "View Session",
+    ctaUrl,
+  });
+
+  const text = formatText(
+    "Your Pivotroom session has been cancelled",
+    "",
+    `Expert: ${params.expertName}`,
+    `Date & time: ${dateTime}`,
+    `Booking reference: ${params.bookingReference}`,
+    followupLine,
+    "",
+    `View session: ${ctaUrl}`,
+  );
+
+  return { subject: "Your Pivotroom session has been cancelled", html, text };
+}
+
+export function sessionCancelledExpertEmail(params: {
+  customerName: string;
+  startAt: string;
+  expertTimezone: string | null;
+  bookingReference: string;
+  appUrl: string;
+}): EmailContent {
+  const dateTime = formatSessionDateTime(params.startAt, params.expertTimezone);
+  const ctaUrl = `${params.appUrl}/expert/sessions`;
+
+  const html = renderShell({
+    heading: "A session has been cancelled",
+    bodyHtml: `
+      <p style="margin:0;">Your confirmed session with ${escapeHtml(params.customerName)} has been cancelled.</p>
+      ${fieldsTableHtml(fieldRowHtml("Customer", params.customerName) + fieldRowHtml("Date & time", dateTime) + fieldRowHtml("Booking reference", params.bookingReference))}
+    `,
+    ctaLabel: "View Sessions",
+    ctaUrl,
+  });
+
+  const text = formatText(
+    "A confirmed Pivotroom session has been cancelled",
+    "",
+    `Customer: ${params.customerName}`,
+    `Date & time: ${dateTime}`,
+    `Booking reference: ${params.bookingReference}`,
+    "",
+    `View sessions: ${ctaUrl}`,
+  );
+
+  return { subject: "A confirmed Pivotroom session has been cancelled", html, text };
+}
+
+// =========================================================================
+// reschedule_request_email_customer (spec section 31) -- notifies the
+// customer of an expert-initiated change request; never changes the
+// booking itself.
+// =========================================================================
+export function expertRescheduleRequestedEmail(params: {
+  expertName: string;
+  startAt: string;
+  customerTimezone: string | null;
+  bookingReference: string;
+  reason: string;
+  appUrl: string;
+}): EmailContent {
+  const dateTime = formatSessionDateTime(params.startAt, params.customerTimezone);
+  const ctaUrl = `${params.appUrl}/dashboard/sessions/${encodeURIComponent(params.bookingReference)}`;
+
+  const html = renderShell({
+    heading: "Your expert has requested a schedule change",
+    bodyHtml: `
+      <p style="margin:0;">${escapeHtml(params.expertName)} has requested a change to your upcoming session.</p>
+      ${fieldsTableHtml(fieldRowHtml("Current time", dateTime) + fieldRowHtml("Booking reference", params.bookingReference))}
+      <p style="margin:12px 0 0 0;"><strong>Reason:</strong> ${escapeHtml(truncate(params.reason, 300))}</p>
+      <p style="margin:12px 0 0 0;">Your session has not been changed yet -- please choose a new time that works for you.</p>
+    `,
+    ctaLabel: "Choose a New Time",
+    ctaUrl,
+  });
+
+  const text = formatText(
+    "Your expert has requested a schedule change",
+    "",
+    `Expert: ${params.expertName}`,
+    `Current time: ${dateTime}`,
+    `Booking reference: ${params.bookingReference}`,
+    `Reason: ${truncate(params.reason, 300)}`,
+    "",
+    "Your session has not been changed yet -- please choose a new time that works for you.",
+    "",
+    `Choose a new time: ${ctaUrl}`,
+  );
+
+  return { subject: "Your expert has requested a schedule change", html, text };
+}
+
 function truncate(value: string, max: number): string {
   return value.length > max ? `${value.slice(0, max)}…` : value;
 }

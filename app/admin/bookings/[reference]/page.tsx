@@ -6,7 +6,9 @@ import { BookingStatusPill, PaymentStatusPill } from "@/components/session/Statu
 import { AdminReleaseButton } from "@/components/admin/AdminReleaseButton";
 import { AdminRetryJobButton } from "@/components/admin/AdminRetryJobButton";
 import { AdminBackfillIntegrationsButton } from "@/components/admin/AdminBackfillIntegrationsButton";
-import { SESSION_FORMAT_LABELS, type BookingStatus } from "@/types/booking";
+import { AdminRescheduleButton } from "@/components/admin/AdminRescheduleButton";
+import { AdminCancelBookingButton } from "@/components/admin/AdminCancelBookingButton";
+import { SESSION_FORMAT_LABELS, type BookingStatus, type SessionFormat } from "@/types/booking";
 import type { PaymentStatus } from "@/types/payment";
 import { INTEGRATION_JOB_TYPE_LABELS, INTEGRATION_JOB_STATUS_LABELS } from "@/types/notifications";
 
@@ -21,7 +23,8 @@ export default async function AdminBookingDetailPage({
   const detail = await getAdminBookingDetail(supabase, reference);
   if (!detail) notFound();
 
-  const { booking, intake, customerName, expertName, expertSlug, payments, integrationJobs } = detail;
+  const { booking, intake, customerName, expertName, expertSlug, payments, integrationJobs, rescheduleHistory, cancellation, pendingChangeRequest } =
+    detail;
   const calendarStatusLabel: Record<string, string> = {
     not_synced: "Not synced",
     pending: "Pending",
@@ -41,8 +44,28 @@ export default async function AdminBookingDetailPage({
           {booking.booking_status === "held" || booking.booking_status === "awaiting_payment" ? (
             <AdminReleaseButton bookingId={booking.id} bookingReference={booking.booking_reference} />
           ) : null}
+          {booking.booking_status === "confirmed" ? (
+            <>
+              <AdminRescheduleButton
+                bookingId={booking.id}
+                bookingReference={booking.booking_reference}
+                expertSlug={expertSlug}
+                durationMinutes={booking.duration_minutes}
+                sessionFormat={booking.session_format as SessionFormat}
+                customerTimezone={booking.customer_timezone}
+              />
+              <AdminCancelBookingButton bookingReference={booking.booking_reference} />
+            </>
+          ) : null}
         </div>
       </div>
+
+      {pendingChangeRequest ? (
+        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+          <h2 className="text-sm font-semibold text-[var(--color-text)]">Pending Expert Reschedule Request</h2>
+          <p className="mt-1 text-sm text-[var(--color-text-muted)]">{pendingChangeRequest.reason}</p>
+        </section>
+      ) : null}
 
       <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
         <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Booking</h2>
@@ -105,6 +128,42 @@ export default async function AdminBookingDetailPage({
           </ul>
         )}
       </section>
+
+      {cancellation ? (
+        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Cancellation</h2>
+          <dl className="flex flex-col gap-3 text-sm">
+            <Field label="Cancelled by" value={cancellation.actor_type} />
+            <Field label="Reason" value={cancellation.reason} block />
+          </dl>
+          {cancellation.financial_followup_required ? (
+            <p className="mt-3 text-xs text-[var(--color-text-muted)]">
+              This booking had a verified payment. Financial follow-up is required (Phase 11).
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      {rescheduleHistory.length > 0 ? (
+        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Reschedule History</h2>
+          <ul className="flex flex-col gap-3">
+            {rescheduleHistory.map((reschedule) => (
+              <li key={reschedule.id} className="rounded-md bg-[var(--color-bg)] p-3 text-sm">
+                <p className="text-[var(--color-text)]">
+                  {new Date(reschedule.old_start_at).toLocaleString()} &rarr;{" "}
+                  {new Date(reschedule.new_start_at).toLocaleString()}
+                </p>
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                  By {reschedule.actor_type}
+                  {reschedule.admin_override ? " (admin override)" : ""}
+                  {reschedule.reason ? ` — ${reschedule.reason}` : ""}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {booking.booking_status === "confirmed" ? (
         <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">

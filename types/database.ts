@@ -14,6 +14,111 @@ export type Database = {
   }
   public: {
     Tables: {
+      booking_cancellations: {
+        Row: {
+          actor_type: string
+          booking_id: string
+          cancelled_at: string
+          cancelled_by_user_id: string
+          details: string | null
+          financial_followup_required: boolean
+          id: string
+          policy_cutoff_met: boolean
+          reason: string
+        }
+        Insert: {
+          actor_type: string
+          booking_id: string
+          cancelled_at?: string
+          cancelled_by_user_id: string
+          details?: string | null
+          financial_followup_required?: boolean
+          id?: string
+          policy_cutoff_met: boolean
+          reason: string
+        }
+        Update: {
+          actor_type?: string
+          booking_id?: string
+          cancelled_at?: string
+          cancelled_by_user_id?: string
+          details?: string | null
+          financial_followup_required?: boolean
+          id?: string
+          policy_cutoff_met?: boolean
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_cancellations_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_cancellations_cancelled_by_user_id_fkey"
+            columns: ["cancelled_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_change_requests: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          proposed_end_at: string | null
+          proposed_start_at: string | null
+          reason: string
+          requested_by: string
+          requester_type: string
+          responded_at: string | null
+          status: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          proposed_end_at?: string | null
+          proposed_start_at?: string | null
+          reason: string
+          requested_by: string
+          requester_type: string
+          responded_at?: string | null
+          status?: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          proposed_end_at?: string | null
+          proposed_start_at?: string | null
+          reason?: string
+          requested_by?: string
+          requester_type?: string
+          responded_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_change_requests_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_change_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_intake: {
         Row: {
           additional_context: string
@@ -48,6 +153,63 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: true
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_reschedules: {
+        Row: {
+          actor_type: string
+          admin_override: boolean
+          booking_id: string
+          created_at: string
+          id: string
+          initiated_by_user_id: string
+          new_end_at: string
+          new_start_at: string
+          old_end_at: string
+          old_start_at: string
+          reason: string | null
+        }
+        Insert: {
+          actor_type: string
+          admin_override?: boolean
+          booking_id: string
+          created_at?: string
+          id?: string
+          initiated_by_user_id: string
+          new_end_at: string
+          new_start_at: string
+          old_end_at: string
+          old_start_at: string
+          reason?: string | null
+        }
+        Update: {
+          actor_type?: string
+          admin_override?: boolean
+          booking_id?: string
+          created_at?: string
+          id?: string
+          initiated_by_user_id?: string
+          new_end_at?: string
+          new_start_at?: string
+          old_end_at?: string
+          old_start_at?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_reschedules_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_reschedules_initiated_by_user_id_fkey"
+            columns: ["initiated_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -851,8 +1013,20 @@ export type Database = {
         Args: { p_booking_id: string }
         Returns: undefined
       }
+      admin_cancel_booking: {
+        Args: { p_booking_reference: string; p_reason: string }
+        Returns: undefined
+      }
       admin_release_booking_reservation: {
         Args: { p_booking_id: string }
+        Returns: undefined
+      }
+      admin_reschedule_booking: {
+        Args: {
+          p_booking_reference: string
+          p_new_start_at: string
+          p_reason: string
+        }
         Returns: undefined
       }
       admin_retry_integration_job: {
@@ -867,6 +1041,18 @@ export type Database = {
       booking_horizon_days: { Args: never; Returns: number }
       booking_min_notice_hours: { Args: never; Returns: number }
       booking_slot_increment_minutes: { Args: never; Returns: number }
+      cancel_customer_booking: {
+        Args: {
+          p_booking_reference: string
+          p_details?: string
+          p_reason: string
+        }
+        Returns: undefined
+      }
+      cancel_expert_booking: {
+        Args: { p_booking_reference: string; p_reason: string }
+        Returns: undefined
+      }
       chapa_checkout_hold_minutes: { Args: never; Returns: number }
       create_booking_hold: {
         Args: {
@@ -889,6 +1075,12 @@ export type Database = {
           payment_id: string
           provider_tx_ref: string
         }[]
+      }
+      customer_cancel_cutoff_hours: { Args: never; Returns: number }
+      customer_reschedule_cutoff_hours: { Args: never; Returns: number }
+      decline_expert_reschedule_request: {
+        Args: { p_request_id: string }
+        Returns: undefined
       }
       expert_all_raw_windows_for_date: {
         Args: { p_date: string; p_expert_profile_id: string }
@@ -958,6 +1150,7 @@ export type Database = {
         Args: {
           p_customer_timezone?: string
           p_duration_minutes: number
+          p_exclude_booking_id?: string
           p_expert_slug: string
           p_range_end: string
           p_range_start: string
@@ -973,6 +1166,7 @@ export type Database = {
         Args: { p_booking_id: string }
         Returns: {
           booking_reference: string
+          booking_status: string
           customer_email: string
           customer_full_name: string
           customer_id: string
@@ -1082,8 +1276,16 @@ export type Database = {
         Returns: number
       }
       payment_rejection_grace_minutes: { Args: never; Returns: number }
+      register_booking_cancellation_jobs: {
+        Args: { p_booking_id: string; p_cancellation_id: string }
+        Returns: undefined
+      }
       register_booking_confirmation_jobs: {
         Args: { p_booking_id: string }
+        Returns: undefined
+      }
+      register_booking_reschedule_jobs: {
+        Args: { p_booking_id: string; p_reschedule_id: string }
         Returns: undefined
       }
       register_payment_rejected_job: {
@@ -1108,6 +1310,22 @@ export type Database = {
       }
       remove_expert_one_off_availability: {
         Args: { p_id: string }
+        Returns: undefined
+      }
+      request_expert_reschedule: {
+        Args: {
+          p_booking_reference: string
+          p_proposed_start_at?: string
+          p_reason: string
+        }
+        Returns: undefined
+      }
+      reschedule_booking: {
+        Args: {
+          p_booking_reference: string
+          p_new_start_at: string
+          p_reason?: string
+        }
         Returns: undefined
       }
       resolve_own_approved_expert_profile_id: { Args: never; Returns: string }

@@ -8,6 +8,9 @@ import {
   markCalendarSynced,
   markCalendarFailed,
   getPaymentRejectionContext,
+  getRescheduleContext,
+  getCancellationContext,
+  getPendingChangeRequestContext,
 } from "./data";
 import {
   bookingConfirmationCustomerEmail,
@@ -15,7 +18,24 @@ import {
   paymentRejectedEmail,
   sessionReminderCustomerEmail,
   sessionReminderExpertEmail,
+  sessionRescheduledCustomerEmail,
+  sessionRescheduledExpertEmail,
+  sessionCancelledCustomerEmail,
+  sessionCancelledExpertEmail,
+  expertRescheduleRequestedEmail,
 } from "./emailTemplates";
+
+/** Job dedupe_key is always "<prefix>:<uuid>" for the Phase 10 per-event
+ * job types (calendar_update, calendar_cancel, reschedule_email_*,
+ * cancellation_email_*) -- the uuid is the booking_reschedules/
+ * booking_cancellations row id this specific job renders, so a booking
+ * rescheduled or cancelled more than once always resolves the CORRECT
+ * historical event, never just "whatever happened most recently". */
+function parseEventIdFromDedupeKey(dedupeKey: string): string | null {
+  const idx = dedupeKey.indexOf(":");
+  if (idx === -1) return null;
+  return dedupeKey.slice(idx + 1) || null;
+}
 
 export type JobHandlerResult = { ok: true; providerId: string | null } | { ok: false; error: string };
 
@@ -43,6 +63,20 @@ export async function runJobHandler(job: IntegrationJobRow): Promise<JobHandlerR
       return handleSessionReminderExpert(job);
     case "payment_rejected_email":
       return handlePaymentRejectedEmail(job);
+    case "calendar_update":
+      return handleCalendarUpdate(job);
+    case "calendar_cancel":
+      return handleCalendarCancel(job);
+    case "reschedule_email_customer":
+      return handleRescheduleEmailCustomer(job);
+    case "reschedule_email_expert":
+      return handleRescheduleEmailExpert(job);
+    case "cancellation_email_customer":
+      return handleCancellationEmailCustomer(job);
+    case "cancellation_email_expert":
+      return handleCancellationEmailExpert(job);
+    case "reschedule_request_email_customer":
+      return handleRescheduleRequestEmailCustomer(job);
     default:
       return { ok: false, error: `Unknown job_type: ${job.job_type}` };
   }
@@ -147,6 +181,12 @@ async function handleCalendarCreate(job: IntegrationJobRow): Promise<JobHandlerR
 async function handleSessionReminderCustomer(job: IntegrationJobRow): Promise<JobHandlerResult> {
   const ctx = await getNotificationContext(job.booking_id);
   if (!ctx) return { ok: false, error: "Booking notification context not found." };
+  // Defense in depth (spec section 62): even though cancellation deletes
+  // pending reminder jobs outright, a reminder already claimed/in-flight
+  // when a cancellation lands concurrently must still refuse to send.
+  if (ctx.booking_status !== "confirmed") {
+    return { ok: true, providerId: null };
+  }
   const calendarState = await getBookingCalendarState(job.booking_id);
   const offsetMinutes = typeof job.payload === "object" && job.payload && "offset_minutes" in job.payload
     ? Number((job.payload as { offset_minutes?: number }).offset_minutes)
@@ -178,6 +218,9 @@ async function handleSessionReminderCustomer(job: IntegrationJobRow): Promise<Jo
 async function handleSessionReminderExpert(job: IntegrationJobRow): Promise<JobHandlerResult> {
   const ctx = await getNotificationContext(job.booking_id);
   if (!ctx) return { ok: false, error: "Booking notification context not found." };
+  if (ctx.booking_status !== "confirmed") {
+    return { ok: true, providerId: null };
+  }
   const calendarState = await getBookingCalendarState(job.booking_id);
   const offsetMinutes = typeof job.payload === "object" && job.payload && "offset_minutes" in job.payload
     ? Number((job.payload as { offset_minutes?: number }).offset_minutes)
@@ -222,6 +265,215 @@ async function handlePaymentRejectedEmail(job: IntegrationJobRow): Promise<JobHa
 
   const result = await getEmailProvider().send({
     to: ctx.customerEmail,
+    subject: content.subject,
+    html: content.html,
+    text: content.text,
+    idempotencyKey: job.dedupe_key,
+  });
+
+  return result.ok ? { ok: true, providerId: result.providerId } : { ok: false, error: result.error };
+}
+
+// =========================================================================
+// Phase 10 -- reschedule side effects (spec sections 54-56, 60-65).
+// =========================================================================
+
+async function handleCalendarUpdate(job: IntegrationJobRow): Promise<JobHandlerResult> {
+  const calendarState = await getBookingCalendarState(job.booking_id);
+  // No event exists yet for this booking (e.g. the original calendar_create
+  // hasn't completed) -- nothing to update. Not an error: the reschedule
+  // itself already succeeded in Pivotroom's own DB regardless of Calendar
+  // state (spec section 56).
+  if (!calendarState?.calendar_event_id) {
+    return { ok: true, providerId: null };
+  }
+
+  const ctx = await getNotificationContext(job.booking_id);
+  if (!ctx) return { ok: false, error: "Booking notification context not found." };
+
+  const result = await getCalendarProvider().updateEvent({
+    eventId: calendarState.calendar_event_id,
+    startAt: ctx.start_at,
+    endAt: ctx.end_at,
+  });
+
+  if (!result.ok) {
+    await markCalendarFailed(job.booking_id);
+    return { ok: false, error: result.error };
+  }
+
+  return { ok: true, providerId: calendarState.calendar_event_id };
+}
+
+async function handleRescheduleEmailCustomer(job: IntegrationJobRow): Promise<JobHandlerResult> {
+  const rescheduleId = parseEventIdFromDedupeKey(job.dedupe_key);
+  if (!rescheduleId) return { ok: false, error: "Malformed dedupe_key: missing reschedule id." };
+
+  const [ctx, reschedule, calendarState] = await Promise.all([
+    getNotificationContext(job.booking_id),
+    getRescheduleContext(rescheduleId),
+    getBookingCalendarState(job.booking_id),
+  ]);
+  if (!ctx) return { ok: false, error: "Booking notification context not found." };
+  if (!reschedule) return { ok: false, error: "Reschedule history record not found." };
+
+  const content = sessionRescheduledCustomerEmail({
+    expertName: ctx.expert_full_name,
+    oldStartAt: reschedule.oldStartAt,
+    newStartAt: reschedule.newStartAt,
+    customerTimezone: ctx.customer_timezone,
+    durationMinutes: ctx.duration_minutes,
+    sessionFormat: ctx.session_format,
+    bookingReference: ctx.booking_reference,
+    meetingUrl: calendarState?.calendar_meeting_url ?? null,
+    appUrl: getAppUrl(),
+  });
+
+  const result = await getEmailProvider().send({
+    to: ctx.customer_email,
+    subject: content.subject,
+    html: content.html,
+    text: content.text,
+    idempotencyKey: job.dedupe_key,
+  });
+
+  return result.ok ? { ok: true, providerId: result.providerId } : { ok: false, error: result.error };
+}
+
+async function handleRescheduleEmailExpert(job: IntegrationJobRow): Promise<JobHandlerResult> {
+  const rescheduleId = parseEventIdFromDedupeKey(job.dedupe_key);
+  if (!rescheduleId) return { ok: false, error: "Malformed dedupe_key: missing reschedule id." };
+
+  const [ctx, reschedule, calendarState] = await Promise.all([
+    getNotificationContext(job.booking_id),
+    getRescheduleContext(rescheduleId),
+    getBookingCalendarState(job.booking_id),
+  ]);
+  if (!ctx) return { ok: false, error: "Booking notification context not found." };
+  if (!reschedule) return { ok: false, error: "Reschedule history record not found." };
+
+  const content = sessionRescheduledExpertEmail({
+    customerName: ctx.customer_full_name,
+    oldStartAt: reschedule.oldStartAt,
+    newStartAt: reschedule.newStartAt,
+    expertTimezone: ctx.expert_timezone,
+    durationMinutes: ctx.duration_minutes,
+    sessionFormat: ctx.session_format,
+    bookingReference: ctx.booking_reference,
+    meetingUrl: calendarState?.calendar_meeting_url ?? null,
+    appUrl: getAppUrl(),
+  });
+
+  const result = await getEmailProvider().send({
+    to: ctx.expert_email,
+    subject: content.subject,
+    html: content.html,
+    text: content.text,
+    idempotencyKey: job.dedupe_key,
+  });
+
+  return result.ok ? { ok: true, providerId: result.providerId } : { ok: false, error: result.error };
+}
+
+async function handleRescheduleRequestEmailCustomer(job: IntegrationJobRow): Promise<JobHandlerResult> {
+  const [ctx, request] = await Promise.all([
+    getNotificationContext(job.booking_id),
+    getPendingChangeRequestContext(job.booking_id),
+  ]);
+  if (!ctx) return { ok: false, error: "Booking notification context not found." };
+  // The customer may have already responded (accepted via their own
+  // reschedule, or declined) by the time this job runs -- nothing left
+  // to notify about, not an error (spec section 27's simpler-safe-version
+  // never depends on this email arriving before a response).
+  if (!request) return { ok: true, providerId: null };
+
+  const content = expertRescheduleRequestedEmail({
+    expertName: ctx.expert_full_name,
+    startAt: ctx.start_at,
+    customerTimezone: ctx.customer_timezone,
+    bookingReference: ctx.booking_reference,
+    reason: request.reason,
+    appUrl: getAppUrl(),
+  });
+
+  const result = await getEmailProvider().send({
+    to: ctx.customer_email,
+    subject: content.subject,
+    html: content.html,
+    text: content.text,
+    idempotencyKey: job.dedupe_key,
+  });
+
+  return result.ok ? { ok: true, providerId: result.providerId } : { ok: false, error: result.error };
+}
+
+// =========================================================================
+// Phase 10 -- cancellation side effects (spec sections 44-46, 57-59, 62).
+// =========================================================================
+
+async function handleCalendarCancel(job: IntegrationJobRow): Promise<JobHandlerResult> {
+  const calendarState = await getBookingCalendarState(job.booking_id);
+  if (!calendarState?.calendar_event_id) {
+    return { ok: true, providerId: null };
+  }
+
+  const result = await getCalendarProvider().cancelEvent({ eventId: calendarState.calendar_event_id });
+  if (!result.ok) {
+    await markCalendarFailed(job.booking_id);
+    return { ok: false, error: result.error };
+  }
+
+  return { ok: true, providerId: calendarState.calendar_event_id };
+}
+
+async function handleCancellationEmailCustomer(job: IntegrationJobRow): Promise<JobHandlerResult> {
+  const cancellationId = parseEventIdFromDedupeKey(job.dedupe_key);
+  if (!cancellationId) return { ok: false, error: "Malformed dedupe_key: missing cancellation id." };
+
+  const [ctx, cancellation] = await Promise.all([
+    getNotificationContext(job.booking_id),
+    getCancellationContext(cancellationId),
+  ]);
+  if (!ctx) return { ok: false, error: "Booking notification context not found." };
+  if (!cancellation) return { ok: false, error: "Cancellation history record not found." };
+
+  const content = sessionCancelledCustomerEmail({
+    expertName: ctx.expert_full_name,
+    startAt: ctx.start_at,
+    customerTimezone: ctx.customer_timezone,
+    bookingReference: ctx.booking_reference,
+    financialFollowupRequired: cancellation.financialFollowupRequired,
+    appUrl: getAppUrl(),
+  });
+
+  const result = await getEmailProvider().send({
+    to: ctx.customer_email,
+    subject: content.subject,
+    html: content.html,
+    text: content.text,
+    idempotencyKey: job.dedupe_key,
+  });
+
+  return result.ok ? { ok: true, providerId: result.providerId } : { ok: false, error: result.error };
+}
+
+async function handleCancellationEmailExpert(job: IntegrationJobRow): Promise<JobHandlerResult> {
+  const cancellationId = parseEventIdFromDedupeKey(job.dedupe_key);
+  if (!cancellationId) return { ok: false, error: "Malformed dedupe_key: missing cancellation id." };
+
+  const ctx = await getNotificationContext(job.booking_id);
+  if (!ctx) return { ok: false, error: "Booking notification context not found." };
+
+  const content = sessionCancelledExpertEmail({
+    customerName: ctx.customer_full_name,
+    startAt: ctx.start_at,
+    expertTimezone: ctx.expert_timezone,
+    bookingReference: ctx.booking_reference,
+    appUrl: getAppUrl(),
+  });
+
+  const result = await getEmailProvider().send({
+    to: ctx.expert_email,
     subject: content.subject,
     html: content.html,
     text: content.text,

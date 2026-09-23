@@ -281,6 +281,35 @@ export async function backdateHoldExpiry(bookingId: string, secondsAgo: number) 
   if (error) throw error;
 }
 
+/**
+ * Deterministic time-travel for Phase 10's 24-hour cutoff tests
+ * (CUSTOMER_RESCHEDULE_CUTOFF_HOURS/CUSTOMER_CANCEL_CUTOFF_HOURS) --
+ * directly moves a confirmed booking's start_at closer than the cutoff
+ * without waiting real hours. Also shifts end_at by the same delta so
+ * duration stays correct. Same "test setup only, bypasses RLS via
+ * service-role" posture as backdateHoldExpiry above -- a real customer
+ * action can never do this.
+ */
+export async function setBookingStartAtHoursFromNow(bookingId: string, hoursFromNow: number) {
+  const admin = createAdminClient();
+  const { data: booking, error: readError } = await admin
+    .from("bookings")
+    .select("start_at, end_at")
+    .eq("id", bookingId)
+    .single();
+  if (readError || !booking) throw readError ?? new Error("booking not found");
+
+  const durationMs = new Date(booking.end_at).getTime() - new Date(booking.start_at).getTime();
+  const newStart = new Date(Date.now() + hoursFromNow * 60 * 60 * 1000);
+  const newEnd = new Date(newStart.getTime() + durationMs);
+
+  const { error } = await admin
+    .from("bookings")
+    .update({ start_at: newStart.toISOString(), end_at: newEnd.toISOString() })
+    .eq("id", bookingId);
+  if (error) throw error;
+}
+
 export async function getBookingByReference(admin: SupabaseClient, reference: string) {
   const { data, error } = await admin.from("bookings").select("*").eq("booking_reference", reference).single();
   if (error) throw error;

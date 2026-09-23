@@ -395,3 +395,90 @@ export async function adminBackfillBookingIntegrationsAction(
   if (bookingReference) revalidatePath(`/admin/bookings/${bookingReference}`);
   return { success: true };
 }
+
+/**
+ * Phase 10 (spec sections 4, 16-19) -- admin override/fallback reschedule,
+ * bypassing the customer's own 24-hour cutoff. admin_reschedule_booking()
+ * (045) itself re-checks is_admin() and booking_status = 'confirmed', and
+ * can NEVER bypass double-booking protection -- the same exclusion
+ * constraints original booking uses still apply. A mandatory reason is
+ * required and stored in the same append-only booking_reschedules audit
+ * trail as a customer-initiated reschedule.
+ */
+export async function adminRescheduleBookingAction(
+  _prevState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const supabase = await createClient();
+  const auth = await requireAdminForAction(supabase);
+  if (!auth.ok) return { error: auth.error };
+
+  const bookingReference = String(formData.get("booking_reference") ?? "");
+  const newStartAt = String(formData.get("new_start_at") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!bookingReference || !newStartAt || !reason) {
+    return { error: "A new time and a reason are both required." };
+  }
+
+  const { error } = await supabase.rpc("admin_reschedule_booking", {
+    p_booking_reference: bookingReference,
+    p_new_start_at: newStartAt,
+    p_reason: reason,
+  });
+
+  if (error) {
+    const message = error.message.toLowerCase();
+    if (
+      message.includes("booking not found") ||
+      message.includes("not confirmed") ||
+      message.includes("no longer available") ||
+      message.includes("just taken") ||
+      message.includes("reason")
+    ) {
+      return { error: error.message };
+    }
+    return { error: GENERIC_ERROR };
+  }
+
+  revalidatePath(`/admin/bookings/${bookingReference}`);
+  revalidatePath("/admin/bookings");
+  return { success: true };
+}
+
+/**
+ * Phase 10 (spec sections 4, 16-19) -- admin override/fallback
+ * cancellation, bypassing the customer's own 24-hour cutoff.
+ * admin_cancel_booking() (045) itself re-checks is_admin() and
+ * booking_status = 'confirmed'. Does NOT touch payment_status or issue any
+ * refund -- only sets the same objective financial_followup_required
+ * boolean a customer/expert cancellation would.
+ */
+export async function adminCancelBookingAction(
+  _prevState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const supabase = await createClient();
+  const auth = await requireAdminForAction(supabase);
+  if (!auth.ok) return { error: auth.error };
+
+  const bookingReference = String(formData.get("booking_reference") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!bookingReference || !reason) return { error: "A reason is required." };
+
+  const { error } = await supabase.rpc("admin_cancel_booking", {
+    p_booking_reference: bookingReference,
+    p_reason: reason,
+  });
+
+  if (error) {
+    const message = error.message.toLowerCase();
+    if (message.includes("booking not found") || message.includes("not confirmed") || message.includes("reason")) {
+      return { error: error.message };
+    }
+    return { error: GENERIC_ERROR };
+  }
+
+  revalidatePath(`/admin/bookings/${bookingReference}`);
+  revalidatePath("/admin/bookings");
+  return { success: true };
+}

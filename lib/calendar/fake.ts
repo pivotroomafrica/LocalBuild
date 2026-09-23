@@ -1,5 +1,18 @@
-import type { CalendarProvider, CreateEventParams, CreateEventResult } from "./provider";
-import { getCalendarMockScenario, recordCreatedEvent } from "./mockControl";
+import type {
+  CalendarProvider,
+  CreateEventParams,
+  CreateEventResult,
+  UpdateEventParams,
+  UpdateEventResult,
+  CancelEventParams,
+  CancelEventResult,
+} from "./provider";
+import {
+  getCalendarMockScenario,
+  recordCreatedEvent,
+  recordUpdatedEvent,
+  recordCancelledEvent,
+} from "./mockControl";
 
 /**
  * Test-only implementation of CalendarProvider (spec section 69) --
@@ -24,5 +37,23 @@ export class FakeCalendarProvider implements CalendarProvider {
     });
 
     return { ok: true, eventId, meetingUrl };
+  }
+
+  async updateEvent(params: UpdateEventParams): Promise<UpdateEventResult> {
+    if (getCalendarMockScenario() === "failure") {
+      return { ok: false, error: "Mock Google Calendar: simulated event update failure." };
+    }
+
+    recordUpdatedEvent({ eventId: params.eventId, startAt: params.startAt, endAt: params.endAt });
+    return { ok: true };
+  }
+
+  async cancelEvent(params: CancelEventParams): Promise<CancelEventResult> {
+    if (getCalendarMockScenario() === "failure") {
+      return { ok: false, error: "Mock Google Calendar: simulated event cancellation failure." };
+    }
+
+    recordCancelledEvent({ eventId: params.eventId });
+    return { ok: true };
   }
 }

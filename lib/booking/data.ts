@@ -1,7 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
-import type { Booking, BookingIntake, BookableSlot, BookingStatus, SessionFormat } from "@/types/booking";
-import { BOOKING_STATUS_LABELS } from "@/types/booking";
+import type {
+  Booking,
+  BookingIntake,
+  BookableSlot,
+  BookingStatus,
+  SessionFormat,
+  BookingReschedule,
+  BookingCancellation,
+  BookingChangeRequest,
+} from "@/types/booking";
+import { BOOKING_STATUS_LABELS, CUSTOMER_RESCHEDULE_CUTOFF_HOURS, CUSTOMER_CANCEL_CUTOFF_HOURS } from "@/types/booking";
 import type { Payment, PaymentStatus } from "@/types/payment";
 import type { IntegrationJobType, IntegrationJobStatus } from "@/types/notifications";
 
@@ -28,6 +37,11 @@ export async function getBookableSlots(
     rangeStart: string; // "YYYY-MM-DD"
     rangeEnd: string; // "YYYY-MM-DD"
     customerTimezone?: string | null;
+    // Phase 10 (spec section 20) -- when searching for new candidate slots
+    // to reschedule an existing booking into, that booking's OWN current
+    // occupied time must not block its own search results, while every
+    // OTHER booking still must. Omitted for the original booking flow.
+    excludeBookingId?: string;
   },
 ): Promise<BookableSlot[]> {
   const { data, error } = await supabase.rpc("get_bookable_slots", {
@@ -37,6 +51,7 @@ export async function getBookableSlots(
     p_range_start: params.rangeStart,
     p_range_end: params.rangeEnd,
     p_customer_timezone: params.customerTimezone ?? undefined,
+    p_exclude_booking_id: params.excludeBookingId ?? undefined,
   });
 
   if (error) {
@@ -97,6 +112,63 @@ export async function getExpertSlugForBooking(
 }
 
 /**
+ * Phase 10 (spec sections 6, 14) -- append-only reschedule audit trail for
+ * one booking, newest first. Relies entirely on booking_reschedules'
+ * single RLS SELECT policy (045: admin, or the booking's own
+ * customer/expert) -- a booking this caller doesn't own returns [], same
+ * as one that doesn't exist.
+ */
+export async function getBookingRescheduleHistory(
+  supabase: TypedClient,
+  bookingId: string,
+): Promise<BookingReschedule[]> {
+  const { data } = await supabase
+    .from("booking_reschedules")
+    .select("*")
+    .eq("booking_id", bookingId)
+    .order("created_at", { ascending: false });
+  return data ?? [];
+}
+
+/**
+ * Phase 10 (spec sections 7, 33-38) -- a cancelled booking has exactly one
+ * booking_cancellations row (cancellation is terminal, spec section 1),
+ * so this returns at most one rather than a list.
+ */
+export async function getBookingCancellation(
+  supabase: TypedClient,
+  bookingId: string,
+): Promise<BookingCancellation | null> {
+  const { data } = await supabase
+    .from("booking_cancellations")
+    .select("*")
+    .eq("booking_id", bookingId)
+    .maybeSingle();
+  return data ?? null;
+}
+
+/**
+ * Phase 10 (spec sections 21-24) -- the current pending expert reschedule
+ * request for a booking, if any (at most one, enforced by the partial
+ * unique index in 045). A booking with no pending request (never
+ * requested, or the request was already accepted/declined) returns null.
+ */
+export async function getPendingChangeRequest(
+  supabase: TypedClient,
+  bookingId: string,
+): Promise<BookingChangeRequest | null> {
+  const { data } = await supabase
+    .from("booking_change_requests")
+    .select("*")
+    .eq("booking_id", bookingId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data ?? null;
+}
+
+/**
  * hold_expires_at is checked directly, not just booking_status -- there
  * is no cron (spec section 33), so a stale row can still read
  * booking_status = 'held'/'awaiting_payment' after its expiry moment has
@@ -117,6 +189,33 @@ export function isHoldExpired(booking: Pick<Booking, "booking_status" | "hold_ex
     booking.hold_expires_at !== null &&
     new Date(booking.hold_expires_at).getTime() <= Date.now()
   );
+}
+
+/**
+ * Phase 10 (spec section 2: server time only, never browser time) --
+ * mirrors customer_reschedule_cutoff_hours() (045) purely so the UI can
+ * show/hide the Reschedule action without a wasted round trip.
+ * reschedule_booking() re-checks this against the server clock
+ * regardless; this is never what actually allows or blocks the action.
+ * Lives here (not lib/booking/reschedule.ts) because that file is a
+ * "use server" Server Actions module, where every export must be async.
+ */
+export function isReschedulableByCustomer(booking: Pick<Booking, "booking_status" | "start_at">): boolean {
+  if (booking.booking_status !== "confirmed") return false;
+  const cutoffMs = CUSTOMER_RESCHEDULE_CUTOFF_HOURS * 60 * 60 * 1000;
+  return new Date(booking.start_at).getTime() - Date.now() > cutoffMs;
+}
+
+/**
+ * Phase 10 (spec section 3: server time only, never browser time) --
+ * mirrors customer_cancel_cutoff_hours() (045), same posture as
+ * isReschedulableByCustomer above, and lives here for the same
+ * "use server" reason.
+ */
+export function isCancellableByCustomer(booking: Pick<Booking, "booking_status" | "start_at">): boolean {
+  if (booking.booking_status !== "confirmed") return false;
+  const cutoffMs = CUSTOMER_CANCEL_CUTOFF_HOURS * 60 * 60 * 1000;
+  return new Date(booking.start_at).getTime() - Date.now() > cutoffMs;
 }
 
 /**
@@ -327,6 +426,12 @@ export type AdminBookingDetail = {
   expertSlug: string | null;
   payments: Payment[];
   integrationJobs: AdminIntegrationJobRow[];
+  // Phase 10 (spec section 39-ish -- admin visibility into the same
+  // reschedule/cancellation audit trail a customer/expert sees on their
+  // own session page).
+  rescheduleHistory: BookingReschedule[];
+  cancellation: BookingCancellation | null;
+  pendingChangeRequest: BookingChangeRequest | null;
 };
 
 /** Admin booking detail (spec section 39) -- booking + intake + payment
@@ -344,26 +449,37 @@ export async function getAdminBookingDetail(
     .maybeSingle();
   if (!booking) return null;
 
-  const [{ data: intake }, { data: customer }, { data: expertProfile }, { data: payments }, { data: jobs }] =
-    await Promise.all([
-      supabase.from("booking_intake").select("*").eq("booking_id", booking.id).maybeSingle(),
-      supabase.from("profiles").select("full_name").eq("id", booking.customer_id).maybeSingle(),
-      supabase
-        .from("expert_profiles")
-        .select("slug, profiles!expert_profiles_user_id_fkey(full_name)")
-        .eq("id", booking.expert_profile_id)
-        .maybeSingle(),
-      supabase.from("payments").select("*").eq("booking_id", booking.id).order("submitted_at", { ascending: false }),
-      // Phase 9 (spec section 32) -- integration_jobs_select_admin (044)
-      // is what actually scopes this to admins only; a non-admin caller
-      // of this same function would just get an empty array, same as any
-      // other admin-only read in this codebase.
-      supabase
-        .from("integration_jobs")
-        .select("id, job_type, status, attempt_count, last_error, completed_at")
-        .eq("booking_id", booking.id)
-        .order("created_at", { ascending: true }),
-    ]);
+  const [
+    { data: intake },
+    { data: customer },
+    { data: expertProfile },
+    { data: payments },
+    { data: jobs },
+    rescheduleHistory,
+    cancellation,
+    pendingChangeRequest,
+  ] = await Promise.all([
+    supabase.from("booking_intake").select("*").eq("booking_id", booking.id).maybeSingle(),
+    supabase.from("profiles").select("full_name").eq("id", booking.customer_id).maybeSingle(),
+    supabase
+      .from("expert_profiles")
+      .select("slug, profiles!expert_profiles_user_id_fkey(full_name)")
+      .eq("id", booking.expert_profile_id)
+      .maybeSingle(),
+    supabase.from("payments").select("*").eq("booking_id", booking.id).order("submitted_at", { ascending: false }),
+    // Phase 9 (spec section 32) -- integration_jobs_select_admin (044)
+    // is what actually scopes this to admins only; a non-admin caller
+    // of this same function would just get an empty array, same as any
+    // other admin-only read in this codebase.
+    supabase
+      .from("integration_jobs")
+      .select("id, job_type, status, attempt_count, last_error, completed_at")
+      .eq("booking_id", booking.id)
+      .order("created_at", { ascending: true }),
+    getBookingRescheduleHistory(supabase, booking.id),
+    getBookingCancellation(supabase, booking.id),
+    getPendingChangeRequest(supabase, booking.id),
+  ]);
 
   const expertProfileTyped = expertProfile as unknown as {
     slug: string;
@@ -385,5 +501,8 @@ export async function getAdminBookingDetail(
       lastError: job.last_error,
       completedAt: job.completed_at,
     })),
+    rescheduleHistory,
+    cancellation,
+    pendingChangeRequest,
   };
 }

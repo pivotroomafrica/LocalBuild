@@ -16,7 +16,8 @@
     "test:e2e:dashboards": "playwright test dashboards.spec.ts",
     "test:e2e:security": "playwright test security.spec.ts",
     "test:e2e:chapa": "CHAPA_MODE=mock CHAPA_WEBHOOK_SECRET=${CHAPA_WEBHOOK_SECRET:-e2e-test-webhook-secret} NEXT_PUBLIC_APP_URL=${PLAYWRIGHT_BASE_URL:-http://localhost:3000} playwright test chapa.spec.ts",
-    "test:e2e:phase9": "INTEGRATIONS_MODE=mock INTEGRATION_WORKER_SECRET=${INTEGRATION_WORKER_SECRET:-e2e-test-worker-secret} NEXT_PUBLIC_APP_URL=${PLAYWRIGHT_BASE_URL:-http://localhost:3000} playwright test phase9.spec.ts"
+    "test:e2e:phase9": "INTEGRATIONS_MODE=mock INTEGRATION_WORKER_SECRET=${INTEGRATION_WORKER_SECRET:-e2e-test-worker-secret} NEXT_PUBLIC_APP_URL=${PLAYWRIGHT_BASE_URL:-http://localhost:3000} playwright test phase9.spec.ts",
+    "test:e2e:phase10": "playwright test phase10.spec.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.6",

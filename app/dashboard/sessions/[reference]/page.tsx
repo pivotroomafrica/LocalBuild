@@ -4,7 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { requireCustomerPage, getCustomerSessionDetail } from "@/lib/dashboard/data";
 import { formatSessionDateTime, pendingActionForSession } from "@/lib/dashboard/presentation";
 import { SessionStatusPill, PaymentStatusPill } from "@/components/session/StatusPill";
-import { SESSION_FORMAT_LABELS } from "@/types/booking";
+import { SessionActionsPanel } from "@/components/booking/SessionActionsPanel";
+import { isReschedulableByCustomer, isCancellableByCustomer } from "@/lib/booking/data";
+import { SESSION_FORMAT_LABELS, type SessionFormat } from "@/types/booking";
 import type { PaymentStatus } from "@/types/payment";
 
 /**
@@ -35,7 +37,7 @@ export default async function DashboardSessionDetailPage({
   const detail = await getCustomerSessionDetail(supabase, userId, reference);
   if (!detail) notFound();
 
-  const { booking, intake, payments, derivedState } = detail;
+  const { booking, intake, payments, derivedState, rescheduleHistory, cancellation, pendingChangeRequest } = detail;
   const action = pendingActionForSession(derivedState, booking.booking_reference);
 
   return (
@@ -58,6 +60,29 @@ export default async function DashboardSessionDetailPage({
           {action.label}
         </Link>
       ) : null}
+
+      {pendingChangeRequest ? (
+        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+          <h2 className="text-sm font-semibold text-[var(--color-text)]">Your expert has requested a new time</h2>
+          <p className="mt-1 text-sm text-[var(--color-text-muted)]">{pendingChangeRequest.reason}</p>
+          <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+            Your session hasn&apos;t changed yet. Reschedule below to pick a new time, or decline to keep the
+            current one.
+          </p>
+        </section>
+      ) : null}
+
+      <SessionActionsPanel
+        bookingId={booking.id}
+        bookingReference={booking.booking_reference}
+        expertSlug={detail.expertSlug ?? ""}
+        durationMinutes={booking.duration_minutes}
+        sessionFormat={booking.session_format as SessionFormat}
+        customerTimezone={booking.customer_timezone}
+        canReschedule={Boolean(detail.expertSlug) && isReschedulableByCustomer(booking)}
+        canCancel={isCancellableByCustomer(booking)}
+        pendingChangeRequestId={pendingChangeRequest?.id ?? null}
+      />
 
       <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
         <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Session</h2>
@@ -102,6 +127,41 @@ export default async function DashboardSessionDetailPage({
               <Field label="Materials to review" value={intake.materials_to_review} block />
             ) : null}
           </dl>
+        </section>
+      ) : null}
+
+      {cancellation ? (
+        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Cancellation</h2>
+          <dl className="flex flex-col gap-3 text-sm">
+            <Field label="Cancelled by" value={cancellation.actor_type} />
+            <Field label="Reason" value={cancellation.reason} block />
+          </dl>
+          {cancellation.financial_followup_required ? (
+            <p className="mt-3 text-xs text-[var(--color-text-muted)]">
+              This booking had a verified payment. Pivotroom will follow up separately about it.
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
+      {rescheduleHistory.length > 0 ? (
+        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Reschedule History</h2>
+          <ul className="flex flex-col gap-3">
+            {rescheduleHistory.map((reschedule) => (
+              <li key={reschedule.id} className="rounded-md bg-[var(--color-bg)] p-3 text-sm">
+                <p className="text-[var(--color-text)]">
+                  {formatSessionDateTime(reschedule.old_start_at, booking.customer_timezone)} &rarr;{" "}
+                  {formatSessionDateTime(reschedule.new_start_at, booking.customer_timezone)}
+                </p>
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                  Rescheduled by {reschedule.actor_type}
+                  {reschedule.reason ? ` — ${reschedule.reason}` : ""}
+                </p>
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
 

@@ -4,7 +4,14 @@ import type { Database } from "@/types/database";
 import type { Booking, BookingIntake, BookingStatus, SessionFormat } from "@/types/booking";
 import type { Payment, PaymentStatus } from "@/types/payment";
 import { deriveSessionState, sessionTabForState, type DerivedSessionState, type SessionTab } from "@/types/session";
-import { getBookingIntake, isHoldExpired } from "@/lib/booking/data";
+import {
+  getBookingIntake,
+  isHoldExpired,
+  getBookingRescheduleHistory,
+  getBookingCancellation,
+  getPendingChangeRequest,
+} from "@/lib/booking/data";
+import type { BookingReschedule, BookingCancellation, BookingChangeRequest } from "@/types/booking";
 import { getPaymentsForBooking, getLatestPaymentForBooking } from "@/lib/payment/data";
 import { getExpertPhotoUrl } from "@/lib/expert/data";
 
@@ -254,6 +261,15 @@ export type CustomerSessionDetail = {
   expertPhotoUrl: string | null;
   payments: Payment[];
   derivedState: DerivedSessionState;
+  // Phase 10 (spec sections 6-7, 21-24) -- the audit trail + any pending
+  // expert reschedule request for this booking, surfaced so the customer
+  // can see what's already happened/pending, and decide/respond via
+  // rescheduleBookingAction/cancelCustomerBookingAction/
+  // declineExpertRescheduleRequestAction (lib/booking/reschedule.ts,
+  // lib/booking/cancellation.ts).
+  rescheduleHistory: BookingReschedule[];
+  cancellation: BookingCancellation | null;
+  pendingChangeRequest: BookingChangeRequest | null;
 };
 
 /**
@@ -281,10 +297,13 @@ export async function getCustomerSessionDetail(
 
   if (!booking || booking.customer_id !== userId) return null;
 
-  const [intake, payments, expertMap] = await Promise.all([
+  const [intake, payments, expertMap, rescheduleHistory, cancellation, pendingChangeRequest] = await Promise.all([
     getBookingIntake(supabase, booking.id),
     getPaymentsForBooking(supabase, booking.id),
     getExpertDisplayMapForBookings(supabase, [booking]),
+    getBookingRescheduleHistory(supabase, booking.id),
+    getBookingCancellation(supabase, booking.id),
+    getPendingChangeRequest(supabase, booking.id),
   ]);
 
   const expert = expertMap.get(booking.expert_profile_id);
@@ -298,6 +317,9 @@ export async function getCustomerSessionDetail(
     expertPhotoUrl: expert?.photoUrl ?? null,
     payments,
     derivedState: effectiveDerivedState(booking, latestPaymentStatus),
+    rescheduleHistory,
+    cancellation,
+    pendingChangeRequest,
   };
 }
 

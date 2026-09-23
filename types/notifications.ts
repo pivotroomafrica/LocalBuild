@@ -11,6 +11,13 @@ export const INTEGRATION_JOB_TYPES = [
   "session_reminder_customer",
   "session_reminder_expert",
   "payment_rejected_email",
+  "calendar_update",
+  "calendar_cancel",
+  "reschedule_email_customer",
+  "reschedule_email_expert",
+  "cancellation_email_customer",
+  "cancellation_email_expert",
+  "reschedule_request_email_customer",
 ] as const;
 export type IntegrationJobType = (typeof INTEGRATION_JOB_TYPES)[number];
 
@@ -21,6 +28,13 @@ export const INTEGRATION_JOB_TYPE_LABELS: Record<IntegrationJobType, string> = {
   session_reminder_customer: "Customer reminder",
   session_reminder_expert: "Expert reminder",
   payment_rejected_email: "Payment rejected email",
+  calendar_update: "Calendar event update",
+  calendar_cancel: "Calendar event cancellation",
+  reschedule_email_customer: "Customer reschedule email",
+  reschedule_email_expert: "Expert reschedule email",
+  cancellation_email_customer: "Customer cancellation email",
+  cancellation_email_expert: "Expert cancellation email",
+  reschedule_request_email_customer: "Reschedule request email",
 };
 
 export const INTEGRATION_JOB_STATUSES = ["pending", "processing", "completed", "failed"] as const;
