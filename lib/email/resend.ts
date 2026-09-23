@@ -16,8 +16,17 @@ import { getResendApiKey, getEmailFrom, getReplyTo, isEmailDeliveryEnabled } fro
  * Authorization: Bearer <RESEND_API_KEY>
  * Idempotency-Key: <job dedupe_key> (spec section 49 -- provider-level
  * duplicate-send protection, not just our own dedupe_key uniqueness)
- * Body: { from, to: [to], subject, html, text, reply_to? }
+ * Body: { from, to: [to], subject, html, text, reply_to?: string[] }
  * Response: { id: string } on success.
+ *
+ * reply_to must be an ARRAY of addresses, not a bare string -- confirmed
+ * live: sending it as a plain string produced a consistent 422 "Invalid
+ * `reply_to` field" from Resend's real API (its validator appears to
+ * require reply_to as string[], contrary to what the pre-build research
+ * assumed -- see the module doc comment above on why that research
+ * couldn't hit Resend's docs directly). Re-verify against Resend's
+ * current official docs; this was corrected from a real failure, not
+ * re-derived from docs.
  */
 const RESEND_BASE_URL = "https://api.resend.com";
 
@@ -30,6 +39,8 @@ export class ResendEmailProvider implements EmailProvider {
       });
       return { ok: true, providerId: "delivery-disabled" };
     }
+
+    const replyTo = getReplyTo();
 
     try {
       const response = await fetch(`${RESEND_BASE_URL}/emails`, {
@@ -45,7 +56,7 @@ export class ResendEmailProvider implements EmailProvider {
           subject: params.subject,
           html: params.html,
           text: params.text,
-          ...(getReplyTo() ? { reply_to: getReplyTo() } : {}),
+          ...(replyTo ? { reply_to: [replyTo] } : {}),
         }),
       });
 
