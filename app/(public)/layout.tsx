@@ -1,4 +1,5 @@
 import { PublicHeader } from "@/components/layout/PublicHeader";
+import { PublicFooter } from "@/components/layout/PublicFooter";
 
 /** Route group -- (public) is stripped from the URL, so this wraps `/`,
  * `/experts`, `/experts/[slug]`, and `/become-an-expert` with the
@@ -9,6 +10,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
     <div className="flex min-h-screen flex-col bg-[var(--color-bg)]">
       <PublicHeader />
       <main className="flex-1">{children}</main>
+      <PublicFooter />
     </div>
   );
 }

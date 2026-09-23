@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { signOutAction } from "@/lib/auth/actions";
+import { BrandLogo } from "@/components/ui/BrandLogo";
+import { Container } from "@/components/ui/Container";
+import { MobileNav } from "@/components/layout/MobileNav";
 
 const linkClasses = "text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)]";
 
 /**
- * Auth-aware public navigation (pre-next-phase repair). Every truly
+ * Auth-aware public navigation (pre-next-phase repair, kept). Every truly
  * public page (/, /experts, /experts/[slug], /become-an-expert) renders
  * this via app/(public)/layout.tsx.
  *
@@ -15,14 +18,15 @@ const linkClasses = "text-sm font-medium text-[var(--color-text-muted)] hover:te
  * client-side placeholder to mismatch or flicker, and no stale client
  * state to fall out of sync with login/logout/refresh. Reading cookies()
  * here also opts the whole (public) route group out of static
- * prerendering, which is what actually fixes the original bug: `/` was
- * previously a fully static page with zero auth awareness at all (it
- * always rendered the same build-time HTML to every visitor, logged in
- * or not) -- not a stale-client-state problem, a "this route never ran
- * per-request" problem.
+ * prerendering.
  *
  * No role-switching UI: a dual-identity account (customer AND approved
- * expert) sees both "Dashboard" and "Expert Dashboard" at once.
+ * expert) sees both "Dashboard" and "Expert dashboard" at once.
+ *
+ * Phase 12: real BrandLogo (was plain text), a Container instead of a
+ * hand-rolled max-w wrapper, and a compact mobile header (logo + a
+ * single menu control opening MobileNav) instead of squeezing the
+ * desktop links inline (guideline section 20).
  */
 export async function PublicHeader() {
   const supabase = await createClient();
@@ -40,49 +44,53 @@ export async function PublicHeader() {
     isApprovedExpert = expertProfile?.application_status === "approved";
   }
 
+  const navLinks = [
+    { href: "/experts", label: "Browse experts" },
+    ...(user
+      ? [
+          { href: "/dashboard", label: "Dashboard" },
+          ...(isApprovedExpert ? [{ href: "/expert/dashboard", label: "Expert dashboard" }] : []),
+        ]
+      : [{ href: "/become-an-expert", label: "Become an expert" }]),
+  ];
+
   return (
     <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4 sm:px-6">
-        <Link href="/" className="text-lg font-semibold tracking-tight text-[var(--color-text)]">
-          Pivotroom
+      <Container className="flex h-16 items-center justify-between">
+        <Link href="/" aria-label="Pivotroom home">
+          <BrandLogo size={26} />
         </Link>
 
-        <nav className="flex items-center gap-4">
-          <Link href="/experts" className={linkClasses}>
-            Find an Expert
-          </Link>
+        <nav className="hidden items-center gap-6 sm:flex">
+          {navLinks.map((link) => (
+            <Link key={link.href} href={link.href} className={linkClasses}>
+              {link.label}
+            </Link>
+          ))}
 
           {user ? (
-            <>
-              <Link href="/dashboard" className={linkClasses}>
-                Dashboard
-              </Link>
-              {isApprovedExpert ? (
-                <Link href="/expert/dashboard" className={linkClasses}>
-                  Expert Dashboard
-                </Link>
-              ) : null}
-              <form action={signOutAction}>
-                <button type="submit" className={linkClasses}>
-                  Log Out
-                </button>
-              </form>
-            </>
+            <form action={signOutAction}>
+              <button type="submit" className={linkClasses}>
+                Log out
+              </button>
+            </form>
           ) : (
             <>
               <Link href="/auth/login" className={linkClasses}>
-                Log In
+                Log in
               </Link>
               <Link
                 href="/auth/signup"
-                className="inline-flex items-center justify-center rounded-md bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--color-brand-hover)]"
+                className="inline-flex h-11 items-center justify-center rounded-full bg-[var(--color-brand)] px-6 text-sm font-medium text-[var(--color-on-brand)] transition-colors hover:bg-[var(--color-brand-hover)]"
               >
-                Sign Up
+                Sign up
               </Link>
             </>
           )}
         </nav>
-      </div>
+
+        <MobileNav navLinks={navLinks} isLoggedIn={Boolean(user)} />
+      </Container>
     </header>
   );
 }
