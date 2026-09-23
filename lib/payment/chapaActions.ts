@@ -73,7 +73,8 @@ export async function startChapaPaymentAction(
   if (!user || !user.email) return { error: "You must be logged in to do that." };
 
   const bookingReference = String(formData.get("booking_reference") ?? "");
-  if (!bookingReference) return { error: GENERIC_ERROR };
+  const expertSlug = String(formData.get("expert_slug") ?? "");
+  if (!bookingReference || !expertSlug) return { error: GENERIC_ERROR };
 
   const mode = getChapaMode();
   const { data: attemptRows, error: attemptError } = await supabase
@@ -102,7 +103,15 @@ export async function startChapaPaymentAction(
     phoneNumber: plausiblePhoneOrUndefined(profile?.phone ?? null),
     txRef,
     callbackUrl: `${appUrl}/api/payments/chapa/webhook`,
-    returnUrl: `${appUrl}/booking/${encodeURIComponent(bookingReference)}/payment/chapa/return?tx_ref=${encodeURIComponent(txRef)}`,
+    // Phase 12 (inline booking rail): Chapa's own external checkout is the
+    // one allowed exception to "never navigate away from the expert
+    // profile" -- but the round trip still has to land back ON that
+    // profile, in the same booking rail, rather than a standalone page.
+    // booking_reference and tx_ref are both already public-safe
+    // identifiers used elsewhere in plain URLs; chapa_return=1 just tells
+    // the profile page to run its (idempotent, re-verifying) return
+    // handling instead of a fresh SESSION state.
+    returnUrl: `${appUrl}/experts/${encodeURIComponent(expertSlug)}?booking=${encodeURIComponent(bookingReference)}&chapa_return=1&tx_ref=${encodeURIComponent(txRef)}`,
     // Chapa's customization.title has a real, live-confirmed 16-character
     // limit ("Pivotroom Session" = 18 chars was rejected during Phase 8
     // real-provider testing) -- "Pivotroom" (9 chars) stays safely under it.

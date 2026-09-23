@@ -944,16 +944,17 @@ app/
       page.tsx                                       tabbed booking list + reference search
       [reference]/page.tsx                           booking + intake + payment status, links to
                                                        /admin/payments for review (not rebuilt here)
-  book/[slug]/page.tsx                            public booking entry (Phase 5, no auth
-                                                     required -- duration/format/date/time picker)
+  book/[slug]/page.tsx                            Phase 12: redirects to /experts/[slug] --
+                                                     the inline booking rail is the sole booking
+                                                     entry point now (see below)
   booking/[reference]/
-    page.tsx                                       owner-only booking journey (Phase 5:
-                                                     profile completion -> intake -> review ->
-                                                     Continue to Payment)
-    payment/page.tsx                                functional manual-payment page (Phase 6:
-                                                     bank instructions + submission form, or
-                                                     pending/rejected/confirmed state, all derived
-                                                     from server-side booking/payment status)
+    page.tsx                                       Phase 12: redirects to /experts/[slug]?
+                                                     booking=<reference>, restoring the caller's
+                                                     own rail state (ownership-checked, never a
+                                                     blind 404)
+    payment/page.tsx                                Phase 12: redirects the same way
+    payment/chapa/return/page.tsx                   Phase 12: redirects the same way (only still
+                                                     reachable via a pre-Phase-12 Chapa returnUrl)
   dev/{rls-test,expert-rls-test}/                temporary, local only
 components/
   ui/          Button, TextField, TextareaField, SelectField, FormMessage,
@@ -1171,6 +1172,12 @@ are derived on demand instead, and "Explicitly not implemented" for the
 exact Phase 5 boundary.
 
 ## Booking Engine (Phase 5)
+
+> The RPCs, policy constants, and security model below are unchanged and
+> still the sole authority. The customer-facing UI that drives them was
+> replaced by the inline booking rail in Phase 12 -- see "Inline Booking
+> Rail (Phase 12)" further down for the current `/experts/[slug]`-based
+> flow; `/book/[slug]` and `/booking/[reference]*` are now redirects.
 
 **Core principle:** availability (Phase 4, untouched) answers "when is
 the expert willing to receive a booking"; a booking answers "a customer
@@ -2345,6 +2352,104 @@ SMS/WhatsApp/Telegram/push notifications for any Phase 10 event, and a
 customer- or expert-facing history/audit UI beyond the simple reschedule-
 history list and current-cancellation display already built into the
 three session-detail pages.
+
+## Inline Booking Rail (Phase 12 — critical architecture change)
+
+**What changed:** the customer booking journey was rebuilt from four
+separate pages (`/book/[slug]` picker → `/booking/[reference]` journey →
+`/booking/[reference]/payment` → `/booking/[reference]/payment/chapa/
+return`) into one persistent, stateful booking rail
+(`components/booking/BookingRail.tsx` + `components/booking/rail/*`)
+mounted directly on the expert's own public profile
+(`app/(public)/experts/[slug]/page.tsx`). SESSION → TIME →
+AUTH_OR_PROFILE → HOLD → INTAKE → REVIEW → PAYMENT → PAYMENT_STATUS →
+CONFIRMED all render in place, on the same route, with zero navigation
+for any internal step. Every underlying RPC, Server Action, and security
+rule from Phases 5–10 is reused exactly as-is -- this is a presentation
+and state-management change, never a business-logic change.
+
+**URL model:** the expert profile route stays canonical. An in-progress
+booking is represented by `?booking=<reference>` on that SAME URL
+(`booking_reference` is already a public-safe identifier used everywhere
+else in the app) -- never a route change. Duration/format/slot selection
+*before* a hold exists lives in local component state only (nothing
+server-authoritative exists yet to restore). Creating a hold pushes one
+new browser-history entry (`router.push`, not `replace`), so Back returns
+to a clean pre-hold profile view without ever cancelling the hold itself
+-- only an explicit "Release This Time" does that. Every later transition
+(intake, review, payment, payment status) calls `router.refresh()` on the
+same URL, re-deriving state from fresh server data -- the same "no local
+step state" discipline `BookingJourney.tsx` originally established,
+extended across the whole journey.
+
+**Inline auth/profile gate:** if a visitor isn't logged in, or is logged
+in but hasn't completed the booking-specific `customer_profiles` fields,
+the rail renders sign-in/sign-up/profile-completion forms *in place*
+(`signInForRailAction`/`signUpForRailAction`, new non-redirecting
+variants of the existing auth actions) rather than navigating to a
+separate-looking login page. Because there is no navigation, the
+customer's in-progress duration/format/slot selection survives
+authentication automatically -- there's nothing to encode into a `next`
+URL. "Reserve This Time" is still always an explicit, separate form
+submission after the gate clears (never an implicit hold on
+auth/profile success).
+
+**Chapa's external checkout is the one allowed exception** to "never
+leave the profile": `lib/payment/chapaActions.ts`'s `returnUrl` now
+points at `/experts/[slug]?booking=<reference>&chapa_return=1&tx_ref=
+<txRef>` instead of a standalone return page. The profile page detects
+that combination server-side, independently re-verifies via Chapa's own
+Verify API (`verifyAndFinalizeChapaTransaction()`, unchanged, still never
+trusts the redirect itself), and the rail then renders whatever the
+booking's own fresh status says -- confirmed, requires_review, or still
+processing with a "Check payment status" retry.
+
+**Mobile architecture:** below the `lg` breakpoint the rail is never a
+compressed sidebar. The profile stays normal full-width content with a
+sticky bottom bar (starting price + a stage-aware CTA label); tapping it
+opens a full-height bottom sheet running the *exact same* state machine,
+props, and server actions as the desktop rail (one mounted component
+instance, two chrome wrappers -- see `BookingRail.tsx`). The sheet has a
+basic focus trap, Escape-to-close, focus restoration to the trigger
+button on close, and closing it never touches server-side booking state
+(an active hold survives a close/reopen cycle untouched).
+
+**Old routes redirect, never 404:** `/book/[slug]` redirects to
+`/experts/[slug]`; `/booking/[reference]`, `/booking/[reference]/
+payment`, and `/booking/[reference]/payment/chapa/return` all resolve
+the caller's own booking (ownership-checked the same way the original
+pages were) and redirect to `/experts/[slug]?booking=<reference>`,
+restoring the exact right rail state rather than starting over. A
+reference that doesn't exist, or belongs to another customer, falls back
+to `/experts` -- the same "confirm nothing" posture the original pages
+had. `getRailBookingSnapshot()` (`lib/booking/railData.ts`) is the one
+place this ownership check happens for the rail itself: a mismatch
+returns `null`, and the rail falls back to a fresh SESSION state exactly
+as if `?booking=` were never present -- never a 404, never a leak of
+whether the reference exists.
+
+**Superseded components removed:** `components/booking/BookingPicker.tsx`
+and `components/booking/BookingJourney.tsx` are deleted (fully replaced
+by `RailSelect.tsx` and `RailIntakeReview.tsx`); every server action and
+RPC they called remains, reused by the rail's own sub-components.
+
+**Testing:** `e2e/fixtures/booking.ts` was rewritten to drive the rail
+directly (`reserveFirstAvailableSlot` now navigates to `/experts/[slug]`,
+opens the mobile sheet first when it's below the `lg` breakpoint, and
+returns the reference read from `?booking=`); every spec that reuses it
+(`booking.spec.ts`, `chapa.spec.ts`, `payments.spec.ts`, `phase9.spec.ts`,
+`phase10.spec.ts`, `responsive.spec.ts`) was updated for the new
+sentence-case copy and URL shape. `e2e/specs/booking-rail.spec.ts` is new
+-- architecture-specific coverage that the other files don't duplicate:
+in-place transitions (no route change for an internal step),
+enabled-format-only selection, refresh-after-hold recovery, browser Back
+never cancelling an active hold, cross-customer isolation via a
+manipulated `?booking=` reference, the public profile staying reachable
+with a foreign/invalid reference present, mobile-sheet close/reopen
+recovery, and no horizontal overflow at 360/390/412px. Like every other
+spec in this suite, written and `tsc`/`eslint`-checked but not executed
+live in this sandbox (no network access to run `next dev`/Supabase from
+here) -- see `e2e/README.md`.
 
 ## Explicitly not implemented (future phases)
 

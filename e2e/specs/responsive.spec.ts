@@ -33,9 +33,14 @@ test.describe("Responsive structural checks", () => {
 
     test(`${path} primary nav links remain visible and clickable`, async ({ page }) => {
       await page.goto(path);
-      const findExpertLink = page.getByRole("link", { name: "Find an Expert" });
-      await expect(findExpertLink).toBeVisible();
-      const box = await findExpertLink.boundingBox();
+      // Phase 12 workstream B: sentence-case "Browse experts" replaced the
+      // pre-redesign "Find an Expert" label. On mobile this link lives
+      // inside MobileNav's slide-in drawer, so open it first there.
+      const isMobileNav = await page.getByLabel("Open menu").isVisible().catch(() => false);
+      if (isMobileNav) await page.getByLabel("Open menu").click();
+      const browseExpertsLink = page.getByRole("link", { name: "Browse experts" }).first();
+      await expect(browseExpertsLink).toBeVisible();
+      const box = await browseExpertsLink.boundingBox();
       expect(box).not.toBeNull();
       if (box) {
         expect(box.width).toBeGreaterThan(0);
@@ -56,10 +61,17 @@ test.describe("Responsive structural checks", () => {
     });
   }
 
-  test("the booking picker's primary CTA stays reachable at this viewport", async ({ page }) => {
+  test("the booking rail's primary CTA stays reachable at this viewport", async ({ page }) => {
     const fixtures = await ensureTestFixtures();
     await loginAsFixture(page, "customerA");
-    await page.goto(`/book/${fixtures.expertA.expertSlug}`);
+    await page.goto(`/experts/${fixtures.expertA.expertSlug}`);
+
+    // Phase 12 (critical architecture change): below the lg breakpoint the
+    // rail is a sticky-bottom-bar + sheet, never a compressed sidebar --
+    // "Book a session" must open it before the duration chip is reachable.
+    const mobileTrigger = page.getByRole("button", { name: "Book a session" });
+    if (await mobileTrigger.isVisible().catch(() => false)) await mobileTrigger.click();
+
     const durationButton = page.getByRole("button", { name: /^30 min/ });
     await expect(durationButton).toBeVisible();
     const box = await durationButton.boundingBox();

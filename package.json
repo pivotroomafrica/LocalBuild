@@ -12,6 +12,7 @@
     "test:e2e:auth": "playwright test auth-nav.spec.ts",
     "test:e2e:availability": "playwright test availability.spec.ts",
     "test:e2e:booking": "playwright test booking.spec.ts",
+    "test:e2e:booking-rail": "playwright test booking-rail.spec.ts",
     "test:e2e:payments": "playwright test payments.spec.ts",
     "test:e2e:dashboards": "playwright test dashboards.spec.ts",
     "test:e2e:security": "playwright test security.spec.ts",

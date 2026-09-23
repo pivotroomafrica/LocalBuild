@@ -13,12 +13,19 @@ const initialState: StartChapaPaymentState = {};
  * as a normal server-driven navigation. isLoading covers the
  * "Redirecting to Chapa" state (spec section 45) for the moment between
  * click and that redirect actually landing. */
-export function ChapaPayButton({ bookingReference }: { bookingReference: string }) {
+export function ChapaPayButton({
+  bookingReference,
+  expertSlug,
+}: {
+  bookingReference: string;
+  expertSlug: string;
+}) {
   const [state, formAction, isPending] = useActionState(startChapaPaymentAction, initialState);
 
   return (
     <form action={formAction} className="flex flex-col gap-2">
       <input type="hidden" name="booking_reference" value={bookingReference} />
+      <input type="hidden" name="expert_slug" value={expertSlug} />
       {state.error ? <FormMessage variant="error">{state.error}</FormMessage> : null}
       <Button type="submit" isLoading={isPending} loadingText="Redirecting to Chapa...">
         Pay with Chapa

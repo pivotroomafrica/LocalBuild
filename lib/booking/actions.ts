@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getBookableSlots } from "@/lib/booking/data";
@@ -82,9 +81,15 @@ export type CreateBookingHoldState = {
  * The only way a booking row is created (spec section 63) -- resolves
  * customer_id from auth.uid() and expert/session-type/price server-side
  * only, via create_booking_hold() (034). Called from a real form
- * submission (never implicitly during a page render) so reloading
- * /book/[slug] with the same selection in the URL can never silently
- * attempt a second hold.
+ * submission (never implicitly during a page render), so re-selecting the
+ * exact same candidate in the booking rail can never silently attempt a
+ * second hold -- creating one is always an explicit "Reserve This Time"
+ * submission.
+ *
+ * Phase 12 (inline booking rail): returns the new booking_reference to the
+ * caller instead of redirecting -- the rail stays on the expert profile
+ * route and updates its own `?booking=` query param client-side, rather
+ * than navigating to a standalone page.
  */
 export async function createBookingHoldAction(
   _prevState: CreateBookingHoldState,
@@ -119,7 +124,7 @@ export async function createBookingHoldAction(
   if (error) return { error: toSafeError(error.message) };
   if (!data?.booking_reference) return { error: GENERIC_ERROR };
 
-  redirect(`/booking/${data.booking_reference}`);
+  return { bookingReference: data.booking_reference };
 }
 
 /**
@@ -222,6 +227,7 @@ export async function saveBookingIntakeAction(
 
 export type AdvanceBookingState = {
   error?: string;
+  success?: boolean;
 };
 
 /**
@@ -231,6 +237,10 @@ export type AdvanceBookingState = {
  * re-verifies ownership, hold expiry, intake, and profile completeness
  * before allowing the transition. Never writes 'confirmed' -- that
  * belongs to a future payment phase.
+ *
+ * Phase 12 (inline booking rail): returns success/error instead of
+ * redirecting -- the rail re-derives its own next state (PAYMENT) from
+ * the booking's fresh booking_status on the same expert-profile route.
  */
 export async function advanceBookingToPaymentAction(
   _prevState: AdvanceBookingState,
@@ -252,7 +262,7 @@ export async function advanceBookingToPaymentAction(
 
   if (error) return { error: toSafeError(error.message) };
 
-  redirect(`/booking/${bookingReference}/payment`);
+  return { success: true };
 }
 
 /**

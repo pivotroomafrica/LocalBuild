@@ -1,32 +1,23 @@
-import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import {
-  getBookingByReference,
-  getBookingIntake,
-  getExpertSlugForBooking,
-  isCustomerProfileCompleteForBooking,
-  isHoldExpired,
-} from "@/lib/booking/data";
-import { getPublicExpertProfile } from "@/lib/public/data";
-import { BookingJourney } from "@/components/booking/BookingJourney";
-import { ReleaseTimeButton } from "@/components/booking/ReleaseTimeButton";
-import { FormMessage } from "@/components/ui/FormMessage";
+import { getBookingByReference, getExpertSlugForBooking } from "@/lib/booking/data";
 
 /**
- * The booking journey for one specific hold -- ownership enforced by RLS
- * (bookings_select_own, 033) AND an explicit `customer_id === user.id`
- * re-check below, so a reference belonging to another customer, or one
- * only reachable through some OTHER permissive policy (e.g. this same
- * account being the EXPERT on that booking -- bookings_select_own_expert,
- * 039, is also a permissive policy on the same table), resolves to
- * notFound() here, never a 403 that would confirm the reference exists
- * (spec section 60). Not in middleware.ts's PROTECTED_PREFIXES (booking
- * selection itself is public, spec section 26), so this page enforces
- * auth itself, same pattern as requireApprovedExpertPage in
- * lib/expert/auth.ts.
+ * Phase 12 (critical architecture change): the standalone booking journey
+ * page is retired -- HOLD/INTAKE/REVIEW now render inline in BookingRail
+ * on the expert profile. An old bookmarked /booking/[reference] link
+ * must not 404 (spec: "old bookmarked booking URLs must not blindly
+ * 404") -- it redirects to that booking's expert profile with
+ * `?booking=<reference>` restored, and BookingRail re-derives the exact
+ * right state from the booking's own current server data, same as it
+ * would after any other refresh.
+ *
+ * Ownership is checked explicitly (booking.customer_id === user.id) same
+ * as the retired page used to -- a reference belonging to someone else,
+ * or one that doesn't exist, resolves to the plain marketplace here
+ * rather than confirming or denying anything about it.
  */
-export default async function BookingReferencePage({
+export default async function BookingReferencePageRedirect({
   params,
 }: {
   params: Promise<{ reference: string }>;
@@ -40,69 +31,7 @@ export default async function BookingReferencePage({
   if (!user) redirect(`/auth/login?next=${encodeURIComponent(`/booking/${reference}`)}`);
 
   const booking = await getBookingByReference(supabase, reference);
-  if (!booking || booking.customer_id !== user.id) notFound();
-
-  if (isHoldExpired(booking)) {
-    const expertSlug = await getExpertSlugForBooking(supabase, booking.id);
-    const resumeHref = expertSlug
-      ? `/book/${expertSlug}?duration=${booking.duration_minutes}&format=${booking.session_format}`
-      : "/experts";
-
-    return (
-      <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6">
-        <div className="flex flex-col gap-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center">
-          <p className="text-sm text-[var(--color-text)]">Your reserved time expired.</p>
-          <p className="text-sm text-[var(--color-text-muted)]">
-            Choose an available time to continue.
-          </p>
-          <Link
-            href={resumeHref}
-            className="mx-auto inline-flex items-center justify-center rounded-md bg-[var(--color-brand)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--color-brand-hover)]"
-          >
-            Choose Another Time
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (booking.booking_status === "awaiting_payment") {
-    redirect(`/booking/${reference}/payment`);
-  }
-
-  if (booking.booking_status !== "held") {
-    return (
-      <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6">
-        <FormMessage variant="error">This booking is no longer active.</FormMessage>
-      </div>
-    );
-  }
-
-  const [intake, profileComplete, expertSlug, { data: customerProfile }, { data: industries }] =
-    await Promise.all([
-      getBookingIntake(supabase, booking.id),
-      isCustomerProfileCompleteForBooking(supabase, user.id),
-      getExpertSlugForBooking(supabase, booking.id),
-      supabase.from("customer_profiles").select("*").eq("user_id", user.id).maybeSingle(),
-      supabase.from("industries").select("*").eq("is_active", true).order("name"),
-    ]);
-
-  const expertProfile = expertSlug ? await getPublicExpertProfile(supabase, expertSlug) : null;
-
-  return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6">
-      <div className="mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-[var(--color-text)]">Time Reserved</h1>
-        <ReleaseTimeButton bookingId={booking.id} bookingReference={booking.booking_reference} />
-      </div>
-      <BookingJourney
-        booking={booking}
-        intake={intake}
-        needsProfile={!profileComplete}
-        customerProfile={customerProfile ?? null}
-        industries={industries ?? []}
-        expertName={expertProfile?.fullName ?? "your expert"}
-      />
-    </div>
-  );
+  const expertSlug =
+    booking && booking.customer_id === user.id ? await getExpertSlugForBooking(supabase, booking.id) : null;
+  redirect(expertSlug ? `/experts/${expertSlug}?booking=${encodeURIComponent(reference)}` : "/experts");
 }

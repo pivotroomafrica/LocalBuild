@@ -51,7 +51,7 @@ test.describe("Manual payment lifecycle", () => {
       transactionReference: `E2E-${Date.now()}`,
       amountPaid: "25000",
     });
-    await expect(page.getByRole("heading", { name: "Payment Submitted" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Payment submitted" })).toBeVisible();
 
     const admin = createAdminClient();
     const { data: payment } = await admin
@@ -76,7 +76,7 @@ test.describe("Manual payment lifecycle", () => {
     expect(bookingAfter?.booking_status).toBe("confirmed");
 
     await page.reload();
-    await expect(page.getByRole("heading", { name: "Booking Confirmed" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Booking confirmed" })).toBeVisible();
   });
 
   test("admin rejects a payment: booking stays awaiting_payment, customer sees the reason and can resubmit", async ({
@@ -115,9 +115,9 @@ test.describe("Manual payment lifecycle", () => {
     expect(bookingAfter?.hold_expires_at).toBeTruthy();
 
     await page.reload();
-    await expect(page.getByRole("heading", { name: "Payment Needs Attention" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Payment needs attention" })).toBeVisible();
     await expect(page.getByText("E2E test: reference could not be verified.")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Submit New Payment Details" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Submit new payment details" })).toBeVisible();
   });
 
   test(
@@ -151,8 +151,10 @@ test.describe("Manual payment lifecycle", () => {
       // hours -- see e2e/README.md "Time-based testing strategy".
       await backdateHoldExpiry(bookingId, 3 * 60 * 60);
 
-      await page.goto(`/booking/${(await admin.from("bookings").select("booking_reference").eq("id", bookingId).single()).data!.booking_reference}`);
-      await expect(page.getByText("Your reserved time expired.")).toBeVisible();
+      const reference = (await admin.from("bookings").select("booking_reference").eq("id", bookingId).single()).data!
+        .booking_reference;
+      await page.goto(`/experts/${expertSlug}?booking=${reference}`);
+      await expect(page.getByText("Your reserved time expired")).toBeVisible();
     },
   );
 

@@ -1,6 +1,8 @@
-import Link from "next/link";
 import type { PublicProfileData } from "@/lib/public/data";
 import { Icon } from "@/components/ui/Icon";
+import { BookingRail } from "@/components/booking/BookingRail";
+import type { RailBookingSnapshot } from "@/lib/booking/railData";
+import type { CustomerProfile, Industry } from "@/types/profile";
 
 /**
  * Shared presentation for a full expert profile -- used by both the
@@ -22,18 +24,31 @@ import { Icon } from "@/components/ui/Icon";
  * application_status = 'approved' -- a real, existing gate, not an
  * invented badge state.
  *
- * "Book a Session" (Phase 5, spec section 7) links to /book/[slug]
- * whenever the expert has at least one active session offering -- that
- * route independently re-derives real availability and shows its own
- * "No availability right now" state if none exists, so this component
- * never needs to know the expert's actual open times, only whether
- * booking is worth offering at all. On the owner-only preview page this
- * link is harmless even before publication: /book/[slug] resolves
- * through the same published-only check as the rest of the public data
- * layer, so an unpublished profile's own preview simply shows "not
- * available" if followed.
+ * Phase 12 (critical architecture change): the right rail is no longer a
+ * static "Session options" summary linking to a separate /book/[slug]
+ * page -- it mounts BookingRail, the persistent, stateful booking
+ * application itself (session/time selection through confirmation, all
+ * in place, no navigation away from this profile). `railSnapshot` /
+ * `railAuth` are omitted entirely on the owner/admin-only application
+ * preview page (see that page's own call site) since booking oneself
+ * isn't a real scenario there -- BookingRail treats a missing auth prop
+ * set the same as a logged-out visitor, which is exactly correct for a
+ * page that never has a real customer session backing it.
  */
-export function PublicProfileView({ profile }: { profile: PublicProfileData }) {
+export function PublicProfileView({
+  profile,
+  railAuth,
+  railSnapshot,
+}: {
+  profile: PublicProfileData;
+  railAuth?: {
+    isLoggedIn: boolean;
+    profileComplete: boolean;
+    customerProfile: CustomerProfile | null;
+    industries: Industry[];
+  };
+  railSnapshot?: RailBookingSnapshot | null;
+}) {
   const formatLabel = [profile.onlineEnabled ? "Online" : null, profile.inPersonEnabled ? "In person" : null]
     .filter(Boolean)
     .join(" · ");
@@ -144,43 +159,56 @@ export function PublicProfileView({ profile }: { profile: PublicProfileData }) {
         ) : null}
       </div>
 
-      <aside className="w-full shrink-0 lg:sticky lg:top-8 lg:w-[340px]">
-        <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-          <h2 className="mb-3 text-lg font-semibold text-[var(--color-text)]">Session options</h2>
-          {profile.sessionOfferings.length > 0 ? (
-            <>
-              <ul className="flex flex-col gap-2">
-                {profile.sessionOfferings.map((offering) => (
-                  <li
-                    key={offering.durationMinutes}
-                    className="flex items-center justify-between rounded-[var(--radius-input)] bg-[var(--color-bg)] px-4 py-3 text-sm"
-                  >
-                    <span className="text-[var(--color-text)]">{offering.durationMinutes} min</span>
-                    <span className="tabular-nums-brand font-medium text-[var(--color-text)]">
-                      {offering.price.toLocaleString()} {offering.currency}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              {formatLabel ? (
-                <p className="mt-3 text-xs text-[var(--color-text-muted)]">Available: {formatLabel}</p>
-              ) : null}
-              <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                Prices shown are base session prices. Applicable government taxes will be
-                calculated separately.
-              </p>
-              <Link
-                href={`/book/${profile.slug}`}
-                className="mt-4 inline-flex h-12 w-full items-center justify-center rounded-full bg-[var(--color-brand)] px-7 text-sm font-medium text-[var(--color-on-brand)] transition-colors hover:bg-[var(--color-brand-hover)]"
-              >
-                Book a session
-              </Link>
-            </>
-          ) : (
-            <p className="text-sm text-[var(--color-text-muted)]">Session options are being finalized.</p>
-          )}
-        </section>
-      </aside>
+      {railAuth ? (
+        <BookingRail
+          expertSlug={profile.slug}
+          expertName={profile.fullName}
+          sessionOfferings={profile.sessionOfferings}
+          onlineEnabled={profile.onlineEnabled}
+          inPersonEnabled={profile.inPersonEnabled}
+          isLoggedIn={railAuth.isLoggedIn}
+          profileComplete={railAuth.profileComplete}
+          customerProfile={railAuth.customerProfile}
+          industries={railAuth.industries}
+          snapshot={railSnapshot ?? null}
+        />
+      ) : (
+        <aside className="w-full shrink-0 lg:sticky lg:top-8 lg:w-[340px]">
+          <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+            <h2 className="mb-3 text-lg font-semibold text-[var(--color-text)]">Session options</h2>
+            {profile.sessionOfferings.length > 0 ? (
+              <>
+                <ul className="flex flex-col gap-2">
+                  {profile.sessionOfferings.map((offering) => (
+                    <li
+                      key={offering.durationMinutes}
+                      className="flex items-center justify-between rounded-[var(--radius-input)] bg-[var(--color-bg)] px-4 py-3 text-sm"
+                    >
+                      <span className="text-[var(--color-text)]">{offering.durationMinutes} min</span>
+                      <span className="tabular-nums-brand font-medium text-[var(--color-text)]">
+                        {offering.price.toLocaleString()} {offering.currency}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {formatLabel ? (
+                  <p className="mt-3 text-xs text-[var(--color-text-muted)]">Available: {formatLabel}</p>
+                ) : null}
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                  Prices shown are base session prices. Applicable government taxes will be
+                  calculated separately.
+                </p>
+                <p className="mt-4 text-xs text-[var(--color-text-muted)]">
+                  This is a preview of your public profile -- booking is only available on the
+                  published page.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-[var(--color-text-muted)]">Session options are being finalized.</p>
+            )}
+          </section>
+        </aside>
+      )}
     </div>
   );
 }

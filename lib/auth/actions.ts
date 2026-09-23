@@ -89,6 +89,87 @@ export async function signInAction(
   redirect(next.startsWith("/") ? next : "/dashboard/profile");
 }
 
+/**
+ * Phase 12 (inline booking rail) -- the exact same signUp/signIn logic as
+ * signUpAction/signInAction above, but returning state instead of calling
+ * redirect(). The booking rail renders these inline (an overlay within the
+ * SAME mounted expert-profile route, never a separate-looking login page)
+ * specifically so a customer's in-progress duration/format/slot selection
+ * -- plain useState in BookingRail, never persisted anywhere -- survives
+ * authentication automatically: there is no navigation for it to be lost
+ * across. Reuses the identical validators/error-mapping as the standalone
+ * auth pages, which remain unchanged and still handle the non-rail
+ * sign-in/sign-up flows exactly as before.
+ */
+export type RailAuthActionState = {
+  error?: string;
+  status?: "check-email";
+  success?: boolean;
+};
+
+export async function signInForRailAction(
+  _prevState: RailAuthActionState,
+  formData: FormData,
+): Promise<RailAuthActionState> {
+  const email = String(formData.get("email") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+
+  if (!email || !password) {
+    return { error: "Enter your email and password." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (error) return { error: friendlyAuthError(error.message) };
+  return { success: true };
+}
+
+export async function signUpForRailAction(
+  _prevState: RailAuthActionState,
+  formData: FormData,
+): Promise<RailAuthActionState> {
+  const fullNameResult = validateFullName(String(formData.get("full_name") ?? ""));
+  if (!fullNameResult.valid) return { error: fullNameResult.error };
+
+  const phoneResult = validatePhone(String(formData.get("phone") ?? ""));
+  if (!phoneResult.valid) return { error: phoneResult.error };
+
+  const email = String(formData.get("email") ?? "").trim();
+  if (!email) return { error: "Email is required." };
+
+  const password = String(formData.get("password") ?? "");
+  const passwordResult = validatePassword(password);
+  if (!passwordResult.valid) return { error: passwordResult.error };
+
+  // Where Supabase's own confirmation-email link lands this customer back
+  // (only relevant if email confirmation is required -- see the no-session
+  // branch below); the profile route is the correct destination since
+  // that's the whole point of the inline rail, but the in-progress
+  // selection itself cannot survive that particular round trip (the same
+  // accepted limitation the standalone auth pages already have for their
+  // own `next` targets).
+  const rawNext = String(formData.get("next") ?? "/dashboard/profile");
+  const next = rawNext.startsWith("/") ? rawNext : "/dashboard/profile";
+
+  const supabase = await createClient();
+  const origin = await siteOrigin();
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { full_name: fullNameResult.value, phone: phoneResult.value },
+      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
+    },
+  });
+
+  if (error) return { error: friendlyAuthError(error.message) };
+
+  if (!data.session) return { status: "check-email" };
+  return { success: true };
+}
+
 export async function signOutAction() {
   const supabase = await createClient();
   await supabase.auth.signOut();

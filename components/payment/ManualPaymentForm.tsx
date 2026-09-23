@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import { useRouter } from "next/navigation";
 import { submitManualPaymentAction, type SubmitPaymentState } from "@/lib/payment/actions";
 import { TextField } from "@/components/ui/TextField";
 import { Button } from "@/components/ui/Button";
@@ -20,6 +21,18 @@ const initialState: SubmitPaymentState = {};
  */
 export function ManualPaymentForm({ bookingReference }: { bookingReference: string }) {
   const [state, formAction, isPending] = useActionState(submitManualPaymentAction, initialState);
+  const router = useRouter();
+  // Phase 12 (inline booking rail): this form now lives inside
+  // BookingRail on the expert-profile route rather than a standalone
+  // payment page, so its own revalidatePath() call (targeting the now-
+  // superseded standalone route) can't refresh what's on screen -- a
+  // client-side refresh of the CURRENT route is what actually shows the
+  // freshly-submitted PAYMENT_STATUS state.
+  const [handledSuccess, setHandledSuccess] = useState(false);
+  if (state.success && !handledSuccess) {
+    setHandledSuccess(true);
+    router.refresh();
+  }
 
   return (
     <form action={formAction} className="flex flex-col gap-4">

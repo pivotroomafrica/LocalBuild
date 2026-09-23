@@ -62,13 +62,22 @@ test.describe("Chapa payment integration (mock provider)", () => {
     return { bookingId: data.id, reference };
   }
 
-  /** Clicking "Pay with Chapa" drives create_chapa_payment_attempt (042) ->
+  /**
+   * Clicking "Pay with Chapa" drives create_chapa_payment_attempt (042) ->
    * MockChapaClient.initializeTransaction -> a same-origin redirect through
-   * /api/test/chapa-mock/checkout straight back to the real Chapa return
-   * route -- there is no interactive fake checkout UI to click through. */
+   * /api/test/chapa-mock/checkout straight back to Chapa's returnUrl --
+   * there is no interactive fake checkout UI to click through.
+   *
+   * Phase 12 (critical architecture change): that returnUrl now points at
+   * the expert profile (`/experts/[slug]?booking=...&chapa_return=1&tx_ref=...`,
+   * lib/payment/chapaActions.ts), never a standalone
+   * /booking/[reference]/payment/chapa/return page -- Chapa's own external
+   * checkout redirect is the one allowed exception to "never navigate away
+   * from the profile," but the round trip still lands back ON it.
+   */
   async function payWithChapa(page: Page) {
     await page.getByRole("button", { name: "Pay with Chapa" }).click();
-    await page.waitForURL(/\/booking\/[^/]+\/payment\/chapa\/return\?tx_ref=/);
+    await page.waitForURL(new RegExp(`/experts/${expertSlug}\\?.*chapa_return=1.*tx_ref=`));
   }
 
   function currentTxRef(page: Page): string {
@@ -100,10 +109,11 @@ test.describe("Chapa payment integration (mock provider)", () => {
     const { bookingId } = await createBookingAwaitingPayment(page);
 
     await payWithChapa(page);
-    // finalPaymentStatus === "verified" redirects straight back to the
-    // payment page (app/booking/[reference]/payment/chapa/return/page.tsx),
-    // which then shows the confirmed booking.
-    await expect(page.getByRole("heading", { name: "Booking Confirmed" })).toBeVisible();
+    // finalPaymentStatus === "verified" -- the expert-profile page's own
+    // Chapa-return handling (app/(public)/experts/[slug]/page.tsx) already
+    // re-verified and finalized before this render, so the rail shows
+    // CONFIRMED directly, in place.
+    await expect(page.getByRole("heading", { name: "Booking confirmed" })).toBeVisible();
 
     const admin = createAdminClient();
     const { data: booking } = await admin.from("bookings").select("booking_status").eq("id", bookingId).single();
@@ -123,27 +133,27 @@ test.describe("Chapa payment integration (mock provider)", () => {
     const { bookingId } = await createBookingAwaitingPayment(page);
 
     await payWithChapa(page);
-    await expect(page.getByRole("heading", { name: "Payment Failed" })).toBeVisible();
-
     const admin = createAdminClient();
     const { data: booking } = await admin.from("bookings").select("booking_status").eq("id", bookingId).single();
     expect(booking?.booking_status).toBe("awaiting_payment");
 
-    await page.getByRole("link", { name: "Back to payment options" }).click();
+    // No active Chapa attempt remains (the failed one is terminal) --
+    // the rail falls through to its normal PAYMENT view, with a banner
+    // naming the failed attempt rather than a dedicated interstitial page.
     await expect(page.getByText("Your Chapa payment didn't go through.")).toBeVisible();
     // A fresh Chapa attempt is still offered (never blocked by the
     // now-failed attempt), and manual bank transfer remains available too.
     await expect(page.getByRole("button", { name: "Pay with Chapa" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Manual Bank Transfer" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Manual bank transfer" })).toBeVisible();
   });
 
-  test("mock pending: shows Checking Your Payment without confirming anything", async ({ page }) => {
+  test("mock pending: shows Payment processing without confirming anything", async ({ page }) => {
     await setMockScenario(page.request, "pending");
     const { bookingId } = await createBookingAwaitingPayment(page);
 
     await payWithChapa(page);
-    await expect(page.getByRole("heading", { name: "Checking Your Payment..." })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Check Again" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Payment processing" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Check payment status" })).toBeVisible();
 
     const admin = createAdminClient();
     const { data: booking } = await admin.from("bookings").select("booking_status").eq("id", bookingId).single();
@@ -157,7 +167,7 @@ test.describe("Chapa payment integration (mock provider)", () => {
     const { bookingId } = await createBookingAwaitingPayment(page);
 
     await payWithChapa(page);
-    await expect(page.getByRole("heading", { name: "Payment Requires Review" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Payment requires review" })).toBeVisible();
 
     const admin = createAdminClient();
     const { data: booking } = await admin.from("bookings").select("booking_status").eq("id", bookingId).single();
@@ -171,7 +181,7 @@ test.describe("Chapa payment integration (mock provider)", () => {
     const { bookingId } = await createBookingAwaitingPayment(page);
 
     await payWithChapa(page);
-    await expect(page.getByRole("heading", { name: "Payment Requires Review" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Payment requires review" })).toBeVisible();
 
     const admin = createAdminClient();
     const { data: payment } = await admin.from("payments").select("payment_status").eq("booking_id", bookingId).single();
@@ -187,7 +197,7 @@ test.describe("Chapa payment integration (mock provider)", () => {
     // this payment's own provider_tx_ref and routes a mismatch into the
     // same requires_review path as an amount/currency mismatch, rather
     // than confirming on an amount/currency match alone.
-    await expect(page.getByRole("heading", { name: "Payment Requires Review" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Payment requires review" })).toBeVisible();
 
     const admin = createAdminClient();
     const { data: booking } = await admin.from("bookings").select("booking_status").eq("id", bookingId).single();
@@ -223,7 +233,7 @@ test.describe("Chapa payment integration (mock provider)", () => {
     const { bookingId } = await createBookingAwaitingPayment(page);
     await payWithChapa(page);
     const txRef = currentTxRef(page);
-    await expect(page.getByRole("heading", { name: "Booking Confirmed" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Booking confirmed" })).toBeVisible();
 
     // The return route above already finalized this attempt once. A real
     // Chapa webhook delivery for the exact same event arriving 1, 2, or 10
@@ -303,8 +313,8 @@ test.describe("Chapa payment integration (mock provider)", () => {
       // -- same technique as payments.spec.ts's grace-period test.
       await backdateHoldExpiry(bookingId, 45 * 60);
 
-      await page.goto(`/booking/${reference}`);
-      await expect(page.getByText("Your reserved time expired.")).toBeVisible();
+      await page.goto(`/experts/${expertSlug}?booking=${reference}`);
+      await expect(page.getByText("Your reserved time expired")).toBeVisible();
 
       // Chapa now reports success for the same tx_ref -- genuinely
       // verified money movement, but the reservation is no longer safely
