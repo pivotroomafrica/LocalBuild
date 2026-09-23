@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getPublicExpertProfile } from "@/lib/public/data";
 import { PublicProfileView } from "@/components/expert/PublicProfileView";
+import { Container } from "@/components/ui/Container";
 
 export default async function PublicExpertProfilePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -17,8 +18,10 @@ export default async function PublicExpertProfilePage({ params }: { params: Prom
   if (!profile) notFound();
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
-      <PublicProfileView profile={profile} />
-    </div>
+    <Container className="py-10 sm:py-16">
+      <div className="mx-auto max-w-4xl">
+        <PublicProfileView profile={profile} />
+      </div>
+    </Container>
   );
 }
