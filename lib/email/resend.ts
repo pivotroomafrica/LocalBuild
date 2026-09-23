@@ -49,12 +49,18 @@ export class ResendEmailProvider implements EmailProvider {
         }),
       });
 
-      const json = (await response.json().catch(() => null)) as
-        | { id?: string; message?: string; name?: string }
-        | null;
+      type ResendResponseBody = { id?: string; message?: string; name?: string };
+      const rawBody = await response.text();
+      let json: ResendResponseBody | null = null;
+      try {
+        json = rawBody ? (JSON.parse(rawBody) as ResendResponseBody) : null;
+      } catch {
+        json = null;
+      }
 
       if (!response.ok || !json?.id) {
-        return { ok: false, error: json?.message ?? `Resend send failed (HTTP ${response.status}).` };
+        const detail = json?.message ?? rawBody.slice(0, 300) ?? "empty response body";
+        return { ok: false, error: `Resend send failed (HTTP ${response.status}): ${detail}` };
       }
 
       return { ok: true, providerId: json.id };
