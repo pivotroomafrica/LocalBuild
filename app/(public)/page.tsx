@@ -2,25 +2,32 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getPublicExpertDirectory } from "@/lib/public/data";
 import { Container } from "@/components/ui/Container";
-import { ExpertCard } from "@/components/expert/ExpertCard";
-
-const HOME_PREVIEW_COUNT = 6;
+import { MeetOurExperts } from "@/components/experts/MeetOurExperts";
 
 /**
- * Home (Phase 12 workstream D). Expert-first: the hero states what
- * Pivotroom is in one sentence, then experts appear immediately below it
- * -- never a long company story before a face shows up (guideline
- * section 22/109). Auth-aware for the same reason PublicHeader is (see
- * that component's comment): this page reads cookies() via
- * createClient(), which opts it out of static prerendering, so a
- * logged-in visitor never sees the logged-out Sign Up/Log In CTAs again.
+ * Home (Phase 12 workstream D, "Meet Our Experts" marquee). Expert-first:
+ * the hero states what Pivotroom is in one sentence, then experts appear
+ * immediately below it -- never a long company story before a face shows
+ * up (guideline section 22/109). Auth-aware for the same reason
+ * PublicHeader is (see that component's comment): this page reads
+ * cookies() via createClient(), which opts it out of static
+ * prerendering, so a logged-in visitor never sees the logged-out Sign
+ * Up/Log In CTAs again.
+ *
+ * getPublicExpertDirectory() is the SAME published-only, single-round-
+ * trip query /experts already uses (get_expert_directory_public(),
+ * 031_public_data_functions.sql) -- MeetOurExperts does not introduce a
+ * second data source or a second query; it fetches once here and passes
+ * the full list down, unbounded (the marquee is designed to batch/loop
+ * an arbitrary count, not to be truncated the way the old static preview
+ * grid was).
  */
 export default async function Home() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const experts = (await getPublicExpertDirectory(supabase)).slice(0, HOME_PREVIEW_COUNT);
+  const experts = await getPublicExpertDirectory(supabase);
 
   return (
     <div className="flex flex-col">
@@ -70,34 +77,7 @@ export default async function Home() {
         </Container>
       </section>
 
-      <section className="py-16 sm:py-20">
-        <Container className="flex flex-col gap-8">
-          <h2 className="font-display text-2xl font-bold text-[var(--color-text)]">Experts on Pivotroom</h2>
-
-          {experts.length === 0 ? (
-            <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-16 text-center">
-              <p className="text-base font-medium text-[var(--color-text)]">No experts on Pivotroom yet</p>
-              <p className="mx-auto mt-1.5 max-w-sm text-sm text-[var(--color-text-muted)]">
-                We&apos;re adding people. Check back soon.
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {experts.map((expert) => (
-                  <ExpertCard key={expert.slug} expert={expert} />
-                ))}
-              </div>
-              <Link
-                href="/experts"
-                className="inline-flex w-fit items-center gap-1 text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-text-muted)]"
-              >
-                Browse all experts →
-              </Link>
-            </>
-          )}
-        </Container>
-      </section>
+      <MeetOurExperts experts={experts} />
     </div>
   );
 }
