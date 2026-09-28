@@ -73,17 +73,20 @@ export function ExpertCard({ expert, variant = "browse", decorative = false, cla
         href={`/experts/${expert.slug}`}
         aria-hidden={decorative || undefined}
         tabIndex={decorative ? -1 : undefined}
-        className={`group flex h-full flex-col overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] transition-[border-color,transform] hover:border-[var(--color-text)] ${className}`}
-        style={{ transitionDuration: "var(--duration-fast)", transitionTimingFunction: "var(--ease-brand)" }}
+        className={`group flex h-full flex-col overflow-hidden rounded-[14px] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[0_2px_8px_rgba(0,0,0,0.035)] transition-[box-shadow,transform] duration-500 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] group-hover:-translate-y-0 ${className}`}
+        style={{ transitionTimingFunction: "var(--ease-brand)" }}
         draggable={false}
       >
-        <div className="relative aspect-[4/5] w-full shrink-0 overflow-hidden bg-[var(--color-mist)]">
+        <div
+          className="relative w-full shrink-0 overflow-hidden bg-[var(--color-mist)] transition-transform duration-500"
+          style={{ aspectRatio: "4 / 5", transitionTimingFunction: "var(--ease-brand)" }}
+        >
           {expert.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- signed URL, expires hourly; next/image would cache a stale asset (same reasoning as the browse variant below).
             <img
               src={expert.photoUrl}
               alt=""
-              className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+              className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.025]"
               width={320}
               height={400}
               loading="lazy"
@@ -96,10 +99,6 @@ export function ExpertCard({ expert, variant = "browse", decorative = false, cla
               </span>
             </div>
           )}
-          <div className="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full bg-[var(--color-surface)]/90 px-2 py-1 text-[11px] font-medium text-[var(--color-text)] backdrop-blur-sm">
-            <Icon name="verified" size={18} className="text-[var(--color-accent)]" decorative />
-            Verified
-          </div>
         </div>
 
         <div className="flex flex-1 flex-col gap-1 p-3.5">
@@ -109,12 +108,15 @@ export function ExpertCard({ expert, variant = "browse", decorative = false, cla
           {credibility ? (
             <p className="line-clamp-2 text-xs leading-snug text-[var(--color-text-muted)]">{credibility}</p>
           ) : null}
+          {expert.headline ? (
+            <p className="line-clamp-2 text-xs leading-snug text-[var(--color-text-muted)]">{expert.headline}</p>
+          ) : null}
           {expert.categoryNames.length > 0 ? (
             <p className="line-clamp-1 text-xs text-[var(--color-text-muted)]">
               {expert.categoryNames.slice(0, 3).join(" · ")}
             </p>
           ) : null}
-          <span className="tabular-nums-brand mt-auto pt-2 text-xs font-medium text-[var(--color-text)]">
+          <span className="tabular-nums-brand mt-auto pt-2.5 text-xs font-medium text-[var(--color-text)]">
             {price ?? ""}
           </span>
         </div>

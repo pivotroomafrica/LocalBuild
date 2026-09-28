@@ -175,6 +175,23 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Hero expert constellation drift (Phase 13 redesign, section 7): each
+ * portrait sets its own --float-x/--float-y/duration/delay inline so one
+ * keyframe animates every slot at a different rate/distance without a
+ * bespoke @keyframes per portrait. The global prefers-reduced-motion rule
+ * above already zeroes animation-duration for this like everything else,
+ * so no separate JS check is needed here (unlike ExpertMarqueeRow, which
+ * drives scrollLeft directly rather than through a CSS animation). */
+@keyframes pv-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(var(--float-x, 0px), var(--float-y, -8px), 0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

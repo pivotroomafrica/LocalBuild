@@ -49,6 +49,29 @@ export type PublicDirectoryCard = {
   inPersonEnabled: boolean;
 };
 
+/**
+ * Real, published-only category taxonomy for the homepage "what are you
+ * trying to solve?" discovery section -- the ACTUAL 8 expert_categories
+ * rows, not an invented problem list. Fetched once, no join needed
+ * (public.expert_categories has no RLS -- it's reference data, already
+ * readable by anon elsewhere in this app).
+ */
+export type ExpertCategorySummary = { name: string; sortOrder: number };
+
+export async function getExpertCategories(supabase: TypedClient): Promise<ExpertCategorySummary[]> {
+  const { data, error } = await supabase
+    .from("expert_categories")
+    .select("name, sort_order")
+    .order("sort_order");
+
+  if (error) {
+    console.error("getExpertCategories: failed to load expert_categories", error);
+    return [];
+  }
+
+  return (data ?? []).map((row) => ({ name: row.name, sortOrder: row.sort_order }));
+}
+
 /** /experts -- card list, backed by get_expert_directory_public()
  * (031_public_data_functions.sql; replaces the retired expert_directory_
  * public view -- same column list, same profile_status = 'published'
@@ -68,7 +91,7 @@ export async function getPublicExpertDirectory(supabase: TypedClient): Promise<P
     (data ?? []).map(async (row) => ({
       slug: row.slug!,
       fullName: row.full_name ?? "",
-      headline: row.headline,
+      headline: row.headline ?? null,
       currentPosition: row.current_position,
       currentCompany: row.current_company,
       photoUrl: await getExpertPhotoUrl(supabase, row.profile_image_path),

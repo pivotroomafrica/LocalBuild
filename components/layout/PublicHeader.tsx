@@ -55,8 +55,8 @@ export async function PublicHeader() {
   ];
 
   return (
-    <header className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
-      <Container className="flex h-16 items-center justify-between">
+    <header className="sticky top-0 z-40 bg-[var(--color-surface)] shadow-[0_1px_0_0_var(--color-border)]">
+      <Container className="flex h-[68px] items-center justify-between">
         <Link href="/" aria-label="Pivotroom home">
           <BrandLogo size={26} />
         </Link>

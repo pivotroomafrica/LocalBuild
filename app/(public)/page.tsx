@@ -1,83 +1,66 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getPublicExpertDirectory } from "@/lib/public/data";
-import { Container } from "@/components/ui/Container";
+import { getPublicExpertDirectory, getExpertCategories } from "@/lib/public/data";
+import { HomeHero } from "@/components/marketing/HomeHero";
+import { ExperienceStatement } from "@/components/marketing/ExperienceStatement";
+import { ProblemDiscovery } from "@/components/marketing/ProblemDiscovery";
+import { FinalCta } from "@/components/marketing/FinalCta";
 import { MeetOurExperts } from "@/components/experts/MeetOurExperts";
 
 /**
- * Home (Phase 12 workstream D, "Meet Our Experts" marquee). Expert-first:
- * the hero states what Pivotroom is in one sentence, then experts appear
- * immediately below it -- never a long company story before a face shows
- * up (guideline section 22/109). Auth-aware for the same reason
- * PublicHeader is (see that component's comment): this page reads
- * cookies() via createClient(), which opts it out of static
- * prerendering, so a logged-in visitor never sees the logged-out Sign
- * Up/Log In CTAs again.
+ * Home -- editorial redesign (spec: "PIVOTROOM.AFRICA -- ELITE WEBSITE
+ * DESIGN TRANSFORMATION"), homepage-only pass. Section order follows the
+ * spec's own scroll narrative (section 23): there are experienced people
+ * here (hero) -> a quiet philosophical beat (light ExperienceStatement,
+ * section 9) -> here they are (MeetOurExperts) -> why this matters (dark
+ * ExperienceStatement, the ONE ink moment, section 24) -> how to find the
+ * right one (ProblemDiscovery) -> do this now (FinalCta). Booking/session/
+ * matching-preview/profile-story sections from the spec live on OTHER
+ * pages (not yet redesigned) and are intentionally out of scope for this
+ * pass.
  *
- * getPublicExpertDirectory() is the SAME published-only, single-round-
- * trip query /experts already uses (get_expert_directory_public(),
- * 031_public_data_functions.sql) -- MeetOurExperts does not introduce a
- * second data source or a second query; it fetches once here and passes
- * the full list down, unbounded (the marquee is designed to batch/loop
- * an arbitrary count, not to be truncated the way the old static preview
- * grid was).
+ * Auth-aware for the same reason PublicHeader is: reading cookies() here
+ * opts the route out of static prerendering, so a logged-in visitor's
+ * hero CTA is always correct.
+ *
+ * ONE server-side fetch of the published expert directory
+ * (getPublicExpertDirectory -- get_expert_directory_public(),
+ * 031_public_data_functions.sql) is passed down to both HomeHero (for the
+ * ExpertConstellation) and MeetOurExperts (for the marquee rows) -- no
+ * second query, same published-only data used identically both places.
+ * getExpertCategories() is the one additional query this pass adds (plain
+ * reference-table read, no RLS, no migration) for ProblemDiscovery's real
+ * taxonomy.
  */
 export default async function Home() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const experts = await getPublicExpertDirectory(supabase);
+  const [experts, categories] = await Promise.all([
+    getPublicExpertDirectory(supabase),
+    getExpertCategories(supabase),
+  ]);
 
   return (
     <div className="flex flex-col">
-      <section className="bg-[var(--color-mist)] py-16 sm:py-20">
-        <Container className="flex flex-col items-center text-center">
-          <h1 className="font-display max-w-2xl text-4xl font-bold tracking-[-0.025em] text-[var(--color-text)] sm:text-5xl">
-            Talk to someone who&apos;s already been there.
-          </h1>
-          <p className="mt-4 max-w-md text-base text-[var(--color-text-muted)]">
-            Book one-to-one time with experienced professionals who&apos;ve navigated what
-            you&apos;re facing now.
-          </p>
+      <HomeHero isLoggedIn={Boolean(user)} experts={experts} />
 
-          <div className="mt-8 flex w-full max-w-xs flex-col gap-3 sm:w-auto sm:flex-row">
-            {user ? (
-              <>
-                <Link
-                  href="/experts"
-                  className="inline-flex h-12 items-center justify-center rounded-full bg-[var(--color-brand)] px-7 text-sm font-medium text-[var(--color-on-brand)] transition-colors hover:bg-[var(--color-brand-hover)] sm:w-auto"
-                >
-                  Browse experts
-                </Link>
-                <Link
-                  href="/dashboard"
-                  className="inline-flex h-12 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-7 text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-bg)] sm:w-auto"
-                >
-                  Go to dashboard
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/auth/signup"
-                  className="inline-flex h-12 items-center justify-center rounded-full bg-[var(--color-brand)] px-7 text-sm font-medium text-[var(--color-on-brand)] transition-colors hover:bg-[var(--color-brand-hover)] sm:w-auto"
-                >
-                  Sign up
-                </Link>
-                <Link
-                  href="/experts"
-                  className="inline-flex h-12 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-7 text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-bg)] sm:w-auto"
-                >
-                  Browse experts
-                </Link>
-              </>
-            )}
-          </div>
-        </Container>
-      </section>
+      <ExperienceStatement
+        tone="light"
+        lines={["Experience shouldn't depend", "on who you happen to know."]}
+      />
 
       <MeetOurExperts experts={experts} />
+
+      <ExperienceStatement
+        tone="dark"
+        lines={["Africa doesn't have", "an experience problem.", "It has an access problem."]}
+        sublabel="Pivotroom exists to close that gap, one conversation at a time."
+      />
+
+      <ProblemDiscovery categories={categories} />
+
+      <FinalCta />
     </div>
   );
 }
