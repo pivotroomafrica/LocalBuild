@@ -18,12 +18,28 @@ function formatRemaining(ms: number): string {
  */
 export function HoldCountdown({ holdExpiresAt }: { holdExpiresAt: string }) {
   const target = new Date(holdExpiresAt).getTime();
-  const [remaining, setRemaining] = useState(() => target - Date.now());
+  // Starts null (identical on server and client) rather than computing
+  // Date.now() at initial-state time -- the server's render and the
+  // client's pre-hydration render happen at different moments, so seeding
+  // this from Date.now() directly causes an intermittent hydration
+  // mismatch on the seconds digit. The real value is filled in a moment
+  // later, once mounted, from an effect.
+  const [remaining, setRemaining] = useState<number | null>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => setRemaining(target - Date.now()), 1000);
+    const tick = () => setRemaining(target - Date.now());
+    tick();
+    const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
   }, [target]);
+
+  if (remaining === null) {
+    return (
+      <p className="text-sm text-[var(--color-text)]">
+        Your session time is being held while you correct the payment.
+      </p>
+    );
+  }
 
   if (remaining <= 0) {
     return (

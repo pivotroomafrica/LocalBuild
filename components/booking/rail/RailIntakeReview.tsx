@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TextField } from "@/components/ui/TextField";
 import { SelectField } from "@/components/ui/SelectField";
@@ -74,35 +74,40 @@ export function RailIntakeReview({ booking, intake, profileComplete, customerPro
   const [customerTimezone] = useState(detectTimezone);
   const step = !profileComplete ? "profile" : !intake ? "intake" : "review";
 
+  // router.refresh() is an external imperative API, not a plain local
+  // setState, so it must run from an effect that itself contains no
+  // setState -- the guard flag is adjusted directly during render (safe,
+  // local-only), and a separate effect keyed on that flag fires the
+  // actual refresh once it flips.
   const [profileState, profileFormAction, profilePending] = useActionState(
     saveBookingProfileAction,
     profileInitialState,
   );
   const [handledProfile, setHandledProfile] = useState(false);
-  if (profileState.success && !handledProfile) {
-    setHandledProfile(true);
-    router.refresh();
-  }
+  if (profileState.success && !handledProfile) setHandledProfile(true);
+  useEffect(() => {
+    if (handledProfile) router.refresh();
+  }, [handledProfile, router]);
 
   const [intakeState, intakeFormAction, intakePending] = useActionState(
     saveBookingIntakeAction,
     intakeInitialState,
   );
   const [handledIntake, setHandledIntake] = useState(false);
-  if (intakeState.success && !handledIntake) {
-    setHandledIntake(true);
-    router.refresh();
-  }
+  if (intakeState.success && !handledIntake) setHandledIntake(true);
+  useEffect(() => {
+    if (handledIntake) router.refresh();
+  }, [handledIntake, router]);
 
   const [advanceState, advanceFormAction, advancePending] = useActionState(
     advanceBookingToPaymentAction,
     advanceInitialState,
   );
   const [handledAdvance, setHandledAdvance] = useState(false);
-  if (advanceState.success && !handledAdvance) {
-    setHandledAdvance(true);
-    router.refresh();
-  }
+  if (advanceState.success && !handledAdvance) setHandledAdvance(true);
+  useEffect(() => {
+    if (handledAdvance) router.refresh();
+  }, [handledAdvance, router]);
 
   return (
     <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">

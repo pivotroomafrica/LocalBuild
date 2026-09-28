@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { submitManualPaymentAction, type SubmitPaymentState } from "@/lib/payment/actions";
 import { TextField } from "@/components/ui/TextField";
@@ -27,12 +27,16 @@ export function ManualPaymentForm({ bookingReference }: { bookingReference: stri
   // payment page, so its own revalidatePath() call (targeting the now-
   // superseded standalone route) can't refresh what's on screen -- a
   // client-side refresh of the CURRENT route is what actually shows the
-  // freshly-submitted PAYMENT_STATUS state.
+  // freshly-submitted PAYMENT_STATUS state. router.refresh() is an
+  // external imperative API, so it must run from an effect that itself
+  // contains no setState -- the guard flag is adjusted directly during
+  // render (safe, local-only), and a separate effect keyed on that flag
+  // fires the actual refresh once it flips.
   const [handledSuccess, setHandledSuccess] = useState(false);
-  if (state.success && !handledSuccess) {
-    setHandledSuccess(true);
-    router.refresh();
-  }
+  if (state.success && !handledSuccess) setHandledSuccess(true);
+  useEffect(() => {
+    if (handledSuccess) router.refresh();
+  }, [handledSuccess, router]);
 
   return (
     <form action={formAction} className="flex flex-col gap-4">

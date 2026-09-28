@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
@@ -98,12 +98,19 @@ export function BookingRail(props: Props) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  function handleHoldCreated(bookingReference: string) {
-    // A real, single new history entry -- Back after this returns to the
-    // clean pre-hold profile view (no `?booking=`), which never cancels
-    // the hold itself (only an explicit "Release This Time" does that).
-    router.push(`${pathname}?booking=${encodeURIComponent(bookingReference)}`, { scroll: false });
-  }
+  // Stable identity (useCallback) so RailSelect's own effect that calls
+  // this can list it as a dependency without re-firing on every
+  // BookingRail render.
+  const handleHoldCreated = useCallback(
+    (bookingReference: string) => {
+      // A real, single new history entry -- Back after this returns to
+      // the clean pre-hold profile view (no `?booking=`), which never
+      // cancels the hold itself (only an explicit "Release This Time"
+      // does that).
+      router.push(`${pathname}?booking=${encodeURIComponent(bookingReference)}`, { scroll: false });
+    },
+    [router, pathname],
+  );
 
   function handleRestart() {
     router.replace(pathname, { scroll: false });

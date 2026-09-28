@@ -197,11 +197,21 @@ export function RailSelect({
     setSelectedSlot(null);
     setAttempt((a) => a + 1);
   }
+  // onHoldCreated calls router.push -- an external imperative API, not a
+  // plain local setState, so it must run from an effect that itself
+  // contains no setState (React's render-time-setState allowance only
+  // covers a component's own local state; the router mutation has to
+  // happen post-commit, never synchronously inside any component's
+  // render). The guard flag is adjusted directly during render (the
+  // established, lint-clean pattern in this codebase); a SEPARATE effect
+  // keyed on that flag fires the actual side effect once it flips.
   const [handledHoldReference, setHandledHoldReference] = useState<string | undefined>(undefined);
   if (holdState.bookingReference && holdState.bookingReference !== handledHoldReference) {
     setHandledHoldReference(holdState.bookingReference);
-    onHoldCreated(holdState.bookingReference);
   }
+  useEffect(() => {
+    if (handledHoldReference) onHoldCreated(handledHoldReference);
+  }, [handledHoldReference, onHoldCreated]);
 
   // --- Inline auth gate ------------------------------------------------
   const [signInState, signInFormAction, signInPending] = useActionState(signInForRailAction, authInitialState);
@@ -209,11 +219,14 @@ export function RailSelect({
   const [handledLogin, setHandledLogin] = useState(false);
   if ((signInState.success || signUpState.success) && !handledLogin) {
     setHandledLogin(true);
-    router.refresh();
   }
+  useEffect(() => {
+    if (handledLogin) router.refresh();
+  }, [handledLogin, router]);
   // Once fresh server props confirm the sign-in landed, advance the gate
   // in place -- selection state (duration/format/selectedSlot above) is
-  // untouched by this refresh, since nothing here navigates.
+  // untouched by this refresh, since nothing here navigates. Plain local
+  // setState, so this one is safe to adjust directly during render.
   const [advancedPastAuth, setAdvancedPastAuth] = useState(false);
   if (isLoggedIn && gate === "auth" && !advancedPastAuth) {
     setAdvancedPastAuth(true);
@@ -228,8 +241,10 @@ export function RailSelect({
   const [handledProfileSave, setHandledProfileSave] = useState(false);
   if (profileState.success && !handledProfileSave) {
     setHandledProfileSave(true);
-    router.refresh();
   }
+  useEffect(() => {
+    if (handledProfileSave) router.refresh();
+  }, [handledProfileSave, router]);
   const [advancedPastProfile, setAdvancedPastProfile] = useState(false);
   if (profileComplete && gate === "profile" && !advancedPastProfile) {
     setAdvancedPastProfile(true);

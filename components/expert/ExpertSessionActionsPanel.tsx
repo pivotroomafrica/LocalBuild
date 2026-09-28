@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -40,23 +40,29 @@ export function ExpertSessionActionsPanel({ bookingReference, hasPendingRequest 
     initialActionState,
   );
 
-  // Adjusting state during render (React's own recommended alternative to
-  // an effect for this, and the same pattern BookingPicker.tsx already
-  // uses for its own hold-error handling) -- guarded by "last handled" so
-  // it only fires once per actual success, not on every re-render.
+  // router.refresh() is an external imperative API, not a plain local
+  // setState, so it must run from an effect that itself contains no
+  // setState -- the guard flag (and the modal's own open/close state,
+  // which IS local) are adjusted directly during render (safe), and a
+  // separate effect keyed on the guard flag fires the actual refresh
+  // once it flips.
   const [lastHandledRequestSuccess, setLastHandledRequestSuccess] = useState(false);
   if (requestState.success && !lastHandledRequestSuccess) {
     setLastHandledRequestSuccess(true);
     setRequestOpen(false);
-    router.refresh();
   }
+  useEffect(() => {
+    if (lastHandledRequestSuccess) router.refresh();
+  }, [lastHandledRequestSuccess, router]);
 
   const [lastHandledCancelSuccess, setLastHandledCancelSuccess] = useState(false);
   if (cancelState.success && !lastHandledCancelSuccess) {
     setLastHandledCancelSuccess(true);
     setCancelOpen(false);
-    router.refresh();
   }
+  useEffect(() => {
+    if (lastHandledCancelSuccess) router.refresh();
+  }, [lastHandledCancelSuccess, router]);
 
   return (
     <div className="flex flex-wrap items-center gap-3">
