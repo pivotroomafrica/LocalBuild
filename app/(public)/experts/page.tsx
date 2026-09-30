@@ -11,14 +11,18 @@ type Props = {
 };
 
 /**
- * `q` (free text, from the homepage hero/final-CTA ProblemInput) and
- * `category` (exact match, from the homepage ProblemDiscovery links) both
- * filter the SAME already-fetched, published-only list client-side -- no
- * second query, no new DB shape. This is intentionally logic-only: the
- * visual design of this page is out of scope for the homepage redesign
- * (spec section 26 treats it as a separate "utility mode" pass), so the
- * grid/cards below are untouched; only the entry points from the new
- * homepage sections needed a real destination instead of a dead link.
+ * `q` (from the header search, and the homepage hero/final-CTA
+ * ProblemInput) and `category` (exact match, from the homepage
+ * ProblemDiscovery links) both filter the SAME already-fetched,
+ * published-only list client-side -- no second query, no new DB shape.
+ * `q` matches expert name only for now (see the filter below) -- not
+ * headline/position/company/category, since the header search is
+ * explicitly scoped to name search only at this stage. This is
+ * intentionally logic-only: the visual design of this page is out of
+ * scope for the homepage redesign (spec section 26 treats it as a
+ * separate "utility mode" pass), so the grid/cards below are untouched;
+ * only the entry points from the new homepage sections and header needed
+ * a real destination instead of a dead link.
  */
 export default async function ExpertDirectoryPage({ searchParams }: Props) {
   const { q, category } = await searchParams;
@@ -29,17 +33,11 @@ export default async function ExpertDirectoryPage({ searchParams }: Props) {
   const experts = allExperts.filter((expert) => {
     if (category && !expert.categoryNames.includes(category)) return false;
     if (!needle) return true;
-    const haystack = [
-      expert.fullName,
-      expert.headline,
-      expert.currentPosition,
-      expert.currentCompany,
-      ...expert.categoryNames,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-    return haystack.includes(needle);
+    // Name-only for now (per the header search's own scope) -- headline/
+    // position/company/category matching can come later once there's a
+    // reason to widen it, but a name search should never silently start
+    // matching unrelated fields.
+    return expert.fullName.toLowerCase().includes(needle);
   });
 
   return (
