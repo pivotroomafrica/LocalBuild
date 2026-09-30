@@ -28,7 +28,7 @@ export function HomeHero({ isLoggedIn, experts }: Props) {
       <Container>
         <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-12 lg:gap-8">
           <div className="flex flex-col items-start lg:col-span-6">
-            <h1 className="font-display max-w-lg text-[44px] font-bold leading-[1.05] tracking-[-0.02em] text-[var(--color-text)] sm:text-6xl lg:text-[68px]">
+            <h1 className="font-display max-w-lg text-[44px] font-bold leading-[1.05] tracking-[-0.03em] text-[var(--color-text)] sm:text-6xl lg:text-[68px]">
               Talk to someone
               <br />
               who&apos;s already been there.
