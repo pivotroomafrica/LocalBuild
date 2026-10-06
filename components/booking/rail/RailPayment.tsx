@@ -50,7 +50,7 @@ export function RailPayment({
   if (needsReview) {
     return (
       <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-        <h2 className="mb-3 text-lg font-semibold text-[var(--color-text)]">Payment requires review</h2>
+        <h2 className="mb-3 text-xl font-extrabold tracking-[-0.02em] text-[var(--color-text)]">Payment requires review</h2>
         <FormMessage variant="error">
           Chapa confirmed a payment for this booking, but we couldn&apos;t automatically confirm your
           reservation. Your payment has not been lost -- our team is reviewing it manually. Please
@@ -65,7 +65,7 @@ export function RailPayment({
     return (
       <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-[var(--color-text)]">Payment submitted</h2>
+          <h2 className="text-xl font-extrabold tracking-[-0.02em] text-[var(--color-text)]">Payment submitted</h2>
           <ReleaseTimeButton bookingId={booking.id} bookingReference={booking.booking_reference} />
         </div>
         <p className="mb-3 text-sm text-[var(--color-text)]">Your transfer is waiting for verification.</p>
@@ -99,7 +99,7 @@ export function RailPayment({
     return (
       <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 text-center">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-[var(--color-text)]">Payment processing</h2>
+          <h2 className="text-xl font-extrabold tracking-[-0.02em] text-[var(--color-text)]">Payment processing</h2>
           <ReleaseTimeButton bookingId={booking.id} bookingReference={booking.booking_reference} />
         </div>
         <p className="mb-3 text-sm text-[var(--color-text-muted)]">
@@ -127,7 +127,7 @@ export function RailPayment({
 
       {chapaAvailable ? (
         <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-          <h2 className="mb-1 text-lg font-semibold text-[var(--color-text)]">Pay with Chapa</h2>
+          <h2 className="mb-1 text-xl font-extrabold tracking-[-0.02em] text-[var(--color-text)]">Pay with Chapa</h2>
           <p className="mb-3 text-sm text-[var(--color-text-muted)]">
             Pay securely online -- your booking confirms automatically once Chapa verifies your
             payment.
@@ -158,7 +158,7 @@ export function RailPayment({
 
       {rejected ? (
         <div className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <h2 className="text-sm font-semibold text-[var(--color-text)]">Payment needs attention</h2>
+          <h2 className="text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Payment needs attention</h2>
           <p className="text-sm text-[var(--color-text-muted)]">Admin reason:</p>
           <p className="text-sm text-[var(--color-text)]">{rejected.rejection_reason}</p>
           {booking.hold_expires_at ? <HoldCountdown holdExpiresAt={booking.hold_expires_at} /> : null}
@@ -173,7 +173,7 @@ export function RailPayment({
       )}
 
       <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-        <h2 className="mb-1 text-lg font-semibold text-[var(--color-text)]">Manual bank transfer</h2>
+        <h2 className="mb-1 text-xl font-extrabold tracking-[-0.02em] text-[var(--color-text)]">Manual bank transfer</h2>
         <p className="mb-3 text-sm text-[var(--color-text-muted)]">
           Transfer the amount using the bank details below, then submit your transaction reference
           for verification.
@@ -210,7 +210,7 @@ export function RailPayment({
       </div>
 
       <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-        <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">
+        <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">
           {rejected ? "Submit new payment details" : "Payment details"}
         </h2>
         <ManualPaymentForm bookingReference={booking.booking_reference} />

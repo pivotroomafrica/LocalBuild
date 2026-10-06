@@ -1,8 +1,9 @@
 /*
- * Public-site theme ported from the intro repo's app/globals.css, scoped under
- * .intro-theme (see app/(public)/layout.tsx) so it never touches dashboards,
- * admin, or auth. Generated mechanically -- edit the token bridge at the
- * bottom rather than hand-patching scoped rules.
+ * Site-wide theme ported from the intro repo's app/globals.css, scoped under
+ * .intro-theme (set on <body> in app/layout.tsx). Element resets live in
+ * @layer base so Tailwind utilities still win. Generated mechanically by a
+ * postcss script -- change the bridge at the bottom (or the :root tokens in
+ * app/globals.css) rather than hand-patching scoped rules.
  */
 @layer base {
 
@@ -5532,27 +5533,11 @@
 
 
 
-/* Fonts (loaded via next/font in app/(public)/layout.tsx) and a token bridge
- * so real Pivotroom components rendered inside the public site -- the booking
- * rail, the become-an-expert page -- inherit the same palette. --font-satoshi
- * is deliberately left alone: it carries the Pivotroom wordmark. */
+/* Fonts come from next/font in app/layout.tsx. Palette tokens shared with
+ * the rest of the app (--color-*) are defined once in app/globals.css. */
 .intro-theme {
   --font-sans: var(--font-jakarta), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-serif: var(--font-newsreader), Georgia, serif;
-  --font-inter: var(--font-jakarta);
-  --color-bg: var(--bg-beige);
-  --color-surface: #ffffff;
-  --color-mist: var(--bg-beige-tint);
-  --color-border: var(--border-light);
-  --color-text: var(--text-dark);
-  --color-text-muted: var(--text-muted);
-  --color-brand: #1a1921;
-  --color-brand-hover: #2c2b33;
-  --color-on-brand: #ffffff;
-  --color-accent: var(--blue-verified);
-  --color-accent-tint: #eef3fe;
-  --radius-card: 20px;
-  --radius-input: 12px;
 }
 
 .intro-theme .detail-right-col {

@@ -41,7 +41,7 @@ export function Modal({ open, onClose, title, children, closeOnEscape = true }: 
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(18,17,22,0.55)] p-4 backdrop-blur-[6px]"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -50,9 +50,9 @@ export function Modal({ open, onClose, title, children, closeOnEscape = true }: 
         role="dialog"
         aria-modal="true"
         aria-labelledby="pivotroom-modal-title"
-        className="w-full max-w-md rounded-[var(--radius-card)] bg-[var(--color-surface)] p-6 shadow-lg"
+        className="w-full max-w-md rounded-[24px] border border-[var(--color-border)] bg-[var(--color-surface)] p-7 shadow-[0_30px_80px_rgba(18,17,22,0.35)]"
       >
-        <h2 id="pivotroom-modal-title" className="font-display text-lg font-bold text-[var(--color-text)]">
+        <h2 id="pivotroom-modal-title" className="text-xl font-extrabold tracking-[-0.02em] text-[var(--color-text)]">
           {title}
         </h2>
         <div className="mt-3">{children}</div>

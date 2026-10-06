@@ -41,16 +41,16 @@ export default async function DashboardSessionsPage({
       <DashboardNav current="/dashboard/sessions" />
 
       <div className="flex flex-col gap-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-text)]">My Sessions</h1>
+        <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">My Sessions</h1>
 
-        <nav className="flex flex-wrap gap-1 border-b border-[var(--color-border)]">
+        <nav className="no-scrollbar flex w-fit max-w-full gap-1 overflow-x-auto rounded-full border border-[var(--color-border)] bg-[var(--color-mist)] p-1">
           {SESSION_TABS.map((t) => (
             <Link
               key={t}
               href={`/dashboard/sessions?tab=${t}`}
-              className={`rounded-t-md px-3 py-2 text-sm font-medium ${
+              className={`whitespace-nowrap rounded-full px-4 py-1.5 text-[13px] font-bold transition-all ${
                 t === tab
-                  ? "border-b-2 border-[var(--color-brand)] text-[var(--color-brand)]"
+                  ? "bg-[var(--color-surface)] text-[var(--color-text)] shadow-[0_1px_4px_rgba(20,19,24,0.12)]"
                   : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
               }`}
             >

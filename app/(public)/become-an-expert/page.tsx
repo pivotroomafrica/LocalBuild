@@ -1,6 +1,24 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
+const STEPS = [
+  {
+    step: "01",
+    title: "Build your application",
+    description: "Add your profile and photo, describe your expertise and who you help, and set your session lengths and prices.",
+  },
+  {
+    step: "02",
+    title: "Get reviewed",
+    description: "The Pivotroom team reviews every application. We may approve it or ask for changes before it goes live.",
+  },
+  {
+    step: "03",
+    title: "Open your calendar",
+    description: "Once approved, your profile is published. Add your monthly availability and customers can book you directly.",
+  },
+];
+
 export default async function BecomeAnExpertPage({
   searchParams,
 }: {
@@ -19,50 +37,70 @@ export default async function BecomeAnExpertPage({
     ? "/expert/application"
     : `/auth/signup?next=${encodeURIComponent("/expert/application")}`;
 
+  const loginHref = `/auth/login?next=${encodeURIComponent("/expert/application")}`;
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--color-bg)] px-4 py-20 text-center">
-      <p className="text-sm font-medium tracking-wide text-[var(--color-brand)]">
-        BECOME AN EXPERT
-      </p>
-      <h1 className="mt-4 max-w-lg text-3xl font-semibold tracking-tight text-[var(--color-text)] sm:text-4xl">
-        Share your experience through paid one-to-one sessions.
-      </h1>
-      <p className="mt-4 max-w-md text-base text-[var(--color-text-muted)]">
-        Apply to join Pivotroom as an expert. Tell us about your background, set the
-        consultation offerings you&apos;d like to provide, and submit your application for
-        review.
-      </p>
-
-      {from === "availability" ? (
-        <p className="mt-6 max-w-md rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm text-[var(--color-text)]">
-          Availability is available after your expert application is approved.
-        </p>
-      ) : null}
-
-      <div className="mt-8 flex w-full max-w-xs flex-col gap-3">
-        <Link
-          href={applyHref}
-          className="inline-flex items-center justify-center rounded-md bg-[var(--color-brand)] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--color-brand-hover)]"
-        >
-          Apply to Become an Expert
-        </Link>
-        {!user ? (
-          <p className="text-sm text-[var(--color-text-muted)]">
-            Already have a Pivotroom account?{" "}
-            <Link
-              href={`/auth/login?next=${encodeURIComponent("/expert/application")}`}
-              className="font-medium text-[var(--color-brand)] hover:underline"
-            >
-              Log in
-            </Link>
+    <div>
+      <section className="hero-section">
+        <div className="hero-glow-1" />
+        <div className="hero-glow-2" />
+        <div className="hero-container">
+          <div className="hero-badge-pill">
+            <span className="h-2 w-2 rounded-full bg-amber-400" />
+            Become an expert
+          </div>
+          <h1 className="hero-title">Share your experience through paid 1-on-1 sessions</h1>
+          <p className="hero-subtitle">
+            Apply to join Pivotroom as an expert. Tell us about your background, set the sessions you&apos;d like to
+            offer, and submit your application for review.
           </p>
-        ) : null}
-      </div>
 
-      <p className="mt-10 max-w-md text-xs text-[var(--color-text-muted)]">
-        Applying does not make you a public expert. Your application is reviewed before
-        anything about you appears on Pivotroom.
-      </p>
+          {from === "availability" ? (
+            <p className="mx-auto mb-8 max-w-md rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-[#e7e5ec]">
+              Availability is available after your expert application is approved.
+            </p>
+          ) : null}
+
+          <div className="hero-ctas" style={{ flexDirection: "column" }}>
+            <Link href={applyHref} className="btn-hero-primary">
+              Apply to Become an Expert
+            </Link>
+            {!user ? (
+              <p className="text-sm text-[#a9a6b2]">
+                Already have a Pivotroom account?{" "}
+                <Link href={loginHref} className="font-semibold text-white hover:underline">
+                  Log in
+                </Link>
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
+      <section className="how-section">
+        <div className="how-container">
+          <div className="how-header">
+            <span className="how-tag">For experts</span>
+            <h2 className="how-title">How applying works</h2>
+            <p className="text-lg text-[#6a6871]">Three steps between you and your first booked session.</p>
+          </div>
+
+          <div className="how-steps-grid">
+            {STEPS.map((item) => (
+              <div key={item.step} className="how-step-card">
+                <div className="how-step-num">{item.step}</div>
+                <h3 className="how-step-title">{item.title}</h3>
+                <p className="how-step-desc">{item.description}</p>
+              </div>
+            ))}
+          </div>
+
+          <p className="mx-auto mt-12 max-w-md text-center text-sm text-[var(--color-text-muted)]">
+            Applying does not make you a public expert. Your application is reviewed before anything about you appears
+            on Pivotroom.
+          </p>
+        </div>
+      </section>
     </div>
   );
 }

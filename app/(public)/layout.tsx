@@ -1,27 +1,12 @@
-import { Newsreader, Plus_Jakarta_Sans } from "next/font/google";
 import { createClient } from "@/lib/supabase/server";
 import { getCategoryNamesForRequest, getDirectoryForRequest } from "@/lib/public/cached";
 import { SiteChrome } from "@/components/site/SiteChrome";
 import { SiteFooter } from "@/components/site/SiteFooter";
-import "./intro-theme.css";
-
-const jakarta = Plus_Jakarta_Sans({
-  variable: "--font-jakarta",
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-});
-
-const newsreader = Newsreader({
-  variable: "--font-newsreader",
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-});
 
 /**
  * Route group -- (public) is stripped from the URL, so this wraps `/`,
- * `/experts`, `/experts/[slug]`, and `/become-an-expert` in the public-site
- * theme (intro-theme.css, scoped under .intro-theme so dashboards, admin and
- * auth keep their own styling).
+ * `/experts`, `/experts/[slug]`, and `/become-an-expert` in the public site
+ * chrome (the intro theme itself is applied app-wide in app/layout.tsx).
  *
  * Reads the CURRENT request's auth state (cookies -- a signed-in visitor
  * never sees Sign up / Log in) plus the real published-only directory and
@@ -48,7 +33,7 @@ export default async function PublicLayout({ children }: { children: React.React
   }
 
   return (
-    <div className={`intro-theme ${jakarta.variable} ${newsreader.variable} flex min-h-screen flex-col`}>
+    <div className="flex min-h-screen flex-col">
       <SiteChrome isLoggedIn={Boolean(user)} isApprovedExpert={isApprovedExpert} experts={experts} categories={categories} />
       <main className="flex-1">{children}</main>
       <SiteFooter categories={categories} />

@@ -72,7 +72,7 @@ export function ExpertSessionActionsPanel({ bookingReference, hasPendingRequest 
         <button
           type="button"
           onClick={() => setRequestOpen(true)}
-          className="inline-flex items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-bg)]"
+          className="inline-flex items-center justify-center rounded-full border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm font-bold text-[var(--color-text)] transition-colors hover:bg-[var(--color-bg)]"
         >
           Request Reschedule
         </button>
@@ -102,7 +102,7 @@ export function ExpertSessionActionsPanel({ bookingReference, hasPendingRequest 
               required
               rows={2}
               maxLength={500}
-              className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)]"
+              className="w-full rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)]"
             />
           </div>
           {requestState.error ? <FormMessage variant="error">{requestState.error}</FormMessage> : null}
@@ -133,7 +133,7 @@ export function ExpertSessionActionsPanel({ bookingReference, hasPendingRequest 
               required
               rows={2}
               maxLength={500}
-              className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)]"
+              className="w-full rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)]"
             />
           </div>
           {cancelState.error ? <FormMessage variant="error">{cancelState.error}</FormMessage> : null}
@@ -141,7 +141,7 @@ export function ExpertSessionActionsPanel({ bookingReference, hasPendingRequest 
             <button
               type="submit"
               disabled={cancelPending}
-              className="inline-flex items-center justify-center rounded-md bg-[var(--color-danger)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center rounded-full bg-[var(--color-danger)] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {cancelPending ? "Cancelling..." : "Cancel Session"}
             </button>

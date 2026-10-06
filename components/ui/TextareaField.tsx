@@ -27,7 +27,7 @@ export function TextareaField({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between">
-        <label htmlFor={name} className="text-sm font-medium text-[var(--color-text)]">
+        <label htmlFor={name} className="text-[13.5px] font-bold text-[var(--color-text)]">
           {label}
         </label>
         {maxLength ? (
@@ -47,7 +47,7 @@ export function TextareaField({
           setLength(event.target.value.length);
           onChange?.(event);
         }}
-        className={`min-h-28 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-base text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus-visible:border-[var(--color-brand)] ${
+        className={`min-h-28 w-full rounded-[var(--radius-input)] border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-[15px] text-[var(--color-text)] transition-colors hover:border-[var(--color-border-hover)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(37,99,235,0.14)] placeholder:text-[var(--color-text-muted)] focus-visible:border-[var(--color-accent)] ${
           error ? "border-[var(--color-danger)]" : ""
         } ${className}`}
         {...rest}

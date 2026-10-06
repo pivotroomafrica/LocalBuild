@@ -112,7 +112,7 @@ export function RailIntakeReview({ booking, intake, profileComplete, customerPro
   return (
     <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-[var(--color-text)]">Time reserved</h2>
+        <h2 className="text-xl font-extrabold tracking-[-0.02em] text-[var(--color-text)]">Time reserved</h2>
         <ReleaseTimeButton bookingId={booking.id} bookingReference={booking.booking_reference} />
       </div>
 

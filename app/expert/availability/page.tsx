@@ -34,7 +34,7 @@ export default async function ExpertAvailabilityPage() {
 
       <div className="flex flex-col gap-8">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-text)]">Availability</h1>
+          <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">Availability</h1>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
             Make 1–5 hours available each month. You control exactly when those hours are offered.
           </p>

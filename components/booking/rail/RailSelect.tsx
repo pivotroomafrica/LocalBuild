@@ -267,7 +267,7 @@ export function RailSelect({
 
   return (
     <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-      <h2 className="mb-3 text-lg font-semibold text-[var(--color-text)]">Session options</h2>
+      <h2 className="mb-3 text-xl font-extrabold tracking-[-0.02em] text-[var(--color-text)]">Session options</h2>
 
       <div className="flex flex-col gap-2">
         {sessionOfferings.map((offering) => (

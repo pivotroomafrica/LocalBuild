@@ -32,20 +32,20 @@ export default async function AdminBookingsPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-text)]">Bookings</h1>
+        <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">Bookings</h1>
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">
           All bookings, for support visibility. Payment review happens on the Payments page.
         </p>
       </div>
 
-      <nav className="flex flex-wrap gap-1 border-b border-[var(--color-border)]">
+      <nav className="no-scrollbar flex w-fit max-w-full gap-1 overflow-x-auto rounded-full border border-[var(--color-border)] bg-[var(--color-mist)] p-1">
         {ADMIN_BOOKING_TABS.map((t) => (
           <Link
             key={t.tab}
             href={`/admin/bookings?tab=${t.tab}`}
-            className={`rounded-t-md px-3 py-2 text-sm font-medium ${
+            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-[13px] font-bold transition-all ${
               t.tab === tab
-                ? "border-b-2 border-[var(--color-brand)] text-[var(--color-brand)]"
+                ? "bg-[var(--color-surface)] text-[var(--color-text)] shadow-[0_1px_4px_rgba(20,19,24,0.12)]"
                 : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
             }`}
           >
@@ -61,11 +61,11 @@ export default async function AdminBookingsPage({
           name="q"
           defaultValue={search}
           placeholder="Search by booking reference"
-          className="w-full max-w-sm rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)]"
+          className="w-full max-w-sm rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)]"
         />
         <button
           type="submit"
-          className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-bg)]"
+          className="rounded-full border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-bold text-[var(--color-text)] hover:bg-[var(--color-bg)]"
         >
           Search
         </button>
@@ -79,7 +79,7 @@ export default async function AdminBookingsPage({
             <li key={row.id}>
               <Link
                 href={`/admin/bookings/${row.bookingReference}`}
-                className="flex flex-col gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4 hover:border-[var(--color-brand)] sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 hover:border-[var(--color-border-hover)] hover:shadow-[var(--shadow-raised)] hover:-translate-y-0.5 sm:flex-row sm:items-center sm:justify-between shadow-[var(--shadow-card)] transition-all"
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-[var(--color-text)]">

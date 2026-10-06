@@ -25,7 +25,7 @@ export function AdminReleaseButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-[var(--color-danger)] hover:bg-[var(--color-danger-bg)]"
+        className="rounded-full border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-bold text-[var(--color-danger)] hover:bg-[var(--color-danger-bg)]"
       >
         Release Reservation
       </button>

@@ -2,13 +2,13 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getExpertApplicationData } from "@/lib/expert/data";
 import { toPreviewProfileData } from "@/lib/public/data";
-import { PublicProfileView } from "@/components/expert/PublicProfileView";
+import { ExpertDetailView } from "@/components/site/ExpertDetailView";
 import { ExpertApplicationNav } from "@/components/layout/ExpertApplicationNav";
 
 /**
- * Owner-only preview of the eventual public profile, reusing
- * PublicProfileView (spec section 56) so there is exactly one expert
- * profile presentation design, not two that can drift apart. This route
+ * Owner-only preview of the eventual public profile, reusing the real
+ * public profile view (ExpertDetailView, in preview mode) so there is
+ * exactly one expert profile design, not two that can drift apart. This route
  * is never linked from anywhere public and does not touch
  * profile_status or any admin table -- viewing it has no effect on
  * publication. Access control is the same as every other /expert/* page:
@@ -48,16 +48,22 @@ export default async function ExpertApplicationPreviewPage() {
       <ExpertApplicationNav current="/expert/application/preview" />
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-[var(--color-text)]">Preview</h1>
+          <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">
+            Preview
+          </h1>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
             This is only visible to you. It is not published or discoverable by anyone else.
           </p>
         </div>
-        <Link href="/expert/application" className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
+        <Link href="/expert/application" className="text-sm font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
           &larr; Back
         </Link>
       </div>
-      <PublicProfileView profile={profile} />
+      {/* Break out of the narrow workspace column so the preview renders at
+       * the same width as the real public profile page. */}
+      <div className="relative left-1/2 w-screen max-w-[1320px] -translate-x-1/2">
+        <ExpertDetailView profile={profile} />
+      </div>
     </div>
   );
 }

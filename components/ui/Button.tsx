@@ -9,12 +9,9 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 /**
- * Pill buttons against square-cornered cards (guideline section 09/03).
- * Height 48 (52 in a hero), radius full, padding-inline 28. Hover is a 4%
- * lightness shift baked into --color-brand-hover -- no scale-up, no
- * shadow bloom. Primary is Ink on light grounds and flips to white
- * automatically inside an `.on-ink` section (see globals.css) since both
- * read off the same --color-brand token.
+ * Intro-style pill buttons. Height 48 (52 in a hero). Primary is the ink
+ * pill with a soft lift on hover; it flips to white inside an `.on-ink`
+ * section (see globals.css) since both read the same --color-brand token.
  */
 export function Button({
   variant = "primary",
@@ -27,13 +24,13 @@ export function Button({
   ...rest
 }: Props) {
   const base =
-    "inline-flex w-full items-center justify-center gap-2 rounded-full px-7 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60";
+    "inline-flex w-full items-center justify-center gap-2 rounded-full px-7 text-[14.5px] font-bold tracking-[-0.01em] transition-all disabled:cursor-not-allowed disabled:opacity-60";
   const heightClass = size === "hero" ? "h-[52px]" : "h-12";
   const styles =
     variant === "primary"
-      ? "bg-[var(--color-brand)] text-[var(--color-on-brand)] hover:bg-[var(--color-brand-hover)]"
+      ? "bg-[var(--color-brand)] text-[var(--color-on-brand)] shadow-[0_4px_14px_rgba(20,19,24,0.18)] hover:bg-[var(--color-brand-hover)] enabled:hover:-translate-y-px"
       : variant === "secondary"
-        ? "border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-bg)]"
+        ? "border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:border-[var(--color-border-hover)] hover:bg-[var(--color-bg)]"
         : "bg-transparent text-[var(--color-text)] underline decoration-[var(--color-border)] underline-offset-4 hover:decoration-[var(--color-text)]";
 
   return (

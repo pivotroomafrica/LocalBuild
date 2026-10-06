@@ -10,26 +10,22 @@ import { PAYMENT_STATUS_LABELS, type PaymentStatus } from "@/types/payment";
  * so no page hand-rolls its own status styling or shows a snake_case
  * value directly.
  *
- * Phase 12: there is no red or green in the Pivotroom palette -- blue is
- * the one accent, reserved for informational/confirmed states (the
- * guideline's own example use is literally "confirmed"). A problem state
- * (rejected/cancelled/failed) is never carried by colour alone; it gets
- * an ink border plus its own distinct label text, matching the same "no
- * red, errors stated in words" rule the guideline applies to form
- * errors.
+ * Tones follow the intro design: soft green for confirmed/paid, soft red
+ * for problem states, warm neutral for everything in between. The label
+ * text always names the state too, so colour is never the only signal.
  */
 type Tone = "neutral" | "positive" | "attention";
 
 const TONE_CLASSES: Record<Tone, string> = {
-  neutral: "bg-[var(--color-mist)] text-[var(--color-text-muted)]",
-  positive: "bg-[var(--color-accent-tint)] text-[var(--color-accent)]",
-  attention: "border border-[var(--color-text)] bg-[var(--color-surface)] text-[var(--color-text)]",
+  neutral: "border-[var(--color-border)] bg-[var(--color-mist)] text-[#55525d]",
+  positive: "border-[#c6f0dc] bg-[var(--color-success-bg)] text-[var(--color-success)]",
+  attention: "border-[#fbd5d0] bg-[var(--color-danger-bg)] text-[var(--color-danger)]",
 };
 
 export function StatusPill({ label, tone = "neutral" }: { label: string; tone?: Tone }) {
   return (
     <span
-      className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-medium ${TONE_CLASSES[tone]}`}
+      className={`inline-flex w-fit items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-bold ${TONE_CLASSES[tone]}`}
     >
       {label}
     </span>

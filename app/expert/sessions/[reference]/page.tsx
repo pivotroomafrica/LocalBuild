@@ -52,7 +52,7 @@ export default async function ExpertSessionDetailPage({
           &larr; Back to Sessions
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-text)]">
+          <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">
             {customer?.fullName ?? "Unknown"}
           </h1>
           <BookingStatusPill status={booking.booking_status as "confirmed" | "completed"} />
@@ -67,11 +67,11 @@ export default async function ExpertSessionDetailPage({
       ) : null}
 
       {rescheduleHistory.length > 0 ? (
-        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Reschedule History</h2>
+        <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Reschedule History</h2>
           <ul className="flex flex-col gap-3">
             {rescheduleHistory.map((reschedule) => (
-              <li key={reschedule.id} className="rounded-md bg-[var(--color-bg)] p-3 text-sm">
+              <li key={reschedule.id} className="rounded-xl bg-[var(--color-bg)] p-3 text-sm">
                 <p className="text-[var(--color-text)]">
                   {formatExpertSessionDateTime(reschedule.old_start_at, booking.expert_timezone)} &rarr;{" "}
                   {formatExpertSessionDateTime(reschedule.new_start_at, booking.expert_timezone)}
@@ -86,8 +86,8 @@ export default async function ExpertSessionDetailPage({
         </section>
       ) : null}
 
-      <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Session</h2>
+      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+        <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Session</h2>
         <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
           <Field label="Date & time" value={formatExpertSessionDateTime(booking.start_at, booking.expert_timezone)} />
           <Field label="Duration" value={`${booking.duration_minutes} minutes`} />
@@ -104,7 +104,7 @@ export default async function ExpertSessionDetailPage({
                 href={booking.calendar_meeting_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm font-medium text-[var(--color-brand)] hover:underline"
+                className="text-sm font-medium text-[var(--color-accent)] hover:underline"
               >
                 Join Google Meet
               </a>
@@ -118,8 +118,8 @@ export default async function ExpertSessionDetailPage({
       </section>
 
       {customer ? (
-        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">About the Customer</h2>
+        <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">About the Customer</h2>
           <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
             {customer.currentRole ? <Field label="Role" value={customer.currentRole} /> : null}
             {customer.companyName ? <Field label="Company" value={customer.companyName} /> : null}
@@ -139,7 +139,7 @@ export default async function ExpertSessionDetailPage({
               href={customer.linkedinUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3 inline-block text-sm font-medium text-[var(--color-brand)] hover:underline"
+              className="mt-3 inline-block text-sm font-medium text-[var(--color-accent)] hover:underline"
             >
               View LinkedIn profile
             </a>
@@ -148,8 +148,8 @@ export default async function ExpertSessionDetailPage({
       ) : null}
 
       {intake ? (
-        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">What They Want to Discuss</h2>
+        <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">What They Want to Discuss</h2>
           <dl className="flex flex-col gap-3 text-sm">
             <Field label="Discussion topic" value={intake.discussion_topic} block />
             <Field label="Additional context" value={intake.additional_context} block />

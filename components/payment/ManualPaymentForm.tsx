@@ -57,7 +57,7 @@ export function ManualPaymentForm({ bookingReference }: { bookingReference: stri
           type="file"
           name="receipt"
           accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
-          className="text-sm text-[var(--color-text-muted)] file:mr-3 file:rounded-md file:border file:border-[var(--color-border)] file:bg-[var(--color-surface)] file:px-3 file:py-1.5 file:text-sm file:font-medium"
+          className="text-sm text-[var(--color-text-muted)] file:mr-3 file:rounded-full file:border file:border-[var(--color-border)] file:bg-[var(--color-surface)] file:px-3 file:py-1.5 file:text-sm file:font-medium"
         />
         <p className="text-xs text-[var(--color-text-muted)]">JPG, PNG, WebP, or PDF. Up to 5 MB.</p>
       </div>

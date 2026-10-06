@@ -6,7 +6,7 @@ import { EXPERT_EXPERIENCE_RANGE_LABELS, type ExpertExperienceRange } from "@/ty
 type TypedClient = SupabaseClient<Database>;
 
 /**
- * Normalized shape the shared PublicProfileView component renders --
+ * Normalized shape the shared ExpertDetailView component renders --
  * deliberately NOT the raw expert_profile_public row (which still carries
  * profile_image_path, a raw storage path that encodes the owner's
  * user_id, see 016_public_expert_views.sql's comments). Every caller of

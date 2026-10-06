@@ -142,7 +142,7 @@ export function AddExtraTimeModal({
             max={monthEnd}
             value={date}
             onChange={(event) => setDate(event.target.value)}
-            className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-text)]"
+            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-text)]"
           />
         </label>
 
@@ -154,7 +154,7 @@ export function AddExtraTimeModal({
               step={900}
               value={startTime}
               onChange={(event) => setStartTime(event.target.value)}
-              className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)]"
+              className="rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)]"
             />
           </label>
           <label className="flex flex-1 flex-col gap-1 text-xs text-[var(--color-text-muted)]">
@@ -164,7 +164,7 @@ export function AddExtraTimeModal({
               step={900}
               value={endTime}
               onChange={(event) => setEndTime(event.target.value)}
-              className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)]"
+              className="rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm text-[var(--color-text)]"
             />
           </label>
         </div>
@@ -185,7 +185,7 @@ export function AddExtraTimeModal({
           type="button"
           onClick={handleSubmit}
           disabled={isPending}
-          className="inline-flex items-center justify-center rounded-md bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--color-brand-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center justify-center rounded-full bg-[var(--color-brand)] px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-[var(--color-brand-hover)] disabled:cursor-not-allowed disabled:opacity-60 shadow-[0_4px_14px_rgba(20,19,24,0.18)]"
         >
           {isPending ? "Adding..." : "Add Time"}
         </button>

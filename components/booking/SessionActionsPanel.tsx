@@ -63,7 +63,7 @@ export function SessionActionsPanel({
         <button
           type="button"
           onClick={() => setRescheduleOpen(true)}
-          className="inline-flex items-center justify-center rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-bg)]"
+          className="inline-flex items-center justify-center rounded-full border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2.5 text-sm font-bold text-[var(--color-text)] transition-colors hover:bg-[var(--color-bg)]"
         >
           Reschedule
         </button>

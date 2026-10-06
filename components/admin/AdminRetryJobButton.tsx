@@ -19,7 +19,7 @@ export function AdminRetryJobButton({ jobId, bookingReference }: { jobId: string
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-medium text-[var(--color-text)] hover:bg-[var(--color-bg)] disabled:opacity-60"
+        className="rounded-full border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-xs font-bold text-[var(--color-text)] hover:bg-[var(--color-bg)] disabled:opacity-60"
       >
         {isPending ? "Retrying..." : "Retry"}
       </button>

@@ -15,7 +15,7 @@ export default async function ExpertApplicationProfilePage() {
       <ExpertApplicationNav current="/expert/application/profile" />
       <div className="flex flex-col gap-8">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-text)]">
+          <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">
             Professional Profile
           </h1>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">

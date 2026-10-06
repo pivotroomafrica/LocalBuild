@@ -25,7 +25,7 @@ export function AdminCancelBookingButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-[var(--color-danger)] hover:bg-[var(--color-danger-bg)]"
+        className="rounded-full border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-bold text-[var(--color-danger)] hover:bg-[var(--color-danger-bg)]"
       >
         Cancel Booking (Override)
       </button>
@@ -45,7 +45,7 @@ export function AdminCancelBookingButton({
               rows={2}
               maxLength={500}
               placeholder="Reason (required)"
-              className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)]"
+              className="w-full rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)]"
             />
           </div>
         }

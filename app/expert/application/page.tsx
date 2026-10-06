@@ -6,7 +6,7 @@ import { ExpertApplicationNav } from "@/components/layout/ExpertApplicationNav";
 import { SubmitApplicationPanel } from "@/components/expert/SubmitApplicationPanel";
 
 const PRIMARY_CTA_CLASSES =
-  "inline-flex w-full items-center justify-center rounded-md bg-[var(--color-brand)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--color-brand-hover)]";
+  "inline-flex w-full items-center justify-center rounded-full bg-[var(--color-brand)] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[var(--color-brand-hover)] shadow-[0_4px_14px_rgba(20,19,24,0.18)]";
 
 export default async function ExpertApplicationPage() {
   await ensureExpertProfileDraft();
@@ -98,7 +98,7 @@ export default async function ExpertApplicationPage() {
 
       <div className="flex flex-col gap-8">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-text)]">
+          <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">
             Expert Application
           </h1>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">
@@ -115,27 +115,27 @@ export default async function ExpertApplicationPage() {
         <section className="grid gap-3 sm:grid-cols-3">
           <Link
             href="/expert/application/profile"
-            className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4 hover:border-[var(--color-brand)]"
+            className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 hover:border-[var(--color-border-hover)] hover:shadow-[var(--shadow-raised)] hover:-translate-y-0.5 shadow-[var(--shadow-card)] transition-all"
           >
-            <h2 className="text-sm font-semibold">Professional Profile</h2>
+            <h2 className="text-[15px] font-extrabold tracking-[-0.01em]">Professional Profile</h2>
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">
               Headline, experience, bio, photo
             </p>
           </Link>
           <Link
             href="/expert/application/expertise"
-            className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4 hover:border-[var(--color-brand)]"
+            className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 hover:border-[var(--color-border-hover)] hover:shadow-[var(--shadow-raised)] hover:-translate-y-0.5 shadow-[var(--shadow-card)] transition-all"
           >
-            <h2 className="text-sm font-semibold">Expertise Categories</h2>
+            <h2 className="text-[15px] font-extrabold tracking-[-0.01em]">Expertise Categories</h2>
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">
               {data.categoryIds.length} of 3 selected
             </p>
           </Link>
           <Link
             href="/expert/application/sessions"
-            className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4 hover:border-[var(--color-brand)]"
+            className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 hover:border-[var(--color-border-hover)] hover:shadow-[var(--shadow-raised)] hover:-translate-y-0.5 shadow-[var(--shadow-card)] transition-all"
           >
-            <h2 className="text-sm font-semibold">Session Pricing</h2>
+            <h2 className="text-[15px] font-extrabold tracking-[-0.01em]">Session Pricing</h2>
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">
               {baseRateLabel} · {durationsLabel} · {formatLabel}
             </p>
@@ -148,8 +148,8 @@ export default async function ExpertApplicationPage() {
           </Link>
         </section>
 
-        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <h2 className="mb-3 text-sm font-semibold">Application Completion</h2>
+        <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em]">Application Completion</h2>
           <ul className="flex flex-col gap-2">
             {sectionRows.map((row) => (
               <li key={row.label} className="flex items-center justify-between text-sm">
@@ -168,7 +168,7 @@ export default async function ExpertApplicationPage() {
 
         <section>
           {primaryCta.kind === "submitted" ? (
-            <div className="rounded-md bg-[var(--color-success-bg)] px-4 py-3 text-sm text-[var(--color-success)]">
+            <div className="rounded-xl border border-[#c6f0dc] bg-[var(--color-success-bg)] px-4 py-3 text-sm text-[var(--color-success)]">
               <p className="font-medium">Application Submitted</p>
               <p className="mt-1">
                 Your application is ready for review. You can keep editing any section above —
@@ -177,7 +177,7 @@ export default async function ExpertApplicationPage() {
             </div>
           ) : primaryCta.kind === "changes_requested" ? (
             <div className="flex flex-col gap-4">
-              <div className="rounded-md bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger)]">
+              <div className="rounded-xl border border-[#fbd5d0] bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger)]">
                 <p className="font-medium">Changes Requested</p>
                 <p className="mt-1">
                   {expertProfile.review_message ??
@@ -191,14 +191,14 @@ export default async function ExpertApplicationPage() {
               />
             </div>
           ) : primaryCta.kind === "rejected" ? (
-            <div className="rounded-md bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger)]">
+            <div className="rounded-xl border border-[#fbd5d0] bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger)]">
               <p className="font-medium">Application Not Approved</p>
               <p className="mt-1">
                 {expertProfile.review_message ?? "Your application was not approved at this time."}
               </p>
             </div>
           ) : primaryCta.kind === "approved" ? (
-            <div className="rounded-md bg-[var(--color-success-bg)] px-4 py-3 text-sm text-[var(--color-success)]">
+            <div className="rounded-xl border border-[#c6f0dc] bg-[var(--color-success-bg)] px-4 py-3 text-sm text-[var(--color-success)]">
               <p className="font-medium">Application Approved</p>
               <p className="mt-1">
                 Your application has been approved. An admin will publish your profile soon.
@@ -213,7 +213,7 @@ export default async function ExpertApplicationPage() {
               </div>
             </div>
           ) : primaryCta.kind === "published" ? (
-            <div className="rounded-md bg-[var(--color-success-bg)] px-4 py-3 text-sm text-[var(--color-success)]">
+            <div className="rounded-xl border border-[#c6f0dc] bg-[var(--color-success-bg)] px-4 py-3 text-sm text-[var(--color-success)]">
               <p className="font-medium">Your Profile Is Live</p>
               <p className="mt-1">Customers can now find and view your expert profile.</p>
               <div className="mt-2 flex flex-col gap-1">
@@ -226,7 +226,7 @@ export default async function ExpertApplicationPage() {
               </div>
             </div>
           ) : primaryCta.kind === "suspended" ? (
-            <div className="rounded-md bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger)]">
+            <div className="rounded-xl border border-[#fbd5d0] bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger)]">
               <p className="font-medium">Profile Suspended</p>
               <p className="mt-1">
                 Your profile is temporarily suspended and is not visible in the public directory.

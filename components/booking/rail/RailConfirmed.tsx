@@ -19,7 +19,7 @@ export function RailConfirmed({ booking, customerTimezone }: { booking: Booking;
         <Icon name="check_circle" size={18} decorative />
         Confirmed
       </div>
-      <h2 className="mb-3 text-lg font-semibold text-[var(--color-text)]">Booking confirmed</h2>
+      <h2 className="mb-3 text-xl font-extrabold tracking-[-0.02em] text-[var(--color-text)]">Booking confirmed</h2>
 
       <dl className="flex flex-col gap-2 rounded-[var(--radius-input)] bg-[var(--color-bg)] p-4 text-sm text-[var(--color-text)]">
         <div className="flex justify-between">

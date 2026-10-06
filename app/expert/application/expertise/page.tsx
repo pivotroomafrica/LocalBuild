@@ -22,7 +22,7 @@ export default async function ExpertApplicationExpertisePage() {
       <ExpertApplicationNav current="/expert/application/expertise" />
       <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-text)]">
+          <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">
             Expertise Categories
           </h1>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">

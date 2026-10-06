@@ -27,14 +27,14 @@ export default async function ExpertDashboardPage() {
       <ExpertOperationsNav current="/expert/dashboard" />
 
       <div className="flex flex-col gap-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-text)]">Dashboard</h1>
+        <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">Dashboard</h1>
 
         {nextSession ? (
           <section>
-            <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Next Session</h2>
+            <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Next Session</h2>
             <Link
               href={`/expert/sessions/${nextSession.bookingReference}`}
-              className="flex flex-col gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4 hover:border-[var(--color-brand)] sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-2 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 hover:border-[var(--color-border-hover)] hover:shadow-[var(--shadow-raised)] hover:-translate-y-0.5 sm:flex-row sm:items-center sm:justify-between shadow-[var(--shadow-card)] transition-all"
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-[var(--color-text)]">{nextSession.customerName}</p>
@@ -47,7 +47,7 @@ export default async function ExpertDashboardPage() {
             </Link>
           </section>
         ) : (
-          <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center">
+          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center shadow-[var(--shadow-card)]">
             <p className="text-sm text-[var(--color-text)]">No upcoming confirmed sessions.</p>
             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
               Confirmed sessions will appear here once a customer completes payment.
@@ -55,7 +55,7 @@ export default async function ExpertDashboardPage() {
           </div>
         )}
 
-        <Link href="/expert/sessions" className="text-sm font-medium text-[var(--color-brand)] hover:underline">
+        <Link href="/expert/sessions" className="text-sm font-medium text-[var(--color-accent)] hover:underline">
           View all sessions &rarr;
         </Link>
       </div>

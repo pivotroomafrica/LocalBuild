@@ -49,7 +49,7 @@ export function CancelBookingModal({ open, onClose, bookingReference }: Props) {
             name="reason_category"
             value={reasonCategory}
             onChange={(event) => setReasonCategory(event.target.value)}
-            className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)]"
+            className="w-full rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)]"
           >
             {CANCELLATION_REASON_CATEGORIES.map((category) => (
               <option key={category} value={category}>
@@ -68,7 +68,7 @@ export function CancelBookingModal({ open, onClose, bookingReference }: Props) {
             name="details"
             rows={2}
             maxLength={500}
-            className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)]"
+            className="w-full rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)]"
           />
         </div>
 
@@ -78,7 +78,7 @@ export function CancelBookingModal({ open, onClose, bookingReference }: Props) {
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex items-center justify-center rounded-md bg-[var(--color-danger)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center justify-center rounded-full bg-[var(--color-danger)] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {pending ? "Cancelling..." : "Cancel Session"}
           </button>

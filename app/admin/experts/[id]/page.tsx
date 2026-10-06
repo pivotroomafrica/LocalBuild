@@ -46,7 +46,7 @@ export default async function AdminExpertDetailPage({ params }: { params: Promis
         <Link href="/admin/experts" className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
           &larr; Back to applications
         </Link>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--color-text)]">
+        <h1 className="mt-2 text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">
           {identity?.full_name ?? "Unknown applicant"}
         </h1>
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">
@@ -57,8 +57,8 @@ export default async function AdminExpertDetailPage({ params }: { params: Promis
         </p>
       </div>
 
-      <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Professional Profile</h2>
+      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+        <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Professional Profile</h2>
         <div className="flex flex-col gap-3 sm:flex-row sm:gap-6">
           {photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -93,8 +93,8 @@ export default async function AdminExpertDetailPage({ params }: { params: Promis
         </div>
       </section>
 
-      <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Expertise Categories</h2>
+      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+        <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Expertise Categories</h2>
         {categoryNames.length > 0 ? (
           <ul className="flex flex-wrap gap-2">
             {categoryNames.map((name) => (
@@ -108,8 +108,8 @@ export default async function AdminExpertDetailPage({ params }: { params: Promis
         )}
       </section>
 
-      <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Session Pricing</h2>
+      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+        <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Session Pricing</h2>
         {activeOfferings.length > 0 ? (
           <>
             <ul className="flex flex-col gap-1.5 text-sm">
@@ -136,16 +136,16 @@ export default async function AdminExpertDetailPage({ params }: { params: Promis
       </section>
 
       {expertProfile.review_message && (expertProfile.application_status === "changes_requested" || expertProfile.application_status === "rejected") ? (
-        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <h2 className="mb-2 text-sm font-semibold text-[var(--color-text)]">
+        <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+          <h2 className="mb-2 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">
             {expertProfile.application_status === "rejected" ? "Rejection reason sent to applicant" : "Changes requested from applicant"}
           </h2>
           <p className="text-sm text-[var(--color-text)]">{expertProfile.review_message}</p>
         </section>
       ) : null}
 
-      <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Review Decision</h2>
+      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+        <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Review Decision</h2>
         <ReviewActions expertProfileId={expertProfile.id} applicationStatus={expertProfile.application_status} profileStatus={expertProfile.profile_status} />
       </section>
     </div>

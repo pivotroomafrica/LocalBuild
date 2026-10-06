@@ -1,10 +1,8 @@
 import type { ButtonHTMLAttributes } from "react";
 
 /**
- * Selection chip (guideline section 09/12) -- duration/format/date/time
- * pickers, category filters. Radius 8px. Selected chip is the only place
- * blue fills a shape (section 12): unselected stays a quiet outline, so
- * blue never competes with itself across a row of chips.
+ * Selection chip -- duration/format/date/time pickers, category filters.
+ * Intro's category-pill look: quiet outline, dark ink pill when selected.
  */
 type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   selected?: boolean;
@@ -12,14 +10,14 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 export function Chip({ selected = false, className = "", children, ...rest }: Props) {
   const styles = selected
-    ? "border-[var(--color-accent)] bg-[var(--color-accent)] text-white"
-    : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-bg)]";
+    ? "border-[var(--color-text)] bg-[var(--color-text)] text-white shadow-[0_4px_14px_rgba(20,19,24,0.22)]"
+    : "border-[#eae4d7] bg-[var(--color-surface)] text-[#3f3c47] hover:border-[#2b2832] hover:bg-[var(--color-bg)]";
 
   return (
     <button
       type="button"
       aria-pressed={selected}
-      className={`inline-flex items-center justify-center rounded-[var(--radius-chip)] border px-3.5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${styles} ${className}`}
+      className={`inline-flex items-center justify-center rounded-full border-[1.5px] px-4 py-2 text-[13.5px] font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-60 ${styles} ${className}`}
       style={{ transitionDuration: "var(--duration-fast)", transitionTimingFunction: "var(--ease-brand)" }}
       {...rest}
     >

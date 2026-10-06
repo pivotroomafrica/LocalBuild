@@ -20,7 +20,7 @@ export default async function ExpertSessionsPage() {
       <ExpertOperationsNav current="/expert/sessions" />
 
       <div className="flex flex-col gap-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-text)]">Sessions</h1>
+        <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">Sessions</h1>
 
         {sessions.length === 0 ? (
           <p className="text-sm text-[var(--color-text-muted)]">

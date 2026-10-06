@@ -34,7 +34,7 @@ export function ForgotPasswordForm() {
       </Button>
 
       <p className="text-center text-sm text-[var(--color-text-muted)]">
-        <Link href="/auth/login" className="font-medium text-[var(--color-brand)] hover:underline">
+        <Link href="/auth/login" className="font-medium text-[var(--color-accent)] hover:underline">
           Back to log in
         </Link>
       </p>

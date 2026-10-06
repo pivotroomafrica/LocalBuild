@@ -39,7 +39,7 @@ export default async function AdminBookingDetailPage({
           &larr; Back to bookings
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-text)]">{booking.booking_reference}</h1>
+          <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">{booking.booking_reference}</h1>
           <BookingStatusPill status={booking.booking_status as BookingStatus} />
           {booking.booking_status === "held" || booking.booking_status === "awaiting_payment" ? (
             <AdminReleaseButton bookingId={booking.id} bookingReference={booking.booking_reference} />
@@ -61,14 +61,14 @@ export default async function AdminBookingDetailPage({
       </div>
 
       {pendingChangeRequest ? (
-        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-          <h2 className="text-sm font-semibold text-[var(--color-text)]">Pending Expert Reschedule Request</h2>
+        <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-bg)] p-5">
+          <h2 className="text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Pending Expert Reschedule Request</h2>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">{pendingChangeRequest.reason}</p>
         </section>
       ) : null}
 
-      <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Booking</h2>
+      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+        <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Booking</h2>
         <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
           <Field label="Customer" value={customerName} />
           <Field
@@ -86,8 +86,8 @@ export default async function AdminBookingDetailPage({
       </section>
 
       {intake ? (
-        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Intake</h2>
+        <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Intake</h2>
           <dl className="flex flex-col gap-3 text-sm">
             <Field label="Discussion topic" value={intake.discussion_topic} block />
             <Field label="Additional context" value={intake.additional_context} block />
@@ -98,14 +98,14 @@ export default async function AdminBookingDetailPage({
         </section>
       ) : null}
 
-      <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Payments</h2>
+      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+        <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Payments</h2>
         {payments.length === 0 ? (
           <p className="text-sm text-[var(--color-text-muted)]">No payment submitted yet.</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {payments.map((payment) => (
-              <li key={payment.id} className="flex items-center justify-between gap-3 rounded-md bg-[var(--color-bg)] p-3">
+              <li key={payment.id} className="flex items-center justify-between gap-3 rounded-xl bg-[var(--color-bg)] p-3">
                 <div>
                   <p className="text-sm font-medium text-[var(--color-text)]">
                     {Number(payment.amount_paid).toLocaleString()} {payment.currency}
@@ -118,7 +118,7 @@ export default async function AdminBookingDetailPage({
                   <PaymentStatusPill status={payment.payment_status as PaymentStatus} />
                   <Link
                     href={`/admin/payments/${payment.id}`}
-                    className="text-sm font-medium text-[var(--color-brand)] hover:underline"
+                    className="text-sm font-medium text-[var(--color-accent)] hover:underline"
                   >
                     Review
                   </Link>
@@ -130,8 +130,8 @@ export default async function AdminBookingDetailPage({
       </section>
 
       {cancellation ? (
-        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Cancellation</h2>
+        <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Cancellation</h2>
           <dl className="flex flex-col gap-3 text-sm">
             <Field label="Cancelled by" value={cancellation.actor_type} />
             <Field label="Reason" value={cancellation.reason} block />
@@ -145,11 +145,11 @@ export default async function AdminBookingDetailPage({
       ) : null}
 
       {rescheduleHistory.length > 0 ? (
-        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Reschedule History</h2>
+        <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Reschedule History</h2>
           <ul className="flex flex-col gap-3">
             {rescheduleHistory.map((reschedule) => (
-              <li key={reschedule.id} className="rounded-md bg-[var(--color-bg)] p-3 text-sm">
+              <li key={reschedule.id} className="rounded-xl bg-[var(--color-bg)] p-3 text-sm">
                 <p className="text-[var(--color-text)]">
                   {new Date(reschedule.old_start_at).toLocaleString()} &rarr;{" "}
                   {new Date(reschedule.new_start_at).toLocaleString()}
@@ -166,8 +166,8 @@ export default async function AdminBookingDetailPage({
       ) : null}
 
       {booking.booking_status === "confirmed" ? (
-        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">
+        <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">
             Notifications &amp; Calendar
           </h2>
           <dl className="mb-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
@@ -188,7 +188,7 @@ export default async function AdminBookingDetailPage({
           ) : (
             <ul className="flex flex-col gap-2">
               {integrationJobs.map((job) => (
-                <li key={job.id} className="flex items-center justify-between gap-3 rounded-md bg-[var(--color-bg)] p-3">
+                <li key={job.id} className="flex items-center justify-between gap-3 rounded-xl bg-[var(--color-bg)] p-3">
                   <div>
                     <p className="text-sm font-medium text-[var(--color-text)]">{INTEGRATION_JOB_TYPE_LABELS[job.jobType]}</p>
                     <p className="text-xs text-[var(--color-text-muted)]">

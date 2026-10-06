@@ -70,7 +70,7 @@ export function SignupForm() {
 
       <p className="text-center text-sm text-[var(--color-text-muted)]">
         Already have an account?{" "}
-        <Link href={loginHref} className="font-medium text-[var(--color-brand)] hover:underline">
+        <Link href={loginHref} className="font-medium text-[var(--color-accent)] hover:underline">
           Log in
         </Link>
       </p>

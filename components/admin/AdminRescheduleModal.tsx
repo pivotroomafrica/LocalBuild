@@ -143,7 +143,7 @@ export function AdminRescheduleModal({
           <button
             type="button"
             onClick={() => setMonthCursor((c) => new Date(Date.UTC(c.getUTCFullYear(), c.getUTCMonth() - 1, 1)))}
-            className="text-sm text-[var(--color-brand)] hover:underline"
+            className="text-sm text-[var(--color-accent)] hover:underline"
           >
             ← Previous
           </button>
@@ -151,7 +151,7 @@ export function AdminRescheduleModal({
           <button
             type="button"
             onClick={() => setMonthCursor((c) => new Date(Date.UTC(c.getUTCFullYear(), c.getUTCMonth() + 1, 1)))}
-            className="text-sm text-[var(--color-brand)] hover:underline"
+            className="text-sm text-[var(--color-accent)] hover:underline"
           >
             Next →
           </button>
@@ -162,7 +162,7 @@ export function AdminRescheduleModal({
         ) : slotsError ? (
           <FormMessage variant="error">{slotsError}</FormMessage>
         ) : availableDates.length === 0 ? (
-          <div className="rounded-md bg-[var(--color-bg)] px-4 py-3 text-sm text-[var(--color-text-muted)]">
+          <div className="rounded-xl bg-[var(--color-bg)] px-4 py-3 text-sm text-[var(--color-text-muted)]">
             No available times in {monthLabel(monthCursor)}. Try another month.
           </div>
         ) : (
@@ -176,7 +176,7 @@ export function AdminRescheduleModal({
                     setSelectedDate(date);
                     setSelectedSlot(null);
                   }}
-                  className={`rounded-md border px-3 py-2 text-sm transition-colors ${
+                  className={`rounded-xl border-[1.5px] px-3 py-2 text-sm font-semibold transition-colors ${
                     selectedDate === date
                       ? "border-[var(--color-brand)] bg-[var(--color-brand)] text-white"
                       : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-bg)]"
@@ -198,7 +198,7 @@ export function AdminRescheduleModal({
                     key={slot.startAt}
                     type="button"
                     onClick={() => setSelectedSlot(slot)}
-                    className={`rounded-md border px-3 py-2 text-sm transition-colors ${
+                    className={`rounded-xl border-[1.5px] px-3 py-2 text-sm font-semibold transition-colors ${
                       selectedSlot?.startAt === slot.startAt
                         ? "border-[var(--color-brand)] bg-[var(--color-brand)] text-white"
                         : "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-bg)]"
@@ -232,7 +232,7 @@ export function AdminRescheduleModal({
                 required
                 rows={2}
                 maxLength={500}
-                className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)]"
+                className="w-full rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)]"
               />
             </div>
             <div className="flex gap-2">

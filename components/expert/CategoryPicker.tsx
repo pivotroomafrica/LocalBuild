@@ -46,7 +46,7 @@ export function CategoryPicker({ categories, selectedIds }: Props) {
           return (
             <label
               key={category.id}
-              className={`flex items-center gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm ${
+              className={`flex items-center gap-3 rounded-xl border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm font-medium ${
                 isDisabled ? "opacity-50" : "cursor-pointer"
               }`}
             >

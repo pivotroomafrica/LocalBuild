@@ -31,7 +31,7 @@ function Mark({ className = "", style }: { className?: string; style?: CSSProper
 
 function Wordmark({ className = "", style }: { className?: string; style?: CSSProperties }) {
   return (
-    <span className={`font-display font-bold tracking-[-0.035em] ${className}`} style={style}>
+    <span className={`font-wordmark font-bold tracking-[-0.035em] ${className}`} style={style}>
       Pivotroom
     </span>
   );

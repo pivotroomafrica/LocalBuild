@@ -27,7 +27,7 @@ export function PaymentRejectForm({ paymentId }: { paymentId: string }) {
         rows={3}
         maxLength={2000}
         required
-        className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)]"
+        className="w-full rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text)]"
       />
       <Button type="submit" variant="secondary" isLoading={isPending} loadingText="Rejecting...">
         Reject Payment

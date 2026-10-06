@@ -47,7 +47,7 @@ export default async function DashboardSessionDetailPage({
           &larr; Back to My Sessions
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-text)]">{detail.expertName}</h1>
+          <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">{detail.expertName}</h1>
           <SessionStatusPill state={derivedState} />
         </div>
       </div>
@@ -55,15 +55,15 @@ export default async function DashboardSessionDetailPage({
       {action ? (
         <Link
           href={action.href}
-          className="inline-flex w-fit items-center justify-center rounded-md bg-[var(--color-brand)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--color-brand-hover)]"
+          className="inline-flex w-fit items-center justify-center rounded-full bg-[var(--color-brand)] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[var(--color-brand-hover)] shadow-[0_4px_14px_rgba(20,19,24,0.18)]"
         >
           {action.label}
         </Link>
       ) : null}
 
       {pendingChangeRequest ? (
-        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
-          <h2 className="text-sm font-semibold text-[var(--color-text)]">Your expert has requested a new time</h2>
+        <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-bg)] p-5">
+          <h2 className="text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Your expert has requested a new time</h2>
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">{pendingChangeRequest.reason}</p>
           <p className="mt-2 text-xs text-[var(--color-text-muted)]">
             Your session hasn&apos;t changed yet. Reschedule below to pick a new time, or decline to keep the
@@ -84,8 +84,8 @@ export default async function DashboardSessionDetailPage({
         pendingChangeRequestId={pendingChangeRequest?.id ?? null}
       />
 
-      <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Session</h2>
+      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+        <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Session</h2>
         <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
           <Field label="Date & time" value={formatSessionDateTime(booking.start_at, booking.customer_timezone)} />
           <Field label="Duration" value={`${booking.duration_minutes} minutes`} />
@@ -102,7 +102,7 @@ export default async function DashboardSessionDetailPage({
                 href={booking.calendar_meeting_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm font-medium text-[var(--color-brand)] hover:underline"
+                className="text-sm font-medium text-[var(--color-accent)] hover:underline"
               >
                 Join Google Meet
               </a>
@@ -118,8 +118,8 @@ export default async function DashboardSessionDetailPage({
       </section>
 
       {intake ? (
-        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">What You Wanted to Discuss</h2>
+        <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">What You Wanted to Discuss</h2>
           <dl className="flex flex-col gap-3 text-sm">
             <Field label="Discussion topic" value={intake.discussion_topic} block />
             <Field label="Additional context" value={intake.additional_context} block />
@@ -131,8 +131,8 @@ export default async function DashboardSessionDetailPage({
       ) : null}
 
       {cancellation ? (
-        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Cancellation</h2>
+        <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Cancellation</h2>
           <dl className="flex flex-col gap-3 text-sm">
             <Field label="Cancelled by" value={cancellation.actor_type} />
             <Field label="Reason" value={cancellation.reason} block />
@@ -146,11 +146,11 @@ export default async function DashboardSessionDetailPage({
       ) : null}
 
       {rescheduleHistory.length > 0 ? (
-        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Reschedule History</h2>
+        <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Reschedule History</h2>
           <ul className="flex flex-col gap-3">
             {rescheduleHistory.map((reschedule) => (
-              <li key={reschedule.id} className="rounded-md bg-[var(--color-bg)] p-3 text-sm">
+              <li key={reschedule.id} className="rounded-xl bg-[var(--color-bg)] p-3 text-sm">
                 <p className="text-[var(--color-text)]">
                   {formatSessionDateTime(reschedule.old_start_at, booking.customer_timezone)} &rarr;{" "}
                   {formatSessionDateTime(reschedule.new_start_at, booking.customer_timezone)}
@@ -166,11 +166,11 @@ export default async function DashboardSessionDetailPage({
       ) : null}
 
       {payments.length > 0 ? (
-        <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-          <h2 className="mb-3 text-sm font-semibold text-[var(--color-text)]">Payment</h2>
+        <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Payment</h2>
           <ul className="flex flex-col gap-3">
             {payments.map((payment) => (
-              <li key={payment.id} className="rounded-md bg-[var(--color-bg)] p-3">
+              <li key={payment.id} className="rounded-xl bg-[var(--color-bg)] p-3">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-medium text-[var(--color-text)]">
                     {Number(payment.amount_paid).toLocaleString()} {payment.currency}

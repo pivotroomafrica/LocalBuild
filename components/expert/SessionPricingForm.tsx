@@ -68,7 +68,7 @@ export function SessionPricingForm({
             value={basePriceInput}
             onChange={(event) => setBasePriceInput(event.target.value)}
             required
-            className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-base text-[var(--color-text)]"
+            className="w-full rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-base text-[var(--color-text)]"
           />
           <span className="text-sm font-medium text-[var(--color-text-muted)]">ETB</span>
         </div>
@@ -83,7 +83,7 @@ export function SessionPricingForm({
 
       <section className="flex flex-col gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-[var(--color-text)]">Available session lengths</h2>
+          <h2 className="text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Available session lengths</h2>
           <p className="text-sm text-[var(--color-text-muted)]">
             Choose the session lengths customers can book with you.
           </p>
@@ -92,7 +92,7 @@ export function SessionPricingForm({
           {SESSION_DURATIONS.map((duration) => (
             <label
               key={duration}
-              className="flex items-center gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm cursor-pointer"
+              className="flex items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm cursor-pointer"
             >
               <input
                 type="checkbox"
@@ -109,7 +109,7 @@ export function SessionPricingForm({
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-[var(--color-text)]">
+        <h2 className="text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">
           How can customers meet with you?
         </h2>
         <div className="flex gap-4 text-sm">
@@ -136,8 +136,8 @@ export function SessionPricingForm({
         </div>
       </section>
 
-      <section className="flex flex-col gap-3 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        <h2 className="text-sm font-semibold text-[var(--color-text)]">Your session prices</h2>
+      <section className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+        <h2 className="text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Your session prices</h2>
         <ul className="flex flex-col gap-1.5">
           {SESSION_DURATIONS.map((duration) => {
             const isEnabled = enabledDurations.has(duration);

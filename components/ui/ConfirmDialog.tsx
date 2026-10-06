@@ -71,7 +71,7 @@ export function ConfirmDialog({
           type="button"
           onClick={handleConfirm}
           disabled={isPending}
-          className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+          className={`inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-bold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
             destructive
               ? "bg-[var(--color-danger)] hover:opacity-90"
               : "bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)]"

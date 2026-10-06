@@ -41,7 +41,7 @@ export function LoginForm() {
       <div className="-mt-2 text-right">
         <Link
           href="/auth/forgot-password"
-          className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-brand)] hover:underline"
+          className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-accent)] hover:underline"
         >
           Forgot password?
         </Link>
@@ -53,7 +53,7 @@ export function LoginForm() {
 
       <p className="text-center text-sm text-[var(--color-text-muted)]">
         Don&apos;t have an account?{" "}
-        <Link href={signupHref} className="font-medium text-[var(--color-brand)] hover:underline">
+        <Link href={signupHref} className="font-medium text-[var(--color-accent)] hover:underline">
           Sign up
         </Link>
       </p>

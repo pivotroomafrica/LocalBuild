@@ -507,11 +507,11 @@ export function AvailabilityManager({
   return (
     <div className="flex flex-col gap-8">
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-[var(--color-text)]">Timezone</h2>
+        <h2 className="text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Timezone</h2>
         <select
           value={timezone}
           onChange={(event) => handleTimezoneChange(event.target.value)}
-          className="w-full max-w-sm rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-sm text-[var(--color-text)]"
+          className="w-full max-w-sm rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-sm text-[var(--color-text)]"
         >
           {!tzOptions.includes(timezone) ? <option value={timezone}>{timezone}</option> : null}
           {tzOptions.map((tz) => (
@@ -526,7 +526,7 @@ export function AvailabilityManager({
 
       <section className="flex flex-col gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-[var(--color-text)]">Regular Monthly Availability</h2>
+          <h2 className="text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Regular Monthly Availability</h2>
           <p className="text-xs text-[var(--color-text-muted)]">
             Time that repeats every month, on the same day of the month. You can edit, skip, or add extra time for any
             single month below without changing this regular plan.
@@ -534,7 +534,7 @@ export function AvailabilityManager({
         </div>
 
         {rules.length === 0 && !showRuleForm ? (
-          <div className="rounded-md border border-dashed border-[var(--color-border)] p-4 text-center">
+          <div className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] p-5 text-center">
             <p className="text-sm text-[var(--color-text)]">No regular availability added yet.</p>
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">
               Make 1–5 hours available each month. You can use a recurring day of the month or add a specific date below.
@@ -545,7 +545,7 @@ export function AvailabilityManager({
         {rules.map((rule) => (
           <div
             key={rule.id}
-            className="flex items-center justify-between rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
+            className="flex items-center justify-between rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]"
           >
             <div>
               <p className="text-sm font-medium text-[var(--color-text)]">{formatMonthlyRuleLabel(rule)}</p>
@@ -554,7 +554,7 @@ export function AvailabilityManager({
               </p>
             </div>
             <div className="flex gap-3 text-xs font-medium">
-              <button type="button" onClick={() => openEditRule(rule)} className="text-[var(--color-brand)] hover:underline">
+              <button type="button" onClick={() => openEditRule(rule)} className="text-[var(--color-accent)] hover:underline">
                 Edit
               </button>
               <button
@@ -572,13 +572,13 @@ export function AvailabilityManager({
           <button
             type="button"
             onClick={openAddRule}
-            className="self-start text-sm font-medium text-[var(--color-brand)] hover:underline"
+            className="self-start text-sm font-medium text-[var(--color-accent)] hover:underline"
           >
             + Add Regular Availability
           </button>
         ) : (
-          <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-            <h3 className="mb-3 text-sm font-semibold text-[var(--color-text)]">
+          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+            <h3 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">
               {editingRuleId ? "Edit Regular Availability" : "Add Regular Availability"}
             </h3>
 
@@ -594,7 +594,7 @@ export function AvailabilityManager({
                 <select
                   value={dayOfMonth}
                   onChange={(event) => setDayOfMonth(Number(event.target.value))}
-                  className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-text)]"
+                  className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-text)]"
                 >
                   {DAY_OF_MONTH_VALUES.map((d) => (
                     <option key={d} value={d}>
@@ -609,7 +609,7 @@ export function AvailabilityManager({
                   step={900}
                   value={ruleStartTime}
                   onChange={(event) => setRuleStartTime(event.target.value)}
-                  className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm"
+                  className="rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm"
                 />
                 <span className="text-xs text-[var(--color-text-muted)]">to</span>
                 <input
@@ -617,7 +617,7 @@ export function AvailabilityManager({
                   step={900}
                   value={ruleEndTime}
                   onChange={(event) => setRuleEndTime(event.target.value)}
-                  className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm"
+                  className="rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm"
                 />
               </div>
               <p className="text-xs text-[var(--color-text-muted)]">
@@ -630,7 +630,7 @@ export function AvailabilityManager({
                 type="button"
                 onClick={handleSubmitRule}
                 disabled={isSavingRule}
-                className="inline-flex items-center justify-center rounded-md bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--color-brand-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center justify-center rounded-full bg-[var(--color-brand)] px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-[var(--color-brand-hover)] disabled:cursor-not-allowed disabled:opacity-60 shadow-[0_4px_14px_rgba(20,19,24,0.18)]"
               >
                 {isSavingRule ? "Saving..." : editingRuleId ? "Save Changes" : "Add Availability"}
               </button>
@@ -648,7 +648,7 @@ export function AvailabilityManager({
 
       <section className="flex flex-col gap-4">
         <div>
-          <h2 className="text-sm font-semibold text-[var(--color-text)]">Upcoming Months</h2>
+          <h2 className="text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Upcoming Months</h2>
           <p className="text-xs text-[var(--color-text-muted)]">
             What your regular schedule works out to for each of the next {UPCOMING_MONTHS_AHEAD} months. Edit, skip, or
             restore any single month without changing your regular plan above.
@@ -668,7 +668,7 @@ export function AvailabilityManager({
             );
 
             return (
-            <div key={`${monthEntry.year}-${monthEntry.month}`} className="rounded-md border border-[var(--color-border)] p-4">
+            <div key={`${monthEntry.year}-${monthEntry.month}`} className="rounded-[var(--radius-card)] border border-[var(--color-border)] p-5">
               <div className="mb-2 flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-semibold text-[var(--color-text)]">{monthEntry.label}</h3>
@@ -681,7 +681,7 @@ export function AvailabilityManager({
                   onClick={() =>
                     setAddTimeMonth({ year: monthEntry.year, month: monthEntry.month, label: monthEntry.label })
                   }
-                  className="text-xs font-medium text-[var(--color-brand)] hover:underline"
+                  className="text-xs font-medium text-[var(--color-accent)] hover:underline"
                 >
                   + Add Time
                 </button>
@@ -693,7 +693,7 @@ export function AvailabilityManager({
                   const isEditing = editingOccurrence && occurrenceKey(editingOccurrence.ruleId, editingOccurrence.originalDate) === key;
 
                   return (
-                    <div key={key} className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+                    <div key={key} className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3 shadow-[var(--shadow-card)]">
                       {occurrence.status === "regular" ? (
                         <div className="flex items-center justify-between">
                           <p className="text-sm text-[var(--color-text)]">
@@ -705,7 +705,7 @@ export function AvailabilityManager({
                               onClick={() =>
                                 openEditOccurrence(occurrence.ruleId, occurrence.originalDate, occurrence.start_time, occurrence.end_time)
                               }
-                              className="text-[var(--color-brand)] hover:underline"
+                              className="text-[var(--color-accent)] hover:underline"
                             >
                               Edit
                             </button>
@@ -732,7 +732,7 @@ export function AvailabilityManager({
                               onClick={() =>
                                 openEditOccurrence(occurrence.ruleId, occurrence.originalDate, occurrence.start_time, occurrence.end_time)
                               }
-                              className="text-[var(--color-brand)] hover:underline"
+                              className="text-[var(--color-accent)] hover:underline"
                             >
                               Edit
                             </button>
@@ -777,14 +777,14 @@ export function AvailabilityManager({
                               min={todayLocalDateString()}
                               value={overrideDate}
                               onChange={(event) => setOverrideDate(event.target.value)}
-                              className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm"
+                              className="rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm"
                             />
                             <input
                               type="time"
                               step={900}
                               value={overrideStartTime}
                               onChange={(event) => setOverrideStartTime(event.target.value)}
-                              className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm"
+                              className="rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm"
                             />
                             <span className="text-xs text-[var(--color-text-muted)]">to</span>
                             <input
@@ -792,7 +792,7 @@ export function AvailabilityManager({
                               step={900}
                               value={overrideEndTime}
                               onChange={(event) => setOverrideEndTime(event.target.value)}
-                              className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm"
+                              className="rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm"
                             />
                           </div>
                           <div className="mt-3 flex gap-3">
@@ -800,7 +800,7 @@ export function AvailabilityManager({
                               type="button"
                               onClick={handleSubmitOccurrenceEdit}
                               disabled={isSavingOverride}
-                              className="inline-flex items-center justify-center rounded-md bg-[var(--color-brand)] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[var(--color-brand-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                              className="inline-flex items-center justify-center rounded-full bg-[var(--color-brand)] px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-[var(--color-brand-hover)] disabled:cursor-not-allowed disabled:opacity-60 shadow-[0_4px_14px_rgba(20,19,24,0.18)]"
                             >
                               {isSavingOverride ? "Saving..." : "Save for This Month"}
                             </button>
@@ -826,7 +826,7 @@ export function AvailabilityManager({
 
       <section className="flex flex-col gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-[var(--color-text)]">Specific Dates</h2>
+          <h2 className="text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Specific Dates</h2>
           <p className="text-xs text-[var(--color-text-muted)]">
             One-time availability that doesn&apos;t repeat -- for extra time in a given month, or if you have no regular
             plan at all.
@@ -839,7 +839,7 @@ export function AvailabilityManager({
           oneOffs.map((oneOff) => (
             <div
               key={oneOff.id}
-              className="flex items-center justify-between rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
+              className="flex items-center justify-between rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]"
             >
               <div>
                 <p className="text-sm font-medium text-[var(--color-text)]">{oneOff.available_date}</p>
@@ -852,7 +852,7 @@ export function AvailabilityManager({
                 <button
                   type="button"
                   onClick={() => openEditOneOff(oneOff)}
-                  className="text-[var(--color-brand)] hover:underline"
+                  className="text-[var(--color-accent)] hover:underline"
                 >
                   Edit
                 </button>
@@ -872,13 +872,13 @@ export function AvailabilityManager({
           <button
             type="button"
             onClick={() => openAddOneOff()}
-            className="self-start text-sm font-medium text-[var(--color-brand)] hover:underline"
+            className="self-start text-sm font-medium text-[var(--color-accent)] hover:underline"
           >
             + Add a specific date
           </button>
         ) : (
-          <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-            <h3 className="mb-3 text-sm font-semibold text-[var(--color-text)]">
+          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+            <h3 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">
               {editingOneOffId ? "Edit Specific-Date Availability" : "Add Specific-Date Availability"}
             </h3>
 
@@ -894,7 +894,7 @@ export function AvailabilityManager({
                 min={todayLocalDateString()}
                 value={oneOffDate}
                 onChange={(event) => setOneOffDate(event.target.value)}
-                className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm"
+                className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm"
               />
               <div className="flex items-center gap-2">
                 <input
@@ -902,7 +902,7 @@ export function AvailabilityManager({
                   step={900}
                   value={oneOffStartTime}
                   onChange={(event) => setOneOffStartTime(event.target.value)}
-                  className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm"
+                  className="rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm"
                 />
                 <span className="text-xs text-[var(--color-text-muted)]">to</span>
                 <input
@@ -910,7 +910,7 @@ export function AvailabilityManager({
                   step={900}
                   value={oneOffEndTime}
                   onChange={(event) => setOneOffEndTime(event.target.value)}
-                  className="rounded-md border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm"
+                  className="rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm"
                 />
               </div>
             </div>
@@ -920,7 +920,7 @@ export function AvailabilityManager({
                 type="button"
                 onClick={handleSubmitOneOff}
                 disabled={isSavingOneOff}
-                className="inline-flex items-center justify-center rounded-md bg-[var(--color-brand)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--color-brand-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center justify-center rounded-full bg-[var(--color-brand)] px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-[var(--color-brand-hover)] disabled:cursor-not-allowed disabled:opacity-60 shadow-[0_4px_14px_rgba(20,19,24,0.18)]"
               >
                 {isSavingOneOff ? "Saving..." : editingOneOffId ? "Save Changes" : "Add Availability"}
               </button>
@@ -936,8 +936,8 @@ export function AvailabilityManager({
         )}
       </section>
 
-      <section className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        <h2 className="mb-2 text-sm font-semibold text-[var(--color-text)]">Monthly Time</h2>
+      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+        <h2 className="mb-2 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Monthly Time</h2>
         <p className="text-sm text-[var(--color-text)]">
           Regular plan: <span className="font-medium">{formatDuration(recurringMinutes)}/month</span>
         </p>

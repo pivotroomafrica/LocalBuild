@@ -19,7 +19,7 @@ export default async function DashboardPaymentsPage() {
       <DashboardNav current="/dashboard/payments" />
 
       <div className="flex flex-col gap-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-text)]">Payments</h1>
+        <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">Payments</h1>
 
         {rows.length === 0 ? (
           <p className="text-sm text-[var(--color-text-muted)]">You haven&apos;t submitted any payments yet.</p>
@@ -29,7 +29,7 @@ export default async function DashboardPaymentsPage() {
               <li key={payment.id}>
                 <Link
                   href={`/dashboard/sessions/${bookingReference}`}
-                  className="flex flex-col gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] p-4 hover:border-[var(--color-brand)] sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-1 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 hover:border-[var(--color-border-hover)] hover:shadow-[var(--shadow-raised)] hover:-translate-y-0.5 sm:flex-row sm:items-center sm:justify-between shadow-[var(--shadow-card)] transition-all"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-[var(--color-text)]">{expertName}</p>

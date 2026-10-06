@@ -36,7 +36,7 @@ export function AdminRescheduleButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-bg)]"
+        className="rounded-full border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-bold text-[var(--color-text)] hover:bg-[var(--color-bg)]"
       >
         Reschedule (Override)
       </button>

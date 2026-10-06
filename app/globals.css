@@ -1,81 +1,67 @@
 @import "tailwindcss";
 
 /*
- * Pivotroom brand tokens (Phase 12), sourced from the Pivotroom.Africa
- * brand guideline v0.2. Nine neutrals + one accent -- blue is
- * informational/interactive only (links, active, confirmed), never
- * decorative. The primary button is Ink/black on light backgrounds and
- * flips to white on dark backgrounds; there is no second accent colour
- * and no red in this palette anywhere -- attention/error states are
- * carried by wording + an ink-toned treatment, never a colour alone
- * (spec section 13, "There is no red in this palette, so errors are
- * stated in words").
- *
- * These are the SAME variable names most of the codebase already
- * consumes (--color-bg / --color-surface / --color-border / --color-text /
- * --color-text-muted / --color-brand / --color-brand-hover /
- * --color-danger(-bg) / --color-success(-bg)) -- Phase 1-11 built every
- * shared component against
- * these tokens rather than hardcoded Tailwind palette classes, so
- * redefining their values here brings the whole existing app into brand
- * compliance without touching business logic. New brand-only concepts
- * (the blue accent, explicit ink-section tokens, radii, motion) are
- * added alongside under their own names.
+ * App-wide tokens, aligned with the intro design (warm beige canvas, white
+ * cards, ink text, one verified-blue accent). Every shared component reads
+ * these names (--color-bg / --color-surface / --color-border / --color-text
+ * / --color-text-muted / --color-brand / --color-danger / --color-success),
+ * so changing values here re-themes the dashboards, admin and auth screens
+ * without touching business logic. The intro stylesheet's own variables
+ * (--bg-beige, --text-dark, ...) live in app/intro-theme.css and hold the
+ * same values.
  */
 :root {
   /* Neutrals */
   --color-white: #ffffff;
-  --color-mist: #f4f5f7;
-  --color-line: #e4e6e9;
-  --color-slate: #5c616a;
-  --color-slate-dark: #9ba1aa;
-  --color-line-dark: #262a31;
-  --color-ink-soft: #171a1f;
-  --color-ink: #0d0f12;
+  --color-mist: #f3efe6;
+  --color-line: #ece7de;
+  --color-slate: #64616c;
+  --color-slate-dark: #95929e;
+  --color-line-dark: rgba(255, 255, 255, 0.1);
+  --color-ink-soft: #1c1b22;
+  --color-ink: #121116;
 
-  /* Accent -- informational/interactive only */
-  --color-accent: #2b4fe0;
-  --color-accent-press: #1f3bae;
-  --color-accent-tint: #ebeffd;
-  --color-accent-on-ink: #7a94f0;
+  /* Accent -- verified blue */
+  --color-accent: #2563eb;
+  --color-accent-press: #1d4ed8;
+  --color-accent-tint: #eef3fe;
+  --color-accent-on-ink: #93b4f8;
 
-  /* App surface/text/border -- mist canvas, white card fills, ink text */
-  --color-bg: var(--color-mist);
+  /* Surfaces / text */
+  --color-bg: #fbf9f5;
   --color-surface: var(--color-white);
   --color-border: var(--color-line);
-  --color-text: var(--color-ink);
+  --color-border-hover: #d5cebf;
+  --color-text: #141318;
   --color-text-muted: var(--color-slate);
 
-  /* Primary CTA is Ink on light grounds (flips to white on ink grounds --
-   * see .on-ink below); hover is a 4% lightness shift, never a scale/shadow. */
-  --color-brand: var(--color-ink);
-  --color-brand-hover: #23262b;
+  /* Primary CTA: ink pill, white on dark grounds (.on-ink). */
+  --color-brand: #1a1921;
+  --color-brand-hover: #2c2b33;
   --color-on-brand: #ffffff;
 
-  /* No red/green in this palette. "Confirmed" is blue (the guideline's own
-   * example); attention/error states read through wording + ink, not a
-   * colour swap -- see components/ui/FormMessage.tsx and StatusPill. */
-  --color-success: var(--color-accent);
-  --color-success-bg: var(--color-accent-tint);
-  --color-danger: var(--color-ink);
-  --color-danger-bg: var(--color-mist);
+  /* Status */
+  --color-success: #047857;
+  --color-success-bg: #ecfdf5;
+  --color-danger: #b42318;
+  --color-danger-bg: #fef3f2;
+  --color-warning: #b45309;
+  --color-warning-bg: #fffbeb;
 
   --color-focus-ring: var(--color-accent);
 
-  /* Radii -- pill buttons against square-cornered cards, no universal
-   * rounding. Buttons use rounded-full directly; these three cover
-   * everything else. */
-  --radius-chip: 8px;
+  --radius-chip: 9999px;
   --radius-input: 12px;
   --radius-card: 20px;
 
-  /* Motion -- two durations, one curve. Never a page transition. */
-  --ease-brand: cubic-bezier(0.22, 1, 0.36, 1);
+  --shadow-card: 0 2px 8px rgba(20, 19, 24, 0.04), 0 1px 2px rgba(20, 19, 24, 0.02);
+  --shadow-raised: 0 20px 40px -8px rgba(20, 19, 24, 0.09), 0 4px 12px -2px rgba(20, 19, 24, 0.04);
+
+  --ease-brand: cubic-bezier(0.16, 1, 0.3, 1);
   --duration-fast: 160ms;
   --duration-base: 220ms;
 
-  /* Container */
-  --container-max: 1440px;
+  --container-max: 1400px;
 }
 
 @theme inline {
@@ -90,6 +76,8 @@
   --color-danger-bg: var(--color-danger-bg);
   --color-success: var(--color-success);
   --color-success-bg: var(--color-success-bg);
+  --color-warning: var(--color-warning);
+  --color-warning-bg: var(--color-warning-bg);
 
   --color-white: var(--color-white);
   --color-mist: var(--color-mist);
@@ -104,8 +92,10 @@
   --color-accent-tint: var(--color-accent-tint);
   --color-accent-on-ink: var(--color-accent-on-ink);
 
-  --font-sans: var(--font-inter);
-  --font-display: var(--font-satoshi);
+  --font-sans: var(--font-jakarta);
+  --font-display: var(--font-jakarta);
+  --font-serif: var(--font-newsreader);
+  --font-wordmark: var(--font-satoshi);
   --font-icon: var(--font-material-symbols);
 }
 
@@ -119,7 +109,7 @@ body {
 }
 
 ::selection {
-  background: var(--color-ink);
+  background: var(--color-text);
   color: white;
 }
 
@@ -142,7 +132,7 @@ body {
   --color-border: var(--color-line-dark);
   --color-surface: var(--color-ink-soft);
   --color-brand: #ffffff;
-  --color-brand-hover: #f4f5f7;
+  --color-brand-hover: #f3efe6;
   --color-on-brand: var(--color-ink);
 }
 .on-ink a:not(.pv-btn) {

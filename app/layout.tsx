@@ -1,27 +1,24 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Newsreader, Plus_Jakarta_Sans } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
+import "./intro-theme.css";
 
-/**
- * Inter carries everything but names (UI, body, credentials, forms,
- * metadata, prices, tables) -- guideline section 07. Weights 400/500
- * only; the guideline never calls for 600/700 Inter anywhere.
- */
-const inter = Inter({
-  variable: "--font-inter",
+/** Plus Jakarta Sans carries all UI and headings; Newsreader is the serif
+ * accent face of the intro design. */
+const jakarta = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
   subsets: ["latin"],
-  weight: ["400", "500"],
+  style: ["normal", "italic"],
 });
 
-/**
- * Satoshi carries names: hero headlines, expert names, section heads,
- * major statistics. Weight 700 only -- the guideline specifies a single
- * weight for this face throughout. Self-hosted from the file extracted
- * directly out of the brand guideline's own embedded font bundle
- * (Fontshare-licensed, free), not approximated with a Google Fonts
- * lookalike.
- */
+const newsreader = Newsreader({
+  variable: "--font-newsreader",
+  subsets: ["latin"],
+  style: ["normal", "italic"],
+});
+
+/** Satoshi Bold is kept only for the Pivotroom wordmark (BrandLogo). */
 const satoshi = localFont({
   src: "./fonts/Satoshi-Bold.woff2",
   variable: "--font-satoshi",
@@ -51,9 +48,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${satoshi.variable} ${materialSymbols.variable} h-full antialiased`}
+      className={`${jakarta.variable} ${newsreader.variable} ${satoshi.variable} ${materialSymbols.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <body className="intro-theme min-h-full flex flex-col font-sans">{children}</body>
     </html>
   );
 }
