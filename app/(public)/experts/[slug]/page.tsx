@@ -5,8 +5,7 @@ import { getRailBookingSnapshot } from "@/lib/booking/railData";
 import { getBookingByReference, isCustomerProfileCompleteForBooking } from "@/lib/booking/data";
 import { getPaymentByProviderTxRef } from "@/lib/payment/data";
 import { verifyAndFinalizeChapaTransaction } from "@/lib/chapa/verify";
-import { PublicProfileView } from "@/components/expert/PublicProfileView";
-import { Container } from "@/components/ui/Container";
+import { ExpertDetailView } from "@/components/site/ExpertDetailView";
 import type { CustomerProfile } from "@/types/profile";
 
 /**
@@ -88,19 +87,15 @@ export default async function PublicExpertProfilePage({
   }
 
   return (
-    <Container className="py-10 pb-28 sm:py-16 lg:pb-16">
-      <div className="mx-auto max-w-4xl">
-        <PublicProfileView
-          profile={profile}
-          railAuth={{
-            isLoggedIn: Boolean(user),
-            profileComplete,
-            customerProfile: customerProfile ?? null,
-            industries: industries ?? [],
-          }}
-          railSnapshot={railSnapshot}
-        />
-      </div>
-    </Container>
+    <ExpertDetailView
+      profile={profile}
+      railAuth={{
+        isLoggedIn: Boolean(user),
+        profileComplete,
+        customerProfile: customerProfile ?? null,
+        industries: industries ?? [],
+      }}
+      railSnapshot={railSnapshot}
+    />
   );
 }
