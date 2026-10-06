@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { getExpertPhotoUrl, type ExpertApplicationData } from "@/lib/expert/data";
 import { EXPERT_EXPERIENCE_RANGE_LABELS, type ExpertExperienceRange } from "@/types/expert";
+import { describeSupabaseError } from "@/lib/supabase/errors";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -59,13 +60,10 @@ export type PublicDirectoryCard = {
 export type ExpertCategorySummary = { name: string; sortOrder: number };
 
 export async function getExpertCategories(supabase: TypedClient): Promise<ExpertCategorySummary[]> {
-  const { data, error } = await supabase
-    .from("expert_categories")
-    .select("name, sort_order")
-    .order("sort_order");
+  const { data, error } = await supabase.from("expert_categories").select("name, sort_order").order("sort_order");
 
   if (error) {
-    console.error("getExpertCategories: failed to load expert_categories", error);
+    console.error(`getExpertCategories: failed to load expert_categories: ${describeSupabaseError(error)}`);
     return [];
   }
 
@@ -80,10 +78,14 @@ export async function getExpertCategories(supabase: TypedClient): Promise<Expert
  * advisor). There is no additional status filter to apply here -- the
  * function itself already resolves to published rows only. */
 export async function getPublicExpertDirectory(supabase: TypedClient): Promise<PublicDirectoryCard[]> {
-  const { data, error } = await supabase.rpc("get_expert_directory_public");
+  // GET (the function is STABLE/read-only) so supabase-js retries it on a
+  // dropped connection -- it only auto-retries GET/HEAD/OPTIONS requests.
+  const { data, error } = await supabase.rpc("get_expert_directory_public", undefined, { get: true });
 
   if (error) {
-    console.error("getPublicExpertDirectory: failed to load get_expert_directory_public", error);
+    console.error(
+      `getPublicExpertDirectory: failed to load get_expert_directory_public: ${describeSupabaseError(error)}`,
+    );
     return [];
   }
 
@@ -110,15 +112,14 @@ export async function getPublicExpertDirectory(supabase: TypedClient): Promise<P
  * doesn't exist at all, or belongs to a draft/submitted/rejected/
  * suspended application) -- the two cases are indistinguishable on
  * purpose, so a private application never leaks its existence. */
-export async function getPublicExpertProfile(
-  supabase: TypedClient,
-  slug: string,
-): Promise<PublicProfileData | null> {
-  const { data: profile } = await supabase.rpc("get_expert_profile_public", { p_slug: slug }).maybeSingle();
+export async function getPublicExpertProfile(supabase: TypedClient, slug: string): Promise<PublicProfileData | null> {
+  const { data: profile } = await supabase
+    .rpc("get_expert_profile_public", { p_slug: slug }, { get: true })
+    .maybeSingle();
 
   if (!profile) return null;
 
-  const { data: sessionTypes } = await supabase.rpc("get_expert_session_types_public", { p_slug: slug });
+  const { data: sessionTypes } = await supabase.rpc("get_expert_session_types_public", { p_slug: slug }, { get: true });
 
   const photoUrl = await getExpertPhotoUrl(supabase, profile.profile_image_path);
 

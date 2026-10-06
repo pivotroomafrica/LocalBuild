@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { Payment } from "@/types/payment";
+import { describeSupabaseError } from "@/lib/supabase/errors";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -170,7 +171,7 @@ export async function getAdminPaymentList(
     .order("submitted_at", { ascending: tab === "pending_verification" });
 
   if (error) {
-    console.error("getAdminPaymentList: failed to load payments", error);
+    console.error(`getAdminPaymentList: failed to load payments: ${describeSupabaseError(error)}`);
     return [];
   }
 

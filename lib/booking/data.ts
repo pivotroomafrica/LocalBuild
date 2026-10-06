@@ -13,6 +13,7 @@ import type {
 import { BOOKING_STATUS_LABELS, CUSTOMER_RESCHEDULE_CUTOFF_HOURS, CUSTOMER_CANCEL_CUTOFF_HOURS } from "@/types/booking";
 import type { Payment, PaymentStatus } from "@/types/payment";
 import type { IntegrationJobType, IntegrationJobStatus } from "@/types/notifications";
+import { describeSupabaseError } from "@/lib/supabase/errors";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -55,7 +56,7 @@ export async function getBookableSlots(
   });
 
   if (error) {
-    console.error("getBookableSlots: get_bookable_slots RPC failed", error);
+    console.error(`getBookableSlots: get_bookable_slots RPC failed: ${describeSupabaseError(error)}`);
     return [];
   }
 
@@ -367,7 +368,7 @@ export async function getAdminBookingList(
 
   const { data, error } = await query;
   if (error) {
-    console.error("getAdminBookingList: failed to load bookings", error);
+    console.error(`getAdminBookingList: failed to load bookings: ${describeSupabaseError(error)}`);
     return [];
   }
 

@@ -2,6 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import type { ApplicationStatus, ExpertProfileStatus } from "@/types/expert";
+import { describeSupabaseError } from "@/lib/supabase/errors";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -144,7 +145,7 @@ export async function getAdminExpertList(
 
   const { data, error } = await query.order("submitted_at", { ascending: false, nullsFirst: false });
   if (error) {
-    console.error("getAdminExpertList: failed to load expert_profiles", error);
+    console.error(`getAdminExpertList: failed to load expert_profiles: ${describeSupabaseError(error)}`);
     return [];
   }
 
