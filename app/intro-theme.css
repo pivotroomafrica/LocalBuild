@@ -5557,3 +5557,13 @@
     padding-bottom: 88px;
   }
 }
+
+/* Directory cards carry no category chips, so the photo gets the space: a
+ * square frame, cropped toward the top so faces stay in view. */
+.intro-theme .expert-dir-img-wrap {
+  aspect-ratio: 1 / 1;
+}
+
+.intro-theme .expert-dir-img {
+  object-position: center 22%;
+}

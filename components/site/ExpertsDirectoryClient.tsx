@@ -34,7 +34,8 @@ function PriceStack({ expert, unit }: { expert: PublicDirectoryCard; unit: strin
 
 /**
  * /experts (intro design). Real published experts and the real category
- * taxonomy; `q` / `category` arrive pre-seeded from the URL so the header
+ * taxonomy (categories drive the filter strip only -- cards don't show
+ * category chips, so the photo gets the space); `q` / `category` arrive pre-seeded from the URL so the header
  * search and footer links still land on a filtered view. "Book Now" opens the
  * real profile, where the booking rail checks live availability -- there is
  * no separate quick-book form here.
@@ -247,13 +248,6 @@ export function ExpertsDirectoryClient({
                     <VerifiedIcon className="expert-dir-check" />
                   </div>
                   <p className="expert-dir-headline">{summaryLine(expert)}</p>
-                  <div className="expert-dir-tags">
-                    {expert.categoryNames.slice(0, 2).map((name) => (
-                      <span key={name} className="dir-tag-chip rounded-full border border-[#ece7de] bg-[#f8f5ef] px-2.5 py-0.5 text-[11.5px] font-semibold text-[#55525d]">
-                        {name}
-                      </span>
-                    ))}
-                  </div>
                 </div>
               </Link>
               <div className="expert-dir-footer">
@@ -277,13 +271,6 @@ export function ExpertsDirectoryClient({
                     <VerifiedIcon className="expert-dir-check" />
                   </div>
                   <p className="expert-list-bio">{summaryLine(expert)}</p>
-                  <div className="expert-list-chips">
-                    {expert.categoryNames.slice(0, 3).map((name) => (
-                      <span key={name} className="dir-tag-chip rounded-full border border-[#ece7de] bg-[#f8f5ef] px-2.5 py-0.5 text-[11.5px] font-semibold text-[#55525d]">
-                        {name}
-                      </span>
-                    ))}
-                  </div>
                 </div>
               </Link>
               <div className="expert-list-right">
