@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { signOutAction } from "@/lib/auth/actions";
+import { getPublicExpertDirectory } from "@/lib/public/data";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { Container } from "@/components/ui/Container";
-import { Icon } from "@/components/ui/Icon";
 import { MobileNav } from "@/components/layout/MobileNav";
+import { SearchModal } from "@/components/layout/SearchModal";
 
 const linkClasses = "text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)]";
 
@@ -29,19 +30,21 @@ const linkClasses = "text-sm font-medium text-[var(--color-text-muted)] hover:te
  * single menu control opening MobileNav) instead of squeezing the
  * desktop links inline (guideline section 20).
  *
- * Layout direction (logo, a hairline divider, an inline borderless
- * search filling the middle, links + auth pill on the right) matches a
- * reference the user supplied -- only OUR logo, links and auth actions
- * are kept; nothing from the reference's own brand/content was copied.
- * The search is a plain GET /experts?q= form (works without JS) and is
- * intentionally name-only for now -- see the `q` handling in
- * app/(public)/experts/page.tsx.
+ * Layout direction (logo, a hairline divider, a search trigger filling
+ * the middle, links + auth pill on the right) matches a reference the
+ * user supplied -- only OUR logo, links and auth actions are kept;
+ * nothing from the reference's own brand/content was copied. The search
+ * trigger opens SearchModal (Cmd+K/Ctrl+K also opens it from anywhere),
+ * a real, published-only expert search -- name-only matching for now,
+ * same as the `q` handling in app/(public)/experts/page.tsx, which is
+ * also where Enter-with-no-result-selected falls through to.
  */
 export async function PublicHeader() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [{ data: { user } }, experts] = await Promise.all([
+    supabase.auth.getUser(),
+    getPublicExpertDirectory(supabase),
+  ]);
 
   let isApprovedExpert = false;
   if (user) {
@@ -72,18 +75,9 @@ export async function PublicHeader() {
 
         <div className="hidden h-6 w-px shrink-0 bg-[var(--color-border)] sm:block" aria-hidden="true" />
 
-        {/* Name-only for now (see app/(public)/experts/page.tsx's `q`
-         * handling) -- a plain GET form, no client JS, so it works
-         * pre-hydration too. */}
-        <form action="/experts" method="get" className="hidden min-w-0 flex-1 items-center gap-2 sm:flex">
-          <Icon name="search" size={20} className="shrink-0 text-[var(--color-text-muted)]" decorative />
-          <input
-            type="text"
-            name="q"
-            placeholder="Search experts by name"
-            className="w-full min-w-0 bg-transparent text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none"
-          />
-        </form>
+        <div className="hidden min-w-0 flex-1 sm:block">
+          <SearchModal experts={experts} />
+        </div>
 
         <nav className="hidden shrink-0 items-center gap-6 sm:flex">
           {navLinks.map((link) => (
