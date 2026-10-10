@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { invalidatePublicExperts } from "@/lib/public/cached";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { slugify } from "@/lib/expert/slug";
@@ -176,6 +177,7 @@ export async function updateExpertProfileAction(
   if (error) return { error: GENERIC_ERROR };
 
   revalidatePath("/expert/application");
+  invalidatePublicExperts();
   revalidatePath("/expert/application/profile");
   // Save & Continue: only reached once the update above has actually
   // succeeded -- redirect() never runs on a validation or save failure,
@@ -222,6 +224,7 @@ export async function uploadExpertPhotoAction(
   if (updateError) return { error: "We couldn't upload your photo. Please try again." };
 
   revalidatePath("/expert/application");
+  invalidatePublicExperts();
   revalidatePath("/expert/application/profile");
   return { success: true };
 }
@@ -285,6 +288,7 @@ export async function setExpertCategoriesAction(
   }
 
   revalidatePath("/expert/application");
+  invalidatePublicExperts();
   revalidatePath("/expert/application/expertise");
   // Save & Continue: only reached once the save above has actually
   // succeeded. Category count rules are unchanged -- max 3 is still
@@ -399,6 +403,7 @@ export async function saveSessionPricingAction(
   if (deleteError) return { error: GENERIC_ERROR };
 
   revalidatePath("/expert/application");
+  invalidatePublicExperts();
   revalidatePath("/expert/application/sessions");
   // Save & Review: only reached once every write above has actually
   // succeeded.
@@ -444,6 +449,7 @@ export async function submitApplicationAction(
   if (error) return { error: GENERIC_ERROR };
 
   revalidatePath("/expert/application");
+  invalidatePublicExperts();
   return { success: true };
 }
 

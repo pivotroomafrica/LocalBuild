@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
-import { getExpertPhotoUrl, type ExpertApplicationData } from "@/lib/expert/data";
+import { getExpertPhotoUrl, getExpertPhotoUrls, type ExpertApplicationData } from "@/lib/expert/data";
 import { EXPERT_EXPERIENCE_RANGE_LABELS, type ExpertExperienceRange } from "@/types/expert";
 import { describeSupabaseError } from "@/lib/supabase/errors";
 
@@ -76,33 +76,36 @@ export async function getExpertCategories(supabase: TypedClient): Promise<Expert
  * filter, same SECURITY DEFINER mechanism, now as a function rather than
  * a view so it isn't flagged by Supabase's Security Definer View
  * advisor). There is no additional status filter to apply here -- the
- * function itself already resolves to published rows only. */
-export async function getPublicExpertDirectory(supabase: TypedClient): Promise<PublicDirectoryCard[]> {
+ * function itself already resolves to published rows only.
+ *
+ * Throws on failure rather than returning [], because it runs inside the
+ * shared cache (lib/public/cached.ts) and an empty result must never be
+ * cached for every visitor. Photo URLs are signed in ONE batched storage
+ * call instead of one per expert. */
+export async function fetchPublicExpertDirectory(supabase: TypedClient): Promise<PublicDirectoryCard[]> {
   // GET (the function is STABLE/read-only) so supabase-js retries it on a
   // dropped connection -- it only auto-retries GET/HEAD/OPTIONS requests.
   const { data, error } = await supabase.rpc("get_expert_directory_public", undefined, { get: true });
+  if (error) throw new Error(`failed to load get_expert_directory_public: ${describeSupabaseError(error)}`);
 
-  if (error) {
-    console.error(
-      `getPublicExpertDirectory: failed to load get_expert_directory_public: ${describeSupabaseError(error)}`,
-    );
-    return [];
-  }
-
-  return Promise.all(
-    (data ?? []).map(async (row) => ({
-      slug: row.slug!,
-      fullName: row.full_name ?? "",
-      headline: row.headline ?? null,
-      currentPosition: row.current_position,
-      currentCompany: row.current_company,
-      photoUrl: await getExpertPhotoUrl(supabase, row.profile_image_path),
-      categoryNames: row.category_names ?? [],
-      startingPrice: row.starting_price,
-      onlineEnabled: row.online_enabled ?? false,
-      inPersonEnabled: row.in_person_enabled ?? false,
-    })),
+  const rows = data ?? [];
+  const photoUrls = await getExpertPhotoUrls(
+    supabase,
+    rows.map((row) => row.profile_image_path),
   );
+
+  return rows.map((row, index) => ({
+    slug: row.slug!,
+    fullName: row.full_name ?? "",
+    headline: row.headline ?? null,
+    currentPosition: row.current_position,
+    currentCompany: row.current_company,
+    photoUrl: photoUrls[index],
+    categoryNames: row.category_names ?? [],
+    startingPrice: row.starting_price,
+    onlineEnabled: row.online_enabled ?? false,
+    inPersonEnabled: row.in_person_enabled ?? false,
+  }));
 }
 
 /** /experts/[slug] -- full profile, backed by get_expert_profile_public()
@@ -111,17 +114,22 @@ export async function getPublicExpertDirectory(supabase: TypedClient): Promise<P
  * views). Returns null for any non-published slug (including one that
  * doesn't exist at all, or belongs to a draft/submitted/rejected/
  * suspended application) -- the two cases are indistinguishable on
- * purpose, so a private application never leaks its existence. */
-export async function getPublicExpertProfile(supabase: TypedClient, slug: string): Promise<PublicProfileData | null> {
-  const { data: profile } = await supabase
-    .rpc("get_expert_profile_public", { p_slug: slug }, { get: true })
-    .maybeSingle();
-
+ * purpose, so a private application never leaks its existence.
+ *
+ * A database/network failure throws instead (it runs inside the shared
+ * cache, and a failure must never be cached as "not found"). */
+export async function fetchPublicExpertProfile(supabase: TypedClient, slug: string): Promise<PublicProfileData | null> {
+  const [{ data: profile, error }, { data: sessionTypes, error: sessionError }] = await Promise.all([
+    supabase.rpc("get_expert_profile_public", { p_slug: slug }, { get: true }).maybeSingle(),
+    supabase.rpc("get_expert_session_types_public", { p_slug: slug }, { get: true }),
+  ]);
+  if (error) throw new Error(`failed to load get_expert_profile_public: ${describeSupabaseError(error)}`);
   if (!profile) return null;
+  if (sessionError) {
+    throw new Error(`failed to load get_expert_session_types_public: ${describeSupabaseError(sessionError)}`);
+  }
 
-  const { data: sessionTypes } = await supabase.rpc("get_expert_session_types_public", { p_slug: slug }, { get: true });
-
-  const photoUrl = await getExpertPhotoUrl(supabase, profile.profile_image_path);
+  const [photoUrl] = await getExpertPhotoUrls(supabase, [profile.profile_image_path]);
 
   return {
     slug: profile.slug!,
@@ -154,7 +162,7 @@ export async function getPublicExpertProfile(supabase: TypedClient, slug: string
 
 /**
  * /expert/application/preview -- the SAME presentation shape as
- * getPublicExpertProfile, built from the applicant's own (not
+ * fetchPublicExpertProfile, built from the applicant's own (not
  * necessarily published) data instead of the public views, so the owner
  * can see exactly what their public page will look like before it's
  * live. Never used to make an unpublished profile publicly discoverable

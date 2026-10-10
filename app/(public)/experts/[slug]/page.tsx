@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getPublicExpertProfile } from "@/lib/public/data";
+import { getPublicProfileForRequest } from "@/lib/public/cached";
 import { getRailBookingSnapshot } from "@/lib/booking/railData";
 import { getBookingByReference, isCustomerProfileCompleteForBooking } from "@/lib/booking/data";
 import { getPaymentByProviderTxRef } from "@/lib/payment/data";
@@ -32,13 +32,13 @@ export default async function PublicExpertProfilePage({
   const sp = await searchParams;
   const supabase = await createClient();
 
-  // getPublicExpertProfile reads exclusively through
+  // The (shared-cached) public profile reads exclusively through
   // get_expert_profile_public() (filtered to profile_status = 'published'
   // at the database level) -- any other status resolves to null here,
   // identical to a slug that was never registered at all. notFound()
   // renders a bare 404 either way, so a draft/submitted/rejected/
   // unpublished application never reveals that it exists.
-  const profile = await getPublicExpertProfile(supabase, slug);
+  const profile = await getPublicProfileForRequest(slug);
   if (!profile) notFound();
 
   const {

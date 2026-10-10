@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { invalidatePublicExperts } from "@/lib/public/cached";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdminForAction } from "@/lib/admin/data";
 import { getExpertApplicationDataById, getMissingRequiredFields } from "@/lib/expert/data";
@@ -16,6 +17,9 @@ const STALE_STATE_ERROR =
   "This application's status changed since the page loaded. Refresh to see its current status.";
 
 function revalidateExpertPages(expertProfileId: string) {
+  // Every admin expert-state change can affect what the public directory
+  // and profile pages show (publish/unpublish/suspend/restore).
+  invalidatePublicExperts();
   revalidatePath("/admin/experts");
   revalidatePath(`/admin/experts/${expertProfileId}`);
   // Path-based, not user-scoped -- safe to call unconditionally, and

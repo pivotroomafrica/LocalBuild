@@ -101,6 +101,32 @@ export async function getExpertApplicationDataById(
 /** The bucket is private (experts aren't public in Phase 2), so the photo
  * is only ever reachable via a short-lived signed URL, generated fresh on
  * each server render -- never a public/permanent URL. */
+/** Signed-URL lifetime for published photos. Long enough to outlive the
+ * public data cache (lib/public/cached.ts) so a cached URL never expires
+ * while still being served, and stable across requests within a cache
+ * window so browsers can cache the image itself. */
+const PHOTO_URL_TTL_SECONDS = 6 * 60 * 60;
+
+/** Batch version of getExpertPhotoUrl: ONE storage request for any number
+ * of photos (the directory previously made one request per expert). Order
+ * and length match `paths`; missing paths/failures map to null. */
+export async function getExpertPhotoUrls(
+  supabase: TypedClient,
+  paths: (string | null)[],
+): Promise<(string | null)[]> {
+  const wanted = paths.filter((path): path is string => Boolean(path));
+  if (wanted.length === 0) return paths.map(() => null);
+
+  const { data } = await supabase.storage
+    .from("expert-profile-images")
+    .createSignedUrls(wanted, PHOTO_URL_TTL_SECONDS);
+
+  const byPath = new Map(
+    (data ?? []).map((entry) => [entry.path, entry.signedUrl]),
+  );
+  return paths.map((path) => (path ? (byPath.get(path) ?? null) : null));
+}
+
 export async function getExpertPhotoUrl(
   supabase: TypedClient,
   path: string | null,
