@@ -141,8 +141,8 @@ export default async function ExpertApplicationPage() {
             </p>
             {expertProfile.base_hourly_price != null ? (
               <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                Prices shown are base session prices. Applicable government taxes are
-                calculated separately.
+                Prices shown are before VAT. Customers pay them plus VAT; Pivotroom&apos;s commission is
+                included.
               </p>
             ) : null}
           </Link>

@@ -1,8 +1,8 @@
 import { cache } from "react";
 import { unstable_cache, updateTag } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
 import { createAnonClient } from "@/lib/supabase/anon";
 import { describeSupabaseError } from "@/lib/supabase/errors";
+import { PUBLIC_EXPERTS_TAG } from "@/lib/public/cache-tags";
 import {
   fetchPublicExpertDirectory,
   fetchPublicExpertProfile,
@@ -24,7 +24,6 @@ import {
  * Failed loads throw inside the cached function (so a failure is never
  * cached) and are converted to an empty/not-found result outside it.
  */
-export const PUBLIC_EXPERTS_TAG = "public-experts";
 const PUBLIC_EXPERTS_REVALIDATE_SECONDS = 600;
 
 const loadDirectory = unstable_cache(
@@ -59,12 +58,22 @@ export const getPublicProfileForRequest = cache(async (slug: string): Promise<Pu
   }
 });
 
-// Categories stay per-request with the visitor's own client: the
-// expert_categories RLS policy currently only lets signed-in users read
-// them, so a shared anon-loaded copy would be empty for everyone.
-export const getCategoryNamesForRequest = cache(async () =>
-  (await getExpertCategories(await createClient())).map((category) => category.name),
+const loadCategoryNames = unstable_cache(
+  async () => (await getExpertCategories(createAnonClient())).map((category) => category.name),
+  ["public-expert-categories"],
+  { revalidate: PUBLIC_EXPERTS_REVALIDATE_SECONDS, tags: [PUBLIC_EXPERTS_TAG] },
 );
+
+// Active categories are readable by visitors since migration 047a, so
+// they share the same cache as the directory.
+export const getCategoryNamesForRequest = cache(async (): Promise<string[]> => {
+  try {
+    return await loadCategoryNames();
+  } catch (error) {
+    console.error(`getCategoryNamesForRequest: ${describeSupabaseError(error)}`);
+    return [];
+  }
+});
 
 /** Call from any Server Action that changes what a public profile shows
  * (publish/unpublish/suspend/restore, profile/photo/expertise/pricing

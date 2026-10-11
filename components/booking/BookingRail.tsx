@@ -198,6 +198,7 @@ export function BookingRail(props: Props) {
             latestPayment={snapshot!.latestPayment}
             needsReview={snapshot!.needsReview}
             chapaAvailable={snapshot!.chapaAvailable}
+            manualVerificationRequired={snapshot!.manualVerificationRequired}
             bankConfig={snapshot!.bankConfig}
           />
         );

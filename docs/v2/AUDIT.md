@@ -105,3 +105,15 @@ AI matching (needs a provider decision), commission/VAT/payout ledger (needs app
 7. Backup routine (`docs/v2/BACKUP.md`).
 8. Load tests against staging.
 9. AI matching and finance ledger, after product decisions.
+
+## 7. Decisions applied (2026-10-11)
+
+| Decision | Implemented as | Status |
+|---|---|---|
+| Apply migration 046 | Indexes + per-statement RLS policies | **Applied** to the live project |
+| Visitors can see categories | `047a`: `expert_categories_select_active` now `to anon, authenticated`; categories moved into the shared public cache | **Applied** |
+| VAT 15% added on top and shown as the main price; 20% commission included in the expert's price | `047b` `platform_settings` (rates in one row) · `047c` per-booking snapshot: `vat_amount`, `total_price`, `commission_amount`, `expert_payout_amount` (trigger on insert, locked on update) · `047d` payments charge `total_price`. Public prices, the booking panel and the admin booking page show VAT-inclusive totals; the expert pricing form shows "customer pays / you receive". Bookings made before 047 keep their original price. | **Applied**, verified in a rolled-back transaction: 2,500 → VAT 375 → customer pays 2,875 → commission 500 → payout 2,000 |
+| Manual verification above 300,000 ETB | `047d`: `create_chapa_payment_attempt` refuses totals above `platform_settings.manual_verification_threshold`; the booking panel hides Chapa and asks for a bank transfer, which admins always verify | **Applied**, verified as a customer: Chapa refused at 310,500 ETB |
+| AI matching with OpenAI, key later | `048`: `get_expert_match_candidates_public()` + `ai_match_requests` usage log (no problem text stored). `/match` page; keyword pre-filter → ≤ 15 candidates → one structured-output call → only offered experts kept. No key / over limit / API error → keyword matches. | **Applied**; OpenAI call tested with a mocked API only |
+
+Interpretation to confirm: commission = 20% of the expert's price (excluding VAT). To change any rate later, update the single `platform_settings` row; new bookings pick it up, existing bookings keep their snapshot.

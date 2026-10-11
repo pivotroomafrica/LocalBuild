@@ -3,6 +3,7 @@ import type { Database } from "@/types/database";
 import { getExpertPhotoUrl, getExpertPhotoUrls, type ExpertApplicationData } from "@/lib/expert/data";
 import { EXPERT_EXPERIENCE_RANGE_LABELS, type ExpertExperienceRange } from "@/types/expert";
 import { describeSupabaseError } from "@/lib/supabase/errors";
+import { customerPrice, fetchPlatformPricing } from "@/lib/pricing/platform";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -34,6 +35,7 @@ export type PublicProfileData = {
   categoryNames: string[];
   onlineEnabled: boolean;
   inPersonEnabled: boolean;
+  /** price is the VAT-inclusive amount the customer pays. */
   sessionOfferings: { durationMinutes: number; price: number; currency: string }[];
 };
 
@@ -62,10 +64,8 @@ export type ExpertCategorySummary = { name: string; sortOrder: number };
 export async function getExpertCategories(supabase: TypedClient): Promise<ExpertCategorySummary[]> {
   const { data, error } = await supabase.from("expert_categories").select("name, sort_order").order("sort_order");
 
-  if (error) {
-    console.error(`getExpertCategories: failed to load expert_categories: ${describeSupabaseError(error)}`);
-    return [];
-  }
+  // Throws (never returns []) because it runs inside the shared cache.
+  if (error) throw new Error(`failed to load expert_categories: ${describeSupabaseError(error)}`);
 
   return (data ?? []).map((row) => ({ name: row.name, sortOrder: row.sort_order }));
 }
@@ -85,7 +85,10 @@ export async function getExpertCategories(supabase: TypedClient): Promise<Expert
 export async function fetchPublicExpertDirectory(supabase: TypedClient): Promise<PublicDirectoryCard[]> {
   // GET (the function is STABLE/read-only) so supabase-js retries it on a
   // dropped connection -- it only auto-retries GET/HEAD/OPTIONS requests.
-  const { data, error } = await supabase.rpc("get_expert_directory_public", undefined, { get: true });
+  const [{ data, error }, pricing] = await Promise.all([
+    supabase.rpc("get_expert_directory_public", undefined, { get: true }),
+    fetchPlatformPricing(supabase),
+  ]);
   if (error) throw new Error(`failed to load get_expert_directory_public: ${describeSupabaseError(error)}`);
 
   const rows = data ?? [];
@@ -102,7 +105,8 @@ export async function fetchPublicExpertDirectory(supabase: TypedClient): Promise
     currentCompany: row.current_company,
     photoUrl: photoUrls[index],
     categoryNames: row.category_names ?? [],
-    startingPrice: row.starting_price,
+    // Shown VAT-inclusive: the customer-facing price (V2 pricing rules).
+    startingPrice: row.starting_price == null ? null : customerPrice(Number(row.starting_price), pricing.vatRate),
     onlineEnabled: row.online_enabled ?? false,
     inPersonEnabled: row.in_person_enabled ?? false,
   }));
@@ -119,9 +123,10 @@ export async function fetchPublicExpertDirectory(supabase: TypedClient): Promise
  * A database/network failure throws instead (it runs inside the shared
  * cache, and a failure must never be cached as "not found"). */
 export async function fetchPublicExpertProfile(supabase: TypedClient, slug: string): Promise<PublicProfileData | null> {
-  const [{ data: profile, error }, { data: sessionTypes, error: sessionError }] = await Promise.all([
+  const [{ data: profile, error }, { data: sessionTypes, error: sessionError }, pricing] = await Promise.all([
     supabase.rpc("get_expert_profile_public", { p_slug: slug }, { get: true }).maybeSingle(),
     supabase.rpc("get_expert_session_types_public", { p_slug: slug }, { get: true }),
+    fetchPlatformPricing(supabase),
   ]);
   if (error) throw new Error(`failed to load get_expert_profile_public: ${describeSupabaseError(error)}`);
   if (!profile) return null;
@@ -154,7 +159,7 @@ export async function fetchPublicExpertProfile(supabase: TypedClient, slug: stri
     inPersonEnabled: profile.in_person_enabled ?? false,
     sessionOfferings: (sessionTypes ?? []).map((s) => ({
       durationMinutes: s.duration_minutes!,
-      price: Number(s.base_price),
+      price: customerPrice(Number(s.base_price), pricing.vatRate),
       currency: s.currency ?? "ETB",
     })),
   };
@@ -177,6 +182,7 @@ export async function toPreviewProfileData(
   categoryNames: string[],
 ): Promise<PublicProfileData> {
   const { expertProfile, sessionOfferings } = data;
+  const pricing = await fetchPlatformPricing(supabase);
 
   return {
     slug: expertProfile.slug,
@@ -204,7 +210,7 @@ export async function toPreviewProfileData(
       .sort((a, b) => a.duration_minutes - b.duration_minutes)
       .map((o) => ({
         durationMinutes: o.duration_minutes,
-        price: Number(o.base_price),
+        price: customerPrice(Number(o.base_price), pricing.vatRate),
         currency: o.currency,
       })),
   };

@@ -126,8 +126,8 @@ export default async function AdminExpertDetailPage({ params }: { params: Promis
               Format: {[expertProfile.online_enabled ? "Online" : null, expertProfile.in_person_enabled ? "In Person" : null].filter(Boolean).join(" + ") || "Not set"}
             </p>
             <p className="mt-2 text-xs text-[var(--color-text-muted)]">
-              Displayed prices are base session prices. Applicable government taxes will be
-              calculated separately.
+              Displayed prices are the expert&apos;s prices before VAT. Customers pay them plus VAT;
+              Pivotroom&apos;s commission is included.
             </p>
           </>
         ) : (

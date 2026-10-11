@@ -31,6 +31,7 @@ import {
   type BookingIntake,
 } from "@/types/booking";
 import type { CustomerProfile, Industry } from "@/types/profile";
+import { bookingChargeAmount, formatVatRate } from "@/lib/pricing/platform";
 
 type Props = {
   booking: Booking;
@@ -231,9 +232,9 @@ export function RailIntakeReview({ booking, intake, profileComplete, customerPro
               </dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-[var(--color-text-muted)]">Base price</dt>
+              <dt className="text-[var(--color-text-muted)]">Price (incl. VAT)</dt>
               <dd className="tabular-nums-brand font-medium">
-                {Number(booking.base_price).toLocaleString()} {booking.currency}
+                {bookingChargeAmount(booking).toLocaleString()} {booking.currency}
               </dd>
             </div>
             <div className="flex justify-between">
@@ -241,10 +242,12 @@ export function RailIntakeReview({ booking, intake, profileComplete, customerPro
               <dd className="font-medium">{booking.booking_reference}</dd>
             </div>
           </dl>
-          <p className="text-xs text-[var(--color-text-muted)]">
-            Prices shown are base session prices. Applicable government taxes will be calculated
-            separately.
-          </p>
+          {booking.vat_amount != null && booking.vat_rate != null ? (
+            <p className="text-xs text-[var(--color-text-muted)]">
+              Includes {Number(booking.vat_amount).toLocaleString()} {booking.currency} VAT{" "}
+              ({formatVatRate(Number(booking.vat_rate))}).
+            </p>
+          ) : null}
 
           {intake?.discussion_topic ? (
             <div className="rounded-[var(--radius-input)] border border-[var(--color-border)] p-4 text-sm">

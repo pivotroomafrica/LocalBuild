@@ -136,6 +136,9 @@ export function HomeClient({ experts, categories }: { experts: PublicDirectoryCa
             <a href="#experts-directory" className="btn-hero-primary">
               Browse All Experts
             </a>
+            <Link href="/match" className="btn-hero-secondary">
+              Get matched by AI
+            </Link>
           </div>
         </div>
       </section>

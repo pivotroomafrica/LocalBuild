@@ -3,12 +3,14 @@ import { ensureExpertProfileDraft } from "@/lib/expert/actions";
 import { getExpertApplicationData } from "@/lib/expert/data";
 import { ExpertApplicationNav } from "@/components/layout/ExpertApplicationNav";
 import { SessionPricingForm } from "@/components/expert/SessionPricingForm";
+import { fetchPlatformPricing } from "@/lib/pricing/platform";
 import type { SessionDuration } from "@/types/expert";
 
 export default async function ExpertApplicationSessionsPage() {
   await ensureExpertProfileDraft();
 
   const supabase = await createClient();
+  const pricing = await fetchPlatformPricing(supabase);
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -63,6 +65,7 @@ export default async function ExpertApplicationSessionsPage() {
           initialDurations={initialDurations}
           initialOnlineEnabled={initialOnlineEnabled}
           initialInPersonEnabled={initialInPersonEnabled}
+          pricing={pricing}
         />
       </div>
     </div>

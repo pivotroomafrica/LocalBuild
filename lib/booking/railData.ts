@@ -17,6 +17,7 @@ import { isChapaConfigured } from "@/lib/chapa/config";
 import type { Booking, BookingIntake } from "@/types/booking";
 import type { Payment } from "@/types/payment";
 import type { CustomerProfile, Industry } from "@/types/profile";
+import { bookingChargeAmount, fetchPlatformPricing } from "@/lib/pricing/platform";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -48,6 +49,11 @@ export type RailBookingSnapshot = {
   latestPayment: Payment | null;
   needsReview: boolean;
   chapaAvailable: boolean;
+  /** True when the charge is above the platform's manual-verification
+   * threshold: Chapa is withheld and the customer pays by bank transfer,
+   * which an admin verifies (create_chapa_payment_attempt enforces this
+   * too, 047d). */
+  manualVerificationRequired: boolean;
   bankConfig: BankConfig;
   holdExpired: boolean;
 };
@@ -60,12 +66,15 @@ export async function getRailBookingSnapshot(
   const booking = await getBookingByReference(supabase, reference);
   if (!booking || booking.customer_id !== userId) return null;
 
-  const [intake, profileComplete, { data: customerProfile }, { data: industries }] = await Promise.all([
+  const [intake, profileComplete, { data: customerProfile }, { data: industries }, pricing] = await Promise.all([
     getBookingIntake(supabase, booking.id),
     isCustomerProfileCompleteForBooking(supabase, userId),
     supabase.from("customer_profiles").select("*").eq("user_id", userId).maybeSingle(),
     supabase.from("industries").select("*").eq("is_active", true).order("name"),
+    fetchPlatformPricing(supabase),
   ]);
+
+  const manualVerificationRequired = bookingChargeAmount(booking) > pricing.manualVerificationThreshold;
 
   let activeManualPayment: Payment | null = null;
   let activeChapaAttempt: Payment | null = null;
@@ -99,7 +108,8 @@ export async function getRailBookingSnapshot(
     activeChapaAttempt,
     latestPayment,
     needsReview,
-    chapaAvailable: isChapaConfigured(),
+    chapaAvailable: isChapaConfigured() && !manualVerificationRequired,
+    manualVerificationRequired,
     bankConfig: getBankConfig(),
     holdExpired: isHoldExpired(booking),
   };

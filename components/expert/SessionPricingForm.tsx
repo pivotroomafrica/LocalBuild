@@ -6,6 +6,7 @@ import { calculateAllDurationPrices } from "@/lib/expert/pricing";
 import { Button } from "@/components/ui/Button";
 import { FormMessage } from "@/components/ui/FormMessage";
 import { SESSION_DURATIONS, type SessionDuration } from "@/types/expert";
+import { customerPrice, expertPayout, formatVatRate, type PlatformPricing } from "@/lib/pricing/platform";
 
 const initialState: ExpertActionState = {};
 
@@ -14,6 +15,7 @@ type Props = {
   initialDurations: SessionDuration[];
   initialOnlineEnabled: boolean;
   initialInPersonEnabled: boolean;
+  pricing: PlatformPricing;
 };
 
 export function SessionPricingForm({
@@ -21,6 +23,7 @@ export function SessionPricingForm({
   initialDurations,
   initialOnlineEnabled,
   initialInPersonEnabled,
+  pricing,
 }: Props) {
   const [basePriceInput, setBasePriceInput] = useState(
     initialBasePrice != null ? String(initialBasePrice) : "",
@@ -76,8 +79,8 @@ export function SessionPricingForm({
           Pivotroom uses this rate to automatically calculate your other session prices.
         </p>
         <p className="text-sm text-[var(--color-text-muted)]">
-          Your session price is the base price. Applicable government taxes will be
-          calculated separately.
+          This is your price before VAT. Customers pay it plus {formatVatRate(pricing.vatRate)} VAT, and
+          Pivotroom&apos;s {formatVatRate(pricing.commissionRate)} commission is included in it.
         </p>
       </section>
 
@@ -149,8 +152,14 @@ export function SessionPricingForm({
                 }`}
               >
                 <span>{duration} min</span>
-                <span className={isEnabled ? "font-medium" : ""}>
+                <span className={`text-right ${isEnabled ? "font-medium" : ""}`}>
                   {hasValidBasePrice ? previewPrices[duration].toLocaleString() : "—"} ETB
+                  {hasValidBasePrice ? (
+                    <span className="block text-xs font-normal text-[var(--color-text-muted)]">
+                      Customer pays {customerPrice(previewPrices[duration], pricing.vatRate).toLocaleString()} · you
+                      receive {expertPayout(previewPrices[duration], pricing.commissionRate).toLocaleString()}
+                    </span>
+                  ) : null}
                 </span>
               </li>
             );
@@ -160,8 +169,8 @@ export function SessionPricingForm({
           Prices are automatically calculated from your 60-minute rate.
         </p>
         <p className="text-xs text-[var(--color-text-muted)]">
-          Displayed prices are base session prices. Applicable government taxes will be
-          calculated separately.
+          Customers pay your price plus {formatVatRate(pricing.vatRate)} VAT. Pivotroom&apos;s{" "}
+          {formatVatRate(pricing.commissionRate)} commission is included in your price, so you receive the rest.
         </p>
       </section>
 

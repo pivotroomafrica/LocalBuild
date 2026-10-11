@@ -11,6 +11,7 @@ import type { Booking } from "@/types/booking";
 import type { Payment } from "@/types/payment";
 import { PAYMENT_STATUS_LABELS } from "@/types/payment";
 import type { BankConfig } from "@/lib/payment/bankConfig";
+import { bookingChargeAmount } from "@/lib/pricing/platform";
 
 type Props = {
   booking: Booking;
@@ -20,6 +21,7 @@ type Props = {
   latestPayment: Payment | null;
   needsReview: boolean;
   chapaAvailable: boolean;
+  manualVerificationRequired: boolean;
   bankConfig: BankConfig;
 };
 
@@ -43,6 +45,7 @@ export function RailPayment({
   latestPayment,
   needsReview,
   chapaAvailable,
+  manualVerificationRequired,
   bankConfig,
 }: Props) {
   const router = useRouter();
@@ -134,9 +137,9 @@ export function RailPayment({
           </p>
           <dl className="mb-3 flex flex-col gap-2 rounded-[var(--radius-input)] bg-[var(--color-bg)] p-4 text-sm text-[var(--color-text)]">
             <div className="flex justify-between">
-              <dt className="text-[var(--color-text-muted)]">Amount</dt>
+              <dt className="text-[var(--color-text-muted)]">Amount (incl. VAT)</dt>
               <dd className="tabular-nums-brand font-medium">
-                {Number(booking.base_price).toLocaleString()} {booking.currency}
+                {bookingChargeAmount(booking).toLocaleString()} {booking.currency}
               </dd>
             </div>
             <div className="flex justify-between">
@@ -146,6 +149,12 @@ export function RailPayment({
           </dl>
           <ChapaPayButton bookingReference={booking.booking_reference} expertSlug={expertSlug} />
         </div>
+      ) : null}
+
+      {manualVerificationRequired ? (
+        <FormMessage variant="success">
+          Payments of this size are verified manually by our team. Please pay by bank transfer below.
+        </FormMessage>
       ) : null}
 
       {chapaAvailable ? (
@@ -193,9 +202,9 @@ export function RailPayment({
             <dd className="font-medium">{bankConfig.accountNumber}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-[var(--color-text-muted)]">Session base price</dt>
+            <dt className="text-[var(--color-text-muted)]">Amount to transfer (incl. VAT)</dt>
             <dd className="tabular-nums-brand font-medium">
-              {Number(booking.base_price).toLocaleString()} {booking.currency}
+              {bookingChargeAmount(booking).toLocaleString()} {booking.currency}
             </dd>
           </div>
           <div className="flex justify-between">
@@ -204,9 +213,6 @@ export function RailPayment({
           </div>
         </dl>
         <p className="mt-2 text-xs text-[var(--color-text-muted)]">{bankConfig.instructions}</p>
-        <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-          Applicable government taxes will be calculated separately.
-        </p>
       </div>
 
       <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">

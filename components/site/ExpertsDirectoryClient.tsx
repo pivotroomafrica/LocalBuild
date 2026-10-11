@@ -111,6 +111,12 @@ export function ExpertsDirectoryClient({
               </button>
             ) : null}
           </div>
+          <p className="mt-3 text-sm text-[#6a6871]">
+            Not sure who you need?{" "}
+            <Link href="/match" className="font-semibold text-[var(--color-accent)] hover:underline">
+              Describe your problem and get matched
+            </Link>
+          </p>
         </div>
       </section>
 
@@ -138,7 +144,7 @@ export function ExpertsDirectoryClient({
         <div className="experts-count-meta">
           <span className="experts-count-number">{filtered.length}</span>
           <span className="experts-count-label">
-            {filtered.length === 1 ? "Expert" : "Experts"} available to book
+            {filtered.length === 1 ? "Expert" : "Experts"} available to book · prices incl. VAT
           </span>
           {isFiltering ? (
             <button type="button" onClick={resetFilters} className="reset-filters-pill-btn">

@@ -294,8 +294,7 @@ export function RailSelect({
       </div>
       {formatLabel ? <p className="mt-2 text-xs text-[var(--color-text-muted)]">Available: {formatLabel}</p> : null}
       <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-        Prices shown are base session prices. Applicable government taxes will be calculated
-        separately.
+        Prices include VAT.
       </p>
 
       {duration && availableFormats.length > 1 ? (

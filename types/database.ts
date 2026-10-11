@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_match_requests: {
+        Row: {
+          candidate_count: number
+          client_key_hash: string
+          completion_tokens: number | null
+          created_at: string
+          estimated_cost_usd: number | null
+          id: string
+          match_count: number
+          model: string | null
+          outcome: string
+          prompt_tokens: number | null
+          user_id: string | null
+        }
+        Insert: {
+          candidate_count?: number
+          client_key_hash: string
+          completion_tokens?: number | null
+          created_at?: string
+          estimated_cost_usd?: number | null
+          id?: string
+          match_count?: number
+          model?: string | null
+          outcome: string
+          prompt_tokens?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          candidate_count?: number
+          client_key_hash?: string
+          completion_tokens?: number | null
+          created_at?: string
+          estimated_cost_usd?: number | null
+          id?: string
+          match_count?: number
+          model?: string | null
+          outcome?: string
+          prompt_tokens?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       booking_cancellations: {
         Row: {
           actor_type: string
@@ -236,6 +278,12 @@ export type Database = {
           session_format: string
           session_type_id: string | null
           start_at: string
+          commission_amount: number | null
+          commission_rate: number | null
+          expert_payout_amount: number | null
+          total_price: number | null
+          vat_amount: number | null
+          vat_rate: number | null
           updated_at: string
         }
         Insert: {
@@ -259,6 +307,12 @@ export type Database = {
           session_format: string
           session_type_id?: string | null
           start_at: string
+          commission_amount?: number | null
+          commission_rate?: number | null
+          expert_payout_amount?: number | null
+          total_price?: number | null
+          vat_amount?: number | null
+          vat_rate?: number | null
           updated_at?: string
         }
         Update: {
@@ -282,6 +336,12 @@ export type Database = {
           session_format?: string
           session_type_id?: string | null
           start_at?: string
+          commission_amount?: number | null
+          commission_rate?: number | null
+          expert_payout_amount?: number | null
+          total_price?: number | null
+          vat_amount?: number | null
+          vat_rate?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -952,6 +1012,33 @@ export type Database = {
           },
         ]
       }
+      platform_settings: {
+        Row: {
+          commission_rate: number
+          currency: string
+          id: boolean
+          manual_verification_threshold: number
+          updated_at: string
+          vat_rate: number
+        }
+        Insert: {
+          commission_rate?: number
+          currency?: string
+          id?: boolean
+          manual_verification_threshold?: number
+          updated_at?: string
+          vat_rate?: number
+        }
+        Update: {
+          commission_rate?: number
+          currency?: string
+          id?: boolean
+          manual_verification_threshold?: number
+          updated_at?: string
+          vat_rate?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           account_status: string
@@ -1216,6 +1303,20 @@ export type Database = {
           profile_image_path: string
           slug: string
           starting_price: number
+        }[]
+      }
+      get_expert_match_candidates_public: {
+        Args: never
+        Returns: {
+          category_names: string[]
+          current_company: string
+          current_position: string
+          expertise_summary: string
+          full_name: string
+          headline: string
+          problems_help_with: string
+          slug: string
+          who_i_help: string
         }[]
       }
       get_expert_profile_public: {

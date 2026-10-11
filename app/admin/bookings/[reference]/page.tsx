@@ -11,6 +11,7 @@ import { AdminCancelBookingButton } from "@/components/admin/AdminCancelBookingB
 import { SESSION_FORMAT_LABELS, type BookingStatus, type SessionFormat } from "@/types/booking";
 import type { PaymentStatus } from "@/types/payment";
 import { INTEGRATION_JOB_TYPE_LABELS, INTEGRATION_JOB_STATUS_LABELS } from "@/types/notifications";
+import { formatVatRate } from "@/lib/pricing/platform";
 
 export default async function AdminBookingDetailPage({
   params,
@@ -25,6 +26,7 @@ export default async function AdminBookingDetailPage({
 
   const { booking, intake, customerName, expertName, expertSlug, payments, integrationJobs, rescheduleHistory, cancellation, pendingChangeRequest } =
     detail;
+  const formatMoney = (value: number | string) => `${Number(value).toLocaleString()} ${booking.currency}`;
   const calendarStatusLabel: Record<string, string> = {
     not_synced: "Not synced",
     pending: "Pending",
@@ -81,7 +83,20 @@ export default async function AdminBookingDetailPage({
             label="Format"
             value={SESSION_FORMAT_LABELS[booking.session_format as "online" | "in_person"] ?? booking.session_format}
           />
-          <Field label="Base price" value={`${Number(booking.base_price).toLocaleString()} ${booking.currency}`} />
+          <Field label="Expert price (excl. VAT)" value={formatMoney(booking.base_price)} />
+          {booking.total_price != null ? (
+            <>
+              <Field label={`VAT (${formatVatRate(Number(booking.vat_rate))})`} value={formatMoney(booking.vat_amount ?? 0)} />
+              <Field label="Customer pays" value={formatMoney(booking.total_price)} />
+              <Field
+                label={`Pivotroom commission (${formatVatRate(Number(booking.commission_rate))})`}
+                value={formatMoney(booking.commission_amount ?? 0)}
+              />
+              <Field label="Expert payout" value={formatMoney(booking.expert_payout_amount ?? 0)} />
+            </>
+          ) : (
+            <Field label="Customer pays" value={`${formatMoney(booking.base_price)} (booked before VAT pricing)`} />
+          )}
         </dl>
       </section>
 
