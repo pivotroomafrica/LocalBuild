@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { publicOrigin } from "@/lib/utils/publicOrigin";
 
 /**
  * Supabase email links (signup confirmation, password recovery) redirect
@@ -8,7 +9,8 @@ import { createClient } from "@/lib/supabase/server";
  * the code still attached would leave the visitor unauthenticated.
  */
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
+  const origin = publicOrigin(request);
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/dashboard/profile";
 

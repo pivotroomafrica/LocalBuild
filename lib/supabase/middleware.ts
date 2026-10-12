@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { publicOrigin } from "@/lib/utils/publicOrigin";
 
 const PROTECTED_PREFIXES = ["/dashboard", "/auth/reset-password", "/dev", "/expert", "/admin"];
 const AUTH_PREFIXES = ["/auth/login", "/auth/signup"];
@@ -42,6 +43,8 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
+  // Public address, not request.url (which is the internal one behind a proxy).
+  const origin = publicOrigin(request);
 
   // Path-segment-boundary match, not a plain substring prefix: a plain
   // pathname.startsWith("/expert") would also match "/experts" and
@@ -56,7 +59,7 @@ export async function updateSession(request: NextRequest) {
   const isAuthPage = AUTH_PREFIXES.some((prefix) => matchesPrefix(pathname, prefix));
 
   if (!user && isProtected) {
-    const redirectUrl = new URL("/auth/login", request.url);
+    const redirectUrl = new URL("/auth/login", origin);
     redirectUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(redirectUrl);
   }
@@ -77,7 +80,7 @@ export async function updateSession(request: NextRequest) {
       .maybeSingle();
 
     if (!profile || profile.role !== "admin") {
-      return NextResponse.redirect(new URL("/", request.url));
+      return NextResponse.redirect(new URL("/", origin));
     }
   }
 
@@ -87,7 +90,7 @@ export async function updateSession(request: NextRequest) {
     // instead of always bouncing to /dashboard/profile.
     const rawNext = request.nextUrl.searchParams.get("next");
     const next = rawNext && rawNext.startsWith("/") ? rawNext : "/dashboard/profile";
-    return NextResponse.redirect(new URL(next, request.url));
+    return NextResponse.redirect(new URL(next, origin));
   }
 
   return supabaseResponse;
