@@ -52,7 +52,7 @@ CONFIG = {
     "SIZE_TEXT": "440 ML  -  ZERO SUGAR",
 
     "SEED": 7,                   # change for a different splash / droplet layout
-    "LIGHT_SCALE": 1.0,          # global light multiplier - the one knob for exposure
+    "LIGHT_SCALE": 0.12,         # global light multiplier - the one knob for exposure
     "CONDENSATION": True,
     "USE_FLUID_SIM": False,      # True enables the optional Mantaflow domain (needs manual bake)
 
