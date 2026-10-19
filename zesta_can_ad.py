@@ -1,28 +1,26 @@
-"""
-ZESTA - Cinematic CGI beverage can advertisement for Blender
-=============================================================
-Paste into Blender's  Scripting > Text Editor  and press  Run Script  (Alt+P).
-Targets Blender 4.2 LTS or newer (written/tested against the 5.x Python API too).
-
-What it builds (all re-runnable - previous ZESTA objects are removed first):
-  PRODUCT      CAN_Body, CAN_UpperRim, CAN_Lid, CAN_PullTab, CAN_DrinkingAperture,
-               CAN_LowerRim_Base, CAN_Condensation
-  LABEL        LABEL_Print (UV-mapped, procedural print shader) + real text/logo
-               geometry wrapped onto the cylinder (no stretching, no flat decal)
-  LIQUID       hybrid splash: crown sheet, two wave sheets, tendrils, droplets, pool
-  ENVIRONMENT  curved studio cyclorama with glossy floor
-  LIGHTING     key softbox, strip rims, backlight, fill, splash accents, bg glow
-  CAMERAS      CAM_Hero (16:9), CAM_Hero_Vertical (9:16 reframed), CAM_Detail
-  SIMULATION   optional Mantaflow liquid domain / flow / collider (OFF by default)
-
-Animation: 11 s @ 30 fps (frames 1-331). Establish -> rotate to hero -> splash
-expands -> hero hold with label facing camera.
-
-Command-line use (optional):
-  blender -b -P zesta_can_ad.py -- --out /path/dir --still
-  blender -b -P zesta_can_ad.py -- --out /path/dir --animation --final
-  flags: --final  --vertical  --still  --animation  --eevee  --fluid
-"""
+# ZESTA - Cinematic CGI beverage can advertisement for Blender
+# =============================================================
+# Paste into Blender's  Scripting > Text Editor  and press  Run Script  (Alt+P).
+# Targets Blender 4.2 LTS or newer (written/tested against the 5.x Python API too).
+#
+# What it builds (all re-runnable - previous ZESTA objects are removed first):
+#   PRODUCT      CAN_Body, CAN_UpperRim, CAN_Lid, CAN_PullTab, CAN_DrinkingAperture,
+#                CAN_LowerRim_Base, CAN_Condensation
+#   LABEL        LABEL_Print (UV-mapped, procedural print shader) + real text/logo
+#                geometry wrapped onto the cylinder (no stretching, no flat decal)
+#   LIQUID       hybrid splash: crown sheet, two wave sheets, tendrils, droplets, pool
+#   ENVIRONMENT  curved studio cyclorama with glossy floor
+#   LIGHTING     key softbox, strip rims, backlight, fill, splash accents, bg glow
+#   CAMERAS      CAM_Hero (16:9), CAM_Hero_Vertical (9:16 reframed), CAM_Detail
+#   SIMULATION   optional Mantaflow liquid domain / flow / collider (OFF by default)
+#
+# Animation: 11 s @ 30 fps (frames 1-331). Establish -> rotate to hero -> splash
+# expands -> hero hold with label facing camera.
+#
+# Command-line use (optional):
+#   blender -b -P zesta_can_ad.py -- --out /path/dir --still
+#   blender -b -P zesta_can_ad.py -- --out /path/dir --animation --final
+#   flags: --final  --vertical  --still  --animation  --eevee  --fluid
 
 import bpy
 import bmesh
