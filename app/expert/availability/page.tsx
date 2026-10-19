@@ -7,7 +7,6 @@ import {
   getExpertOneOffAvailability,
 } from "@/lib/availability/data";
 import { AvailabilityManager } from "@/components/expert/AvailabilityManager";
-import { ExpertOperationsNav } from "@/components/layout/ExpertOperationsNav";
 import { RouterRefreshOnMount } from "@/components/layout/RouterRefreshOnMount";
 
 /** Explicit documentation of intent (already implied by requireApprovedExpertPage's
@@ -30,7 +29,6 @@ export default async function ExpertAvailabilityPage() {
   return (
     <div>
       <RouterRefreshOnMount />
-      <ExpertOperationsNav current="/expert/availability" />
 
       <div className="flex flex-col gap-8">
         <div>

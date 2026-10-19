@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireCustomerPage, getCustomerPaymentHistory } from "@/lib/dashboard/data";
-import { DashboardNav } from "@/components/layout/DashboardNav";
 import { PaymentStatusPill } from "@/components/session/StatusPill";
 import type { PaymentStatus } from "@/types/payment";
 
@@ -16,7 +15,6 @@ export default async function DashboardPaymentsPage() {
 
   return (
     <div>
-      <DashboardNav current="/dashboard/payments" />
 
       <div className="flex flex-col gap-6">
         <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">Payments</h1>

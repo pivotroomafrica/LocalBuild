@@ -4,7 +4,7 @@ const LINKS = [
   { href: "/expert/application", label: "Overview" },
   { href: "/expert/application/profile", label: "Profile" },
   { href: "/expert/application/expertise", label: "Expertise" },
-  { href: "/expert/application/sessions", label: "Sessions" },
+  { href: "/expert/application/sessions", label: "Session pricing" },
 ];
 
 export function ExpertApplicationNav({ current }: { current: string }) {

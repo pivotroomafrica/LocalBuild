@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireApprovedExpertPage } from "@/lib/expert/auth";
 import { getExpertSessions } from "@/lib/expert/sessions";
-import { ExpertOperationsNav } from "@/components/layout/ExpertOperationsNav";
 import { ExpertSessionCard } from "@/components/session/ExpertSessionCard";
 
 /** Expert Sessions (spec section 25) -- confirmed/completed sessions only
@@ -17,7 +16,6 @@ export default async function ExpertSessionsPage() {
 
   return (
     <div>
-      <ExpertOperationsNav current="/expert/sessions" />
 
       <div className="flex flex-col gap-6">
         <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">Sessions</h1>

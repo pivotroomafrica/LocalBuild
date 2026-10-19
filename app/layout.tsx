@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter, Noto_Sans_Ethiopic } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
-import "./intro-theme.css";
 import "./site.css";
 
 /** Inter carries all UI text (weights 400/500/600); Satoshi Bold is the
@@ -53,7 +52,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${inter.variable} ${notoEthiopic.variable} ${satoshi.variable} ${materialSymbols.variable} h-full antialiased`}
     >
-      <body className="intro-theme min-h-full flex flex-col font-sans">{children}</body>
+      <body className="min-h-full flex flex-col font-sans">{children}</body>
     </html>
   );
 }

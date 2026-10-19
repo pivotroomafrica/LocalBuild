@@ -2,14 +2,11 @@ import Link from "next/link";
 
 export type WorkspaceTab = { href: string; label: string };
 
-/**
- * Section tabs for the signed-in workspaces (customer dashboard, expert
- * application, expert operations, admin) -- intro's category-pill strip,
- * with the current section as the dark active pill.
- */
+/** In-page section tabs (e.g. the expert application steps): the
+ * design's square filter chips, current one in blue. */
 export function WorkspaceTabs({ tabs, current, label }: { tabs: WorkspaceTab[]; current: string; label: string }) {
   return (
-    <nav aria-label={label} className="no-scrollbar -mx-5 mb-8 flex gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:px-0">
+    <nav aria-label={label} className="scroller" style={{ marginBlockEnd: 32 }}>
       {tabs.map((tab) => {
         const isActive = tab.href === current;
         return (
@@ -17,7 +14,8 @@ export function WorkspaceTabs({ tabs, current, label }: { tabs: WorkspaceTab[]; 
             key={tab.href}
             href={tab.href}
             aria-current={isActive ? "page" : undefined}
-            className={`experts-cat-pill ${isActive ? "active" : ""}`}
+            className={isActive ? "chip on" : "chip"}
+            style={{ display: "inline-flex", alignItems: "center" }}
           >
             {tab.label}
           </Link>

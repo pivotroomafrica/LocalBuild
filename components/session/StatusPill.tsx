@@ -10,22 +10,22 @@ import { PAYMENT_STATUS_LABELS, type PaymentStatus } from "@/types/payment";
  * so no page hand-rolls its own status styling or shows a snake_case
  * value directly.
  *
- * Tones follow the intro design: soft green for confirmed/paid, soft red
- * for problem states, warm neutral for everything in between. The label
+ * Tones follow the website design: blue tint for confirmed/paid, soft red
+ * for problem states, mist for everything in between. The label
  * text always names the state too, so colour is never the only signal.
  */
 type Tone = "neutral" | "positive" | "attention";
 
 const TONE_CLASSES: Record<Tone, string> = {
-  neutral: "border-[var(--color-border)] bg-[var(--color-mist)] text-[#55525d]",
-  positive: "border-[#c6f0dc] bg-[var(--color-success-bg)] text-[var(--color-success)]",
+  neutral: "border-[var(--color-mist)] bg-[var(--color-mist)] text-[var(--color-text)]",
+  positive: "border-[var(--color-accent-tint)] bg-[var(--color-accent-tint)] text-[var(--color-accent)]",
   attention: "border-[#fbd5d0] bg-[var(--color-danger-bg)] text-[var(--color-danger)]",
 };
 
 export function StatusPill({ label, tone = "neutral" }: { label: string; tone?: Tone }) {
   return (
     <span
-      className={`inline-flex w-fit items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-bold ${TONE_CLASSES[tone]}`}
+      className={`inline-flex w-fit items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-[13px] font-medium ${TONE_CLASSES[tone]}`}
     >
       {label}
     </span>

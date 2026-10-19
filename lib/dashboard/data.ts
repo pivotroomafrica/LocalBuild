@@ -367,3 +367,45 @@ export async function getCustomerPaymentHistory(
     };
   });
 }
+
+export type ClientActivity = {
+  sessionsCompleted: number;
+  upcoming: number;
+  expertsMet: number;
+  firstCompletedAt: string | null;
+  nextUpcomingAt: string | null;
+  metExpertIds: string[];
+};
+
+/** Overview figures from the customer's own paid bookings: "completed"
+ * means paid and its end time has passed (nothing marks bookings
+ * 'completed' yet), matching the public ranking rule (049c). */
+export async function getClientActivity(supabase: TypedClient, userId: string): Promise<ClientActivity> {
+  const { data } = await supabase
+    .from("bookings")
+    .select("expert_profile_id, start_at, end_at")
+    .eq("customer_id", userId)
+    .in("booking_status", ["confirmed", "completed"])
+    .order("start_at", { ascending: true });
+
+  const now = Date.now();
+  const rows = data ?? [];
+  const done = rows.filter((row) => new Date(row.end_at).getTime() < now);
+  const upcoming = rows.filter((row) => new Date(row.start_at).getTime() > now);
+  const metExpertIds = Array.from(new Set(done.map((row) => row.expert_profile_id)));
+
+  return {
+    sessionsCompleted: done.length,
+    upcoming: upcoming.length,
+    expertsMet: metExpertIds.length,
+    firstCompletedAt: done[0]?.end_at ?? null,
+    nextUpcomingAt: upcoming[0]?.start_at ?? null,
+    metExpertIds,
+  };
+}
+
+/** The meeting link for one of the customer's own bookings (RLS: own). */
+export async function getBookingMeetingUrl(supabase: TypedClient, bookingId: string): Promise<string | null> {
+  const { data } = await supabase.from("bookings").select("calendar_meeting_url").eq("id", bookingId).maybeSingle();
+  return data?.calendar_meeting_url ?? null;
+}

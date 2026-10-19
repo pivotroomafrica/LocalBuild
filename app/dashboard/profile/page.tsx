@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ProfileForm } from "@/components/profile/ProfileForm";
 import { FormMessage } from "@/components/ui/FormMessage";
-import { DashboardNav } from "@/components/layout/DashboardNav";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -24,7 +23,6 @@ export default async function ProfilePage() {
   if (!profile) {
     return (
       <div>
-        <DashboardNav current="/dashboard/profile" />
         <FormMessage variant="error">
           We couldn&apos;t load your profile. Please try again.
         </FormMessage>
@@ -34,7 +32,6 @@ export default async function ProfilePage() {
 
   return (
     <div>
-      <DashboardNav current="/dashboard/profile" />
       <ProfileForm
         email={user.email ?? ""}
         profile={profile}

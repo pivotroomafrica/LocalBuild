@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireCustomerPage, getCustomerSessions } from "@/lib/dashboard/data";
-import { DashboardNav } from "@/components/layout/DashboardNav";
 import { CustomerSessionCard } from "@/components/session/CustomerSessionCard";
 import { SESSION_TABS, type SessionTab } from "@/types/session";
 
@@ -38,7 +37,6 @@ export default async function DashboardSessionsPage({
 
   return (
     <div>
-      <DashboardNav current="/dashboard/sessions" />
 
       <div className="flex flex-col gap-6">
         <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">My Sessions</h1>

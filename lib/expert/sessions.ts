@@ -29,7 +29,7 @@ export type CustomerContext = {
   linkedinUrl: string | null;
 };
 
-async function getCustomerContextForBooking(
+export async function getCustomerContextForBooking(
   supabase: TypedClient,
   bookingId: string,
 ): Promise<CustomerContext | null> {

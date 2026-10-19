@@ -1,10 +1,9 @@
 /*
  * Public website, ported from the Pivotroom website design (Inter for text,
  * Satoshi Bold for headings, ink #0d0f12, blue #2b4fe0, mist #f4f5f7,
- * line #e4e6e9). Everything is scoped under .pr (the (public) layout and
- * the auth screens), so the dashboards keep their own styles until they
- * are redesigned. Unlayered on purpose: it must beat intro-theme's
- * @layer base element resets.
+ * line #e4e6e9). Everything is scoped under .pr (public site, auth
+ * screens and the signed-in workspaces). Unlayered on purpose, so it
+ * beats Tailwind's layered utilities where both apply.
  */
 .pr {
   --pr-ink: #0d0f12;
@@ -2234,6 +2233,496 @@
 }
 .pr .quick a:hover {
   border-color: var(--pr-ink);
+  color: var(--pr-ink);
+}
+
+/* ---------- Signed-in workspaces ---------- */
+.pr.ws {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.pr .ws-bar {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding-inline: var(--pr-gutter);
+}
+.pr .ws-badge {
+  height: 26px;
+  padding-inline: 10px;
+  border-radius: 999px;
+  background: var(--pr-blue-tint);
+  color: var(--pr-blue);
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 500;
+}
+.pr .ws-body {
+  flex: 1;
+  width: 100%;
+  max-width: 1320px;
+  margin-inline: auto;
+  padding: 40px var(--pr-gutter) 96px;
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  gap: clamp(32px, 4vw, 56px);
+  align-items: start;
+}
+.pr .ws-side {
+  position: sticky;
+  top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.pr .ws-who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pr .ws-av {
+  width: 48px;
+  height: 48px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--pr-mist);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 600;
+}
+.pr .ws-name {
+  font-family: var(--pr-display);
+  font-weight: 700;
+  font-size: 17px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pr .ws-sub {
+  font-size: 14px;
+  color: var(--pr-slate);
+}
+.pr .ws-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pr .ws-switch {
+  padding-block-start: 16px;
+  border-top: 1px solid var(--pr-line);
+}
+.pr .ws-link {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-inline: 14px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--pr-slate);
+  font: inherit;
+  font-size: 15px;
+  text-align: start;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 160ms var(--pr-ease);
+}
+.pr .ws-link .ms {
+  font-size: 20px;
+}
+.pr .ws-link:hover {
+  background: var(--pr-mist);
+  color: var(--pr-ink);
+}
+.pr .ws-link.on {
+  background: var(--pr-mist);
+  color: var(--pr-ink);
+  font-weight: 600;
+}
+.pr .ws-link.on .ms {
+  color: var(--pr-blue);
+}
+.pr .ws-count {
+  min-width: 22px;
+  height: 22px;
+  padding-inline: 6px;
+  border-radius: 999px;
+  background: var(--pr-blue);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+.pr .ws-signout {
+  margin: 0;
+}
+.pr .ws-main {
+  min-width: 0;
+}
+
+/* Admin: dark sidebar and header. */
+.pr.ws-dark {
+  background: #f4f5f7;
+}
+.pr.ws-dark .ws-head {
+  background: var(--pr-ink);
+  border-bottom-color: var(--pr-ink-line);
+}
+.pr.ws-dark .ws-badge {
+  background: var(--pr-ink-line);
+  color: #ffffff;
+}
+.pr.ws-dark .ws-side {
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--pr-ink);
+  color: #ffffff;
+}
+.pr.ws-dark .ws-av {
+  background: var(--pr-ink-line);
+  color: #ffffff;
+}
+.pr.ws-dark .ws-sub,
+.pr.ws-dark .ws-link {
+  color: var(--pr-slate-light);
+}
+.pr.ws-dark .ws-link:hover,
+.pr.ws-dark .ws-link.on {
+  background: var(--pr-ink-line);
+  color: #ffffff;
+}
+.pr.ws-dark .ws-link.on .ms {
+  color: var(--pr-blue-on-ink);
+}
+.pr.ws-dark .ws-switch {
+  border-top-color: var(--pr-ink-line);
+}
+.pr.ws-dark :focus-visible {
+  outline-color: var(--pr-blue-on-ink);
+}
+
+@media (max-width: 900px) {
+  .pr .ws-body {
+    grid-template-columns: minmax(0, 1fr);
+    padding-block-start: 16px;
+    gap: 24px;
+  }
+  .pr .ws-side {
+    position: static;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    overflow-x: auto;
+    margin-inline: calc(var(--pr-gutter) * -1);
+    padding-inline: var(--pr-gutter);
+    scrollbar-width: none;
+  }
+  .pr.ws-dark .ws-side {
+    margin-inline: 0;
+    padding: 8px;
+  }
+  .pr .ws-who {
+    display: none;
+  }
+  .pr .ws-nav {
+    flex-direction: row;
+    gap: 4px;
+  }
+  .pr .ws-switch {
+    padding: 0 0 0 8px;
+    border-top: 0;
+    border-left: 1px solid var(--pr-line);
+  }
+  .pr .ws-link {
+    min-height: 40px;
+    padding-inline: 12px;
+  }
+}
+
+/* Workspace content */
+.pr .ws-h1 {
+  margin: 0;
+  font-family: var(--pr-display);
+  font-weight: 700;
+  font-size: clamp(32px, 3.6vw, 44px);
+  line-height: 1.06;
+  letter-spacing: -0.025em;
+}
+.pr .ws-h2 {
+  margin: 0;
+  font-family: var(--pr-display);
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1.2;
+}
+.pr .ov-next {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px 24px;
+  padding: clamp(24px, 3vw, 32px);
+  border-radius: 20px;
+  background: var(--pr-ink);
+  color: #ffffff;
+}
+.pr .ov-av {
+  width: 64px;
+  height: 64px;
+  flex: none;
+  border-radius: 12px;
+  background: var(--pr-ink-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--pr-display);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--pr-slate-light);
+}
+.pr .btn-ghost-ink,
+.pr a.btn-ghost-ink {
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid var(--pr-ink-line);
+}
+.pr .btn-ghost-ink:hover,
+.pr a.btn-ghost-ink:hover {
+  background: var(--pr-ink-line);
+  color: #ffffff;
+}
+.pr .stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+  gap: 16px;
+}
+.pr .stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px;
+  border: 1px solid var(--pr-line);
+  border-radius: 20px;
+  background: #ffffff;
+}
+.pr .stat .k {
+  font-size: 15px;
+  color: var(--pr-slate);
+}
+.pr .stat .v {
+  font-family: var(--pr-display);
+  font-weight: 700;
+  font-size: clamp(24px, 2.2vw, 30px);
+  white-space: nowrap;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.pr .stat .s {
+  font-size: 14px;
+  color: var(--pr-slate);
+}
+.pr .stat .up {
+  color: var(--pr-blue);
+  font-weight: 600;
+}
+.pr .minis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+.pr .mini {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--pr-line);
+  border-radius: 20px;
+  color: var(--pr-ink);
+  transition: border-color 160ms var(--pr-ease);
+}
+.pr .mini:hover {
+  border-color: var(--pr-slate-light);
+  color: var(--pr-ink);
+}
+.pr .mini-ph {
+  width: 56px;
+  height: 70px;
+  flex: none;
+  border-radius: 10px;
+  background: var(--pr-photo);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: var(--pr-display);
+  font-weight: 700;
+  color: var(--pr-slate-light);
+}
+.pr .mini-ph img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pr .clamp2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pr .panel {
+  padding: clamp(20px, 2.4vw, 28px);
+  border: 1px solid var(--pr-line);
+  border-radius: 20px;
+  background: #ffffff;
+}
+.pr .rows {
+  display: flex;
+  flex-direction: column;
+}
+.pr .rows > * {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) auto;
+  gap: 4px 16px;
+  align-items: center;
+  padding-block: 14px;
+  border-top: 1px solid var(--pr-line);
+  color: var(--pr-ink);
+}
+.pr .rows > a:hover {
+  color: var(--pr-ink);
+  background: #fafafb;
+}
+@media (max-width: 560px) {
+  .pr .rows > * {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .pr .rows > * > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+.pr .bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--pr-line);
+  overflow: hidden;
+}
+.pr .bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--pr-blue);
+}
+.pr .two {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1240px) {
+  .pr .two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.pr .chart {
+  height: 220px;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 8px;
+  align-items: end;
+}
+.pr .chart .col {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.pr .chart .b {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 6px 6px 2px 2px;
+  background: var(--pr-blue);
+}
+.pr .chart .n {
+  font-size: 12px;
+  color: var(--pr-slate);
+}
+.pr .chart .l {
+  font-size: 11px;
+  color: var(--pr-slate);
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .pr .chart .l {
+    display: none;
+  }
+}
+.pr .decisions {
+  display: flex;
+  flex-direction: column;
+}
+.pr .decisions a {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-block: 14px;
+  border-top: 1px solid var(--pr-line);
+  color: var(--pr-ink);
+}
+.pr .decisions a:hover {
+  color: var(--pr-ink);
+}
+.pr .decisions .ic {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 10px;
+  background: var(--pr-mist);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pr .decisions .ic .ms {
+  font-size: 20px;
+}
+
+/* Inner workspace pages are Tailwind + tokens; bring their headings and
+ * buttons into the design without rewriting every page. */
+.pr .ws-main h1,
+.pr .ws-main h2,
+.pr .ws-main h3 {
+  font-family: var(--pr-display);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+.pr .ws-main h1 {
+  letter-spacing: -0.025em;
+}
+.pr .ws-main .font-extrabold,
+.pr .ws-main .font-bold {
+  font-weight: 600;
+}
+.pr .ws-main h1.font-extrabold,
+.pr .ws-main h2.font-extrabold,
+.pr .ws-main h3.font-extrabold {
+  font-weight: 700;
+}
+.pr .ws-main a.rounded-full,
+.pr .ws-main button.rounded-full {
+  font-weight: 500;
+}
+.pr.ws-dark .ws-main {
   color: var(--pr-ink);
 }
 
