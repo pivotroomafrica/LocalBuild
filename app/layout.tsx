@@ -1,24 +1,27 @@
 import type { Metadata } from "next";
-import { Newsreader, Plus_Jakarta_Sans } from "next/font/google";
+import { Inter, Noto_Sans_Ethiopic } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import "./intro-theme.css";
+import "./site.css";
 
-/** Plus Jakarta Sans carries all UI and headings; Newsreader is the serif
- * accent face of the intro design. */
-const jakarta = Plus_Jakarta_Sans({
-  variable: "--font-jakarta",
+/** Inter carries all UI text (weights 400/500/600); Satoshi Bold is the
+ * display face for headings and the wordmark (website design). */
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-  style: ["normal", "italic"],
+  weight: ["400", "500", "600"],
 });
 
-const newsreader = Newsreader({
-  variable: "--font-newsreader",
-  subsets: ["latin"],
-  style: ["normal", "italic"],
+/** Amharic text (the home page quote). Only loaded where it is used. */
+const notoEthiopic = Noto_Sans_Ethiopic({
+  variable: "--font-noto-ethiopic",
+  subsets: ["ethiopic"],
+  weight: ["500", "700"],
+  preload: false,
 });
 
-/** Satoshi Bold is kept only for the Pivotroom wordmark (BrandLogo). */
+/** Satoshi Bold: headings and the Pivotroom wordmark (BrandLogo). */
 const satoshi = localFont({
   src: "./fonts/Satoshi-Bold.woff2",
   variable: "--font-satoshi",
@@ -41,14 +44,14 @@ const materialSymbols = localFont({
 
 export const metadata: Metadata = {
   title: "Pivotroom",
-  description: "Talk to someone who's already been there.",
+  description: "One hour with someone who has done it. Book a paid one-to-one session with a vetted Ethiopian founder, executive or professional.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${jakarta.variable} ${newsreader.variable} ${satoshi.variable} ${materialSymbols.variable} h-full antialiased`}
+      className={`${inter.variable} ${notoEthiopic.variable} ${satoshi.variable} ${materialSymbols.variable} h-full antialiased`}
     >
       <body className="intro-theme min-h-full flex flex-col font-sans">{children}</body>
     </html>

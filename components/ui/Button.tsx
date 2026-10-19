@@ -9,7 +9,7 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 /**
- * Intro-style pill buttons. Height 48 (52 in a hero). Primary is the ink
+ * Pill buttons (website design). Height 48 (52 in a hero). Primary is the ink
  * pill with a soft lift on hover; it flips to white inside an `.on-ink`
  * section (see globals.css) since both read the same --color-brand token.
  */
@@ -24,13 +24,13 @@ export function Button({
   ...rest
 }: Props) {
   const base =
-    "inline-flex w-full items-center justify-center gap-2 rounded-full px-7 text-[14.5px] font-bold tracking-[-0.01em] transition-all disabled:cursor-not-allowed disabled:opacity-60";
+    "inline-flex w-full items-center justify-center gap-2 rounded-full px-7 text-[15px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60";
   const heightClass = size === "hero" ? "h-[52px]" : "h-12";
   const styles =
     variant === "primary"
-      ? "bg-[var(--color-brand)] text-[var(--color-on-brand)] shadow-[0_4px_14px_rgba(20,19,24,0.18)] hover:bg-[var(--color-brand-hover)] enabled:hover:-translate-y-px"
+      ? "bg-[var(--color-brand)] text-[var(--color-on-brand)] hover:bg-[var(--color-brand-hover)]"
       : variant === "secondary"
-        ? "border-[1.5px] border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] hover:border-[var(--color-border-hover)] hover:bg-[var(--color-bg)]"
+        ? "border border-[var(--color-text)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-mist)]"
         : "bg-transparent text-[var(--color-text)] underline decoration-[var(--color-border)] underline-offset-4 hover:decoration-[var(--color-text)]";
 
   return (

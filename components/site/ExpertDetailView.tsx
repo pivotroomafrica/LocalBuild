@@ -1,17 +1,15 @@
 import Link from "next/link";
-import type { PublicProfileData } from "@/lib/public/data";
+import { RESPONSE_TIME_LABELS, type PublicProfileData, type PublicReview } from "@/lib/public/data";
 import type { RailBookingSnapshot } from "@/lib/booking/railData";
 import type { CustomerProfile, Industry } from "@/types/profile";
 import { BookingRail } from "@/components/booking/BookingRail";
-import { ExpertPhoto } from "@/components/site/ExpertPhoto";
-import { ArrowLeftIcon, VerifiedIcon } from "@/components/site/icons";
-import { credibilityLine, formatEtb } from "@/components/site/format";
+import { formatEtb, formatLine, initialsOf } from "@/components/site/format";
 
 type Props = {
   profile: PublicProfileData;
   /** Omitted on the expert's own application preview: no booking rail
    * (booking yourself isn't a real scenario), a static session list
-   * instead, and no sticky breadcrumb bar. */
+   * instead. */
   railAuth?: {
     isLoggedIn: boolean;
     profileComplete: boolean;
@@ -22,264 +20,280 @@ type Props = {
 };
 
 function StaticSessionOptions({ profile }: { profile: PublicProfileData }) {
-  const formats = [profile.onlineEnabled ? "Online" : null, profile.inPersonEnabled ? "In person" : null]
-    .filter(Boolean)
-    .join(" · ");
   return (
-    <div className="booking-widget-card">
-      <h2 className="text-xl font-extrabold tracking-[-0.02em] text-[var(--color-text)]">Session options</h2>
-      {profile.sessionOfferings.length > 0 ? (
-        <ul className="mt-4 flex flex-col gap-2">
-          {profile.sessionOfferings.map((offering) => (
-            <li
-              key={offering.durationMinutes}
-              className="flex items-center justify-between rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg)] px-4 py-3 text-sm"
-            >
-              <span className="font-semibold text-[var(--color-text)]">{offering.durationMinutes} min</span>
-              <span className="tabular-nums-brand font-bold text-[var(--color-text)]">{formatEtb(offering.price)}</span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mt-3 text-sm text-[var(--color-text-muted)]">No session options set yet.</p>
-      )}
-      {formats ? <p className="mt-3 text-xs text-[var(--color-text-muted)]">Available: {formats}</p> : null}
+    <div className="bookaside" style={{ display: "block" }}>
+      <div className="bookcard">
+        <h2 className="d" style={{ margin: 0, fontSize: 20 }}>
+          Session options
+        </h2>
+        {profile.sessionOfferings.length > 0 ? (
+          <div className="opt-grid c3">
+            {profile.sessionOfferings.map((offering) => (
+              <span key={offering.durationMinutes} className="chip tall" style={{ cursor: "default" }}>
+                <span style={{ fontSize: 15, fontWeight: 600 }}>{offering.durationMinutes} min</span>
+                <span className="sub">{formatEtb(offering.price)}</span>
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="muted" style={{ margin: 0 }}>
+            No session options set yet.
+          </p>
+        )}
+        <span className="muted" style={{ fontSize: 13 }}>
+          Prices include VAT. This is a preview: booking opens once your profile is published.
+        </span>
+      </div>
     </div>
   );
 }
 
-function SectionCard({ title, body }: { title: string; body: string | null }) {
-  if (!body) return null;
+function Stars({ rating }: { rating: number }) {
   return (
-    <div className="detail-section-card">
-      <h2 className="detail-card-title">
-        <span>{title}</span>
-      </h2>
-      <div className="detail-bio-text whitespace-pre-wrap">{body}</div>
-    </div>
+    <span className="stars" role="img" aria-label={`${rating} out of 5`}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <svg key={n} viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" className={n <= rating ? undefined : "off"}>
+          <path
+            fill="currentColor"
+            d="m12 17.27 6.18 3.73-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+          />
+        </svg>
+      ))}
+    </span>
+  );
+}
+
+function ReviewCard({ review }: { review: PublicReview }) {
+  return (
+    <figure className="review">
+      <Stars rating={review.rating} />
+      <blockquote>{review.body}</blockquote>
+      <figcaption>
+        <span className="av" aria-hidden="true">
+          {initialsOf(review.reviewerName)}
+        </span>
+        <span className="stack" style={{ lineHeight: 1.35 }}>
+          <span style={{ fontSize: 15, fontWeight: 500 }}>{review.reviewerName}</span>
+          <span className="muted" style={{ fontSize: 14 }}>
+            {review.durationMinutes} min ·{" "}
+            {new Date(review.createdAt).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}
+          </span>
+        </span>
+      </figcaption>
+    </figure>
   );
 }
 
 /**
- * Public expert profile (intro design). Left column renders only fields the
- * expert actually filled in -- no reviews, ratings, FAQs or "fast responder"
- * badges, because none of those exist in this schema. The right column is
- * the real BookingRail (live availability, holds, intake, Chapa / bank
- * payment); it brings its own mobile bottom bar + sheet, which is why the
- * site's mobile tab bar is hidden on this route (see SiteChrome).
+ * Public expert profile (website design). Only what the expert actually
+ * filled in is shown, plus real activity: reviews from completed sessions
+ * and the "Top expert" badge when earned (049c). The right column is the
+ * real BookingRail (live availability, holds, intake, Chapa / bank
+ * payment); below 1040px it becomes a bottom bar and sheet.
  */
 export function ExpertDetailView({ profile, railAuth, railSnapshot }: Props) {
-  const credibility = credibilityLine(profile);
+  const firstName = profile.fullName.split(/\s+/)[0] || profile.fullName;
+  const role = [profile.currentPosition, profile.currentCompany].filter(Boolean).join(", ");
   const location = [profile.city, profile.country].filter(Boolean).join(", ");
-  const cheapest = profile.sessionOfferings.reduce<(typeof profile.sessionOfferings)[number] | null>(
-    (best, offering) => (!best || offering.price < best.price ? offering : best),
-    null,
-  );
-  const primaryCategory = profile.categoryNames[0];
+  const format = formatLine(profile);
+  const { stats } = profile;
 
   return (
-    <div className="expert-detail-page">
+    <div className="wrap profile">
       {railAuth ? (
-        <div className="detail-top-bar">
-          <div className="detail-top-container">
-            <Link href="/experts" className="back-link-btn">
-              <ArrowLeftIcon width={15} height={15} />
-              <span>All Experts</span>
-              {primaryCategory ? (
-                <>
-                  <span className="text-gray-400">/</span>
-                  <span className="text-[#6a6871]">{primaryCategory}</span>
-                </>
-              ) : null}
-              <span className="text-gray-400">/</span>
-              <span className="font-bold text-[#1a1921]">{profile.fullName}</span>
-            </Link>
-
-            {cheapest ? (
-              <div className="hidden items-center gap-3 sm:flex">
-                <div className="widget-trust-badge">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
-                  Booking open
-                </div>
-                <span className="text-sm font-semibold text-[#1a1921]">
-                  From {formatEtb(cheapest.price)} / {cheapest.durationMinutes}m
-                </span>
-              </div>
-            ) : null}
-          </div>
-        </div>
+        <Link href="/experts" className="link-arrow" style={{ alignSelf: "flex-start", fontWeight: 400 }}>
+          <span className="ms flip" aria-hidden="true">
+            arrow_forward
+          </span>{" "}
+          All experts
+        </Link>
       ) : null}
 
-      <div className="detail-main-layout">
-        <div className="detail-left-col">
-          <div className="detail-hero-card">
-            <div className="detail-hero-top">
-              <div className="detail-avatar-container">
-                <ExpertPhoto photoUrl={profile.photoUrl} fullName={profile.fullName} className="detail-avatar" />
+      <div className="profile-cols">
+        <div className="profile-main">
+          <div className="profile-top">
+            <div className="profile-photo">
+              {profile.photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- signed storage URL, expires hourly.
+                <img src={profile.photoUrl} alt={profile.fullName} />
+              ) : (
+                <span className="initials" aria-hidden="true">
+                  {initialsOf(profile.fullName)}
+                </span>
+              )}
+            </div>
+            <div className="profile-id">
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                <span className="pill-blue">
+                  <span className="ms" aria-hidden="true">
+                    verified
+                  </span>
+                  Vetted expert
+                </span>
+                {stats.isTopExpert ? (
+                  <span className="pill-blue" style={{ background: "#0d0f12", color: "#ffffff" }}>
+                    <span className="ms" aria-hidden="true">
+                      workspace_premium
+                    </span>
+                    Top expert
+                  </span>
+                ) : null}
               </div>
-
-              <div className="detail-hero-info">
-                <div className="detail-name-row">
-                  <h1 className="detail-expert-name">{profile.fullName}</h1>
-                  <VerifiedIcon className="h-6 w-6" />
-                </div>
-
-                {profile.headline ? <p className="detail-headline">{profile.headline}</p> : null}
-                {credibility ? <p className="text-sm text-[#6a6871]">{credibility}</p> : null}
-
-                {profile.categoryNames.length > 0 ? (
-                  <div className="detail-category-tags">
-                    {profile.categoryNames.map((name) => (
-                      <span key={name} className="detail-tag-chip">
-                        {name}
-                      </span>
-                    ))}
-                  </div>
+              <h1 className="h1">{profile.fullName}</h1>
+              {role || profile.headline ? (
+                <p className="role">
+                  {role}
+                  {role && profile.headline ? <br /> : null}
+                  {profile.headline}
+                </p>
+              ) : null}
+              <div className="facts">
+                {format ? (
+                  <span>
+                    <span className="ms" aria-hidden="true">
+                      {format.icon}
+                    </span>
+                    {format.label}
+                  </span>
+                ) : null}
+                {profile.languages.length > 0 ? (
+                  <span>
+                    <span className="ms" aria-hidden="true">
+                      chat_bubble
+                    </span>
+                    {profile.languages.join(", ")}
+                  </span>
+                ) : null}
+                {profile.responseTime ? (
+                  <span>
+                    <span className="ms" aria-hidden="true">
+                      schedule
+                    </span>
+                    {RESPONSE_TIME_LABELS[profile.responseTime]}
+                  </span>
+                ) : null}
+                {location ? (
+                  <span>
+                    <span className="ms" aria-hidden="true">
+                      location_on
+                    </span>
+                    {location}
+                  </span>
+                ) : null}
+                {stats.sessionsCompleted > 0 ? (
+                  <span className="num">
+                    <span className="ms" aria-hidden="true">
+                      task_alt
+                    </span>
+                    {stats.sessionsCompleted} {stats.sessionsCompleted === 1 ? "session" : "sessions"} completed
+                  </span>
+                ) : null}
+                {profile.linkedinUrl ? (
+                  <a href={profile.linkedinUrl} target="_blank" rel="noopener noreferrer nofollow">
+                    LinkedIn
+                    <span className="ms ao" aria-hidden="true">
+                      arrow_outward
+                    </span>
+                    <span className="sr">(opens in a new tab)</span>
+                  </a>
                 ) : null}
               </div>
             </div>
-
-            <div className="detail-perks-bar">
-              {profile.onlineEnabled ? (
-                <div className="detail-perk-item">
-                  <svg
-                    className="h-4 w-4 flex-shrink-0 text-indigo-600"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <polygon points="23 7 16 12 23 17 23 7" />
-                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-                  </svg>
-                  <span>Online sessions</span>
-                </div>
-              ) : null}
-              {profile.inPersonEnabled ? (
-                <div className="detail-perk-item">
-                  <svg
-                    className="h-4 w-4 flex-shrink-0 text-emerald-600"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
-                    <circle cx="12" cy="10" r="3" />
-                  </svg>
-                  <span>In-person sessions</span>
-                </div>
-              ) : null}
-              {location ? (
-                <div className="detail-perk-item">
-                  <span>{location}</span>
-                </div>
-              ) : null}
-              {profile.yearsExperienceLabel ? (
-                <div className="detail-perk-item">
-                  <span>{profile.yearsExperienceLabel} experience</span>
-                </div>
-              ) : null}
-              {profile.linkedinUrl ? (
-                <a
-                  href={profile.linkedinUrl}
-                  target="_blank"
-                  rel="noopener noreferrer nofollow"
-                  className="detail-perk-item text-[#2563eb] hover:underline"
-                >
-                  LinkedIn ↗<span className="sr-only">(opens in a new tab)</span>
-                </a>
-              ) : null}
-            </div>
           </div>
 
-          <SectionCard title={`About ${profile.fullName}`} body={profile.shortBio} />
-          <SectionCard title="Expertise" body={profile.expertiseSummary} />
-          <SectionCard title="What I can help you with" body={profile.problemsHelpWith} />
-          <SectionCard title="Who I help" body={profile.whoIHelp} />
-          <SectionCard title="Career highlights" body={profile.careerHighlights} />
+          {profile.shortBio || profile.whoIHelp ? (
+            <section className="psec">
+              <h2 className="h3">About</h2>
+              {profile.shortBio ? <p>{profile.shortBio}</p> : null}
+              {profile.whoIHelp ? <p>{profile.whoIHelp}</p> : null}
+            </section>
+          ) : null}
+
+          {profile.categoryNames.length > 0 || profile.problemsHelpWith ? (
+            <section className="psec">
+              <h2 className="h3">Ask {firstName} about</h2>
+              {profile.categoryNames.length > 0 ? (
+                <ul className="tags">
+                  {profile.categoryNames.map((name) => (
+                    <li key={name} className="tag">
+                      {name}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {profile.problemsHelpWith ? <p>{profile.problemsHelpWith}</p> : null}
+            </section>
+          ) : null}
+
+          {profile.expertiseSummary ? (
+            <section className="psec">
+              <h2 className="h3">Expertise</h2>
+              <p>{profile.expertiseSummary}</p>
+            </section>
+          ) : null}
+
+          {profile.experience.length > 0 || profile.careerHighlights ? (
+            <section className="psec" style={{ gap: 8 }}>
+              <h2 className="h3" style={{ marginBlockEnd: 8 }}>
+                Experience
+              </h2>
+              {profile.experience.map((entry, index) => (
+                <div key={`${entry.startYear}-${index}`} className="xp-row">
+                  <span className="yrs">
+                    {entry.startYear} – {entry.endYear ?? "now"}
+                  </span>
+                  <div className="what">
+                    <span style={{ fontWeight: 500 }}>{entry.title}</span>
+                    {entry.organization ? (
+                      <span className="muted" style={{ fontSize: 15 }}>
+                        {entry.organization}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+              {profile.careerHighlights ? (
+                <p style={{ paddingBlockStart: profile.experience.length > 0 ? 16 : 0 }}>{profile.careerHighlights}</p>
+              ) : null}
+            </section>
+          ) : null}
+
+          {profile.reviews.length > 0 ? (
+            <section className="psec" style={{ gap: 24 }}>
+              <div className="stack" style={{ gap: 8 }}>
+                <h2 className="h3">After the session</h2>
+                {stats.ratingAvg != null ? (
+                  <span className="muted num" style={{ fontSize: 15 }}>
+                    {stats.ratingAvg.toFixed(1)} out of 5 from {stats.reviewCount}{" "}
+                    {stats.reviewCount === 1 ? "review" : "reviews"}
+                  </span>
+                ) : null}
+              </div>
+              <div className="reviews">
+                {profile.reviews.map((review) => (
+                  <ReviewCard key={`${review.createdAt}-${review.reviewerName}`} review={review} />
+                ))}
+              </div>
+            </section>
+          ) : null}
         </div>
 
-        <aside className="detail-right-col" id="booking-card">
-          {railAuth ? (
-            <BookingRail
-              expertSlug={profile.slug}
-              expertName={profile.fullName}
-              sessionOfferings={profile.sessionOfferings}
-              onlineEnabled={profile.onlineEnabled}
-              inPersonEnabled={profile.inPersonEnabled}
-              isLoggedIn={railAuth.isLoggedIn}
-              profileComplete={railAuth.profileComplete}
-              customerProfile={railAuth.customerProfile}
-              industries={railAuth.industries}
-              snapshot={railSnapshot ?? null}
-            />
-          ) : (
-            <StaticSessionOptions profile={profile} />
-          )}
-
-          {railAuth ? (
-            <div className="widget-guarantees-footer hidden lg:block">
-              <div className="widget-guarantee-line">
-                <svg
-                  className="h-4 w-4 flex-shrink-0 text-blue-600"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                  <polyline points="9 12 11 14 15 10" />
-                </svg>
-                <span>Payment is verified before your session is confirmed.</span>
-              </div>
-              <div className="widget-guarantee-line">
-                <svg
-                  className="h-4 w-4 flex-shrink-0 text-[#6a6871]"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <polyline points="23 4 23 10 17 10" />
-                  <polyline points="1 20 1 14 7 14" />
-                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                </svg>
-                <span>Request a reschedule or cancellation from your dashboard.</span>
-              </div>
-              <div className="widget-guarantee-line">
-                <svg
-                  className="h-4 w-4 flex-shrink-0 text-indigo-600"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                  <line x1="16" y1="2" x2="16" y2="6" />
-                  <line x1="8" y1="2" x2="8" y2="6" />
-                  <line x1="3" y1="10" x2="21" y2="10" />
-                </svg>
-                <span>Confirmation and session details are sent by email.</span>
-              </div>
-            </div>
-          ) : null}
-        </aside>
+        {railAuth ? (
+          <BookingRail
+            expertSlug={profile.slug}
+            expertName={profile.fullName}
+            sessionOfferings={profile.sessionOfferings}
+            onlineEnabled={profile.onlineEnabled}
+            inPersonEnabled={profile.inPersonEnabled}
+            isLoggedIn={railAuth.isLoggedIn}
+            profileComplete={railAuth.profileComplete}
+            customerProfile={railAuth.customerProfile}
+            industries={railAuth.industries}
+            snapshot={railSnapshot ?? null}
+          />
+        ) : (
+          <StaticSessionOptions profile={profile} />
+        )}
       </div>
     </div>
   );

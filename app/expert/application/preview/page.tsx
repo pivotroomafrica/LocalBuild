@@ -61,7 +61,7 @@ export default async function ExpertApplicationPreviewPage() {
       </div>
       {/* Break out of the narrow workspace column so the preview renders at
        * the same width as the real public profile page. */}
-      <div className="relative left-1/2 w-screen max-w-[1320px] -translate-x-1/2">
+      <div className="pr relative left-1/2 w-screen max-w-[1440px] -translate-x-1/2">
         <ExpertDetailView profile={profile} />
       </div>
     </div>

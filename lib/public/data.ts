@@ -37,7 +37,69 @@ export type PublicProfileData = {
   inPersonEnabled: boolean;
   /** price is the VAT-inclusive amount the customer pays. */
   sessionOfferings: { durationMinutes: number; price: number; currency: string }[];
+  languages: string[];
+  responseTime: ExpertResponseTime | null;
+  experience: ExperienceEntry[];
+  stats: ExpertPublicStats;
+  reviews: PublicReview[];
 };
+
+export type ExpertResponseTime = "few_hours" | "one_day" | "two_days";
+
+export const RESPONSE_TIME_LABELS: Record<ExpertResponseTime, string> = {
+  few_hours: "Replies within a few hours",
+  one_day: "Replies within a day",
+  two_days: "Replies within two days",
+};
+
+/** One line of the dated experience timeline (end_year null = "now"). */
+export type ExperienceEntry = {
+  startYear: number;
+  endYear: number | null;
+  title: string;
+  organization: string;
+};
+
+/** Real activity: paid sessions whose time has passed, visible reviews,
+ * and the "Top expert" badge rule from migration 049c. */
+export type ExpertPublicStats = {
+  sessionsCompleted: number;
+  reviewCount: number;
+  ratingAvg: number | null;
+  isTopExpert: boolean;
+};
+
+export type PublicReview = {
+  rating: number;
+  body: string;
+  reviewerName: string;
+  durationMinutes: number;
+  createdAt: string;
+};
+
+const EMPTY_STATS: ExpertPublicStats = { sessionsCompleted: 0, reviewCount: 0, ratingAvg: null, isTopExpert: false };
+
+function toResponseTime(value: string | null | undefined): ExpertResponseTime | null {
+  return value === "few_hours" || value === "one_day" || value === "two_days" ? value : null;
+}
+
+/** Defensive parse of expert_profiles.experience (jsonb): keeps only
+ * well-formed entries, newest first. */
+export function parseExperience(value: unknown): ExperienceEntry[] {
+  if (!Array.isArray(value)) return [];
+  const entries: ExperienceEntry[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as Record<string, unknown>;
+    const startYear = Number(row.start_year);
+    const endYear = row.end_year == null ? null : Number(row.end_year);
+    const title = typeof row.title === "string" ? row.title.trim() : "";
+    const organization = typeof row.organization === "string" ? row.organization.trim() : "";
+    if (!Number.isInteger(startYear) || (endYear !== null && !Number.isInteger(endYear)) || !title) continue;
+    entries.push({ startYear, endYear, title, organization });
+  }
+  return entries.sort((a, b) => (b.endYear ?? 9999) - (a.endYear ?? 9999) || b.startYear - a.startYear);
+}
 
 export type PublicDirectoryCard = {
   slug: string;
@@ -48,8 +110,12 @@ export type PublicDirectoryCard = {
   photoUrl: string | null;
   categoryNames: string[];
   startingPrice: number | null;
+  /** Length of the session the starting price is for. */
+  startingDurationMinutes: number | null;
   onlineEnabled: boolean;
   inPersonEnabled: boolean;
+  languages: string[];
+  stats: ExpertPublicStats;
 };
 
 /**
@@ -86,10 +152,10 @@ export async function fetchPublicExpertDirectory(supabase: TypedClient): Promise
   // GET (the function is STABLE/read-only) so supabase-js retries it on a
   // dropped connection -- it only auto-retries GET/HEAD/OPTIONS requests.
   const [{ data, error }, pricing] = await Promise.all([
-    supabase.rpc("get_expert_directory_public", undefined, { get: true }),
+    supabase.rpc("get_expert_directory_public_v2", undefined, { get: true }),
     fetchPlatformPricing(supabase),
   ]);
-  if (error) throw new Error(`failed to load get_expert_directory_public: ${describeSupabaseError(error)}`);
+  if (error) throw new Error(`failed to load get_expert_directory_public_v2: ${describeSupabaseError(error)}`);
 
   const rows = data ?? [];
   const photoUrls = await getExpertPhotoUrls(
@@ -107,8 +173,16 @@ export async function fetchPublicExpertDirectory(supabase: TypedClient): Promise
     categoryNames: row.category_names ?? [],
     // Shown VAT-inclusive: the customer-facing price (V2 pricing rules).
     startingPrice: row.starting_price == null ? null : customerPrice(Number(row.starting_price), pricing.vatRate),
+    startingDurationMinutes: row.starting_duration_minutes ?? null,
     onlineEnabled: row.online_enabled ?? false,
     inPersonEnabled: row.in_person_enabled ?? false,
+    languages: row.languages ?? [],
+    stats: {
+      sessionsCompleted: row.sessions_completed ?? 0,
+      reviewCount: row.review_count ?? 0,
+      ratingAvg: row.rating_avg == null ? null : Number(row.rating_avg),
+      isTopExpert: row.is_top_expert ?? false,
+    },
   }));
 }
 
@@ -123,15 +197,24 @@ export async function fetchPublicExpertDirectory(supabase: TypedClient): Promise
  * A database/network failure throws instead (it runs inside the shared
  * cache, and a failure must never be cached as "not found"). */
 export async function fetchPublicExpertProfile(supabase: TypedClient, slug: string): Promise<PublicProfileData | null> {
-  const [{ data: profile, error }, { data: sessionTypes, error: sessionError }, pricing] = await Promise.all([
-    supabase.rpc("get_expert_profile_public", { p_slug: slug }, { get: true }).maybeSingle(),
+  const [
+    { data: profile, error },
+    { data: sessionTypes, error: sessionError },
+    { data: reviews, error: reviewsError },
+    pricing,
+  ] = await Promise.all([
+    supabase.rpc("get_expert_profile_public_v2", { p_slug: slug }, { get: true }).maybeSingle(),
     supabase.rpc("get_expert_session_types_public", { p_slug: slug }, { get: true }),
+    supabase.rpc("get_expert_reviews_public", { p_slug: slug }, { get: true }),
     fetchPlatformPricing(supabase),
   ]);
-  if (error) throw new Error(`failed to load get_expert_profile_public: ${describeSupabaseError(error)}`);
+  if (error) throw new Error(`failed to load get_expert_profile_public_v2: ${describeSupabaseError(error)}`);
   if (!profile) return null;
   if (sessionError) {
     throw new Error(`failed to load get_expert_session_types_public: ${describeSupabaseError(sessionError)}`);
+  }
+  if (reviewsError) {
+    throw new Error(`failed to load get_expert_reviews_public: ${describeSupabaseError(reviewsError)}`);
   }
 
   const [photoUrl] = await getExpertPhotoUrls(supabase, [profile.profile_image_path]);
@@ -161,6 +244,22 @@ export async function fetchPublicExpertProfile(supabase: TypedClient, slug: stri
       durationMinutes: s.duration_minutes!,
       price: customerPrice(Number(s.base_price), pricing.vatRate),
       currency: s.currency ?? "ETB",
+    })),
+    languages: profile.languages ?? [],
+    responseTime: toResponseTime(profile.response_time),
+    experience: parseExperience(profile.experience),
+    stats: {
+      sessionsCompleted: profile.sessions_completed ?? 0,
+      reviewCount: profile.review_count ?? 0,
+      ratingAvg: profile.rating_avg == null ? null : Number(profile.rating_avg),
+      isTopExpert: profile.is_top_expert ?? false,
+    },
+    reviews: (reviews ?? []).map((review) => ({
+      rating: review.rating,
+      body: review.body,
+      reviewerName: review.reviewer_name,
+      durationMinutes: review.duration_minutes,
+      createdAt: review.created_at,
     })),
   };
 }
@@ -213,5 +312,11 @@ export async function toPreviewProfileData(
         price: customerPrice(Number(o.base_price), pricing.vatRate),
         currency: o.currency,
       })),
+    languages: expertProfile.languages ?? [],
+    responseTime: toResponseTime(expertProfile.response_time),
+    experience: parseExperience(expertProfile.experience),
+    // A preview has no public activity yet.
+    stats: EMPTY_STATS,
+    reviews: [],
   };
 }

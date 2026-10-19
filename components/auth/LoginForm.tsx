@@ -47,8 +47,8 @@ export function LoginForm() {
         </Link>
       </div>
 
-      <Button type="submit" isLoading={isPending} loadingText="Logging in...">
-        Log In
+      <Button type="submit" isLoading={isPending} loadingText="Signing in…">
+        Sign in
       </Button>
 
       <p className="text-center text-sm text-[var(--color-text-muted)]">

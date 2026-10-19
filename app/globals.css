@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 /*
- * App-wide tokens, aligned with the intro design (warm beige canvas, white
- * cards, ink text, one verified-blue accent). Every shared component reads
+ * App-wide tokens from the Pivotroom website design (white canvas, mist
+ * panels, ink text, one blue accent). Every shared component reads
  * these names (--color-bg / --color-surface / --color-border / --color-text
  * / --color-text-muted / --color-brand / --color-danger / --color-success),
  * so changing values here re-themes the dashboards, admin and auth screens
@@ -13,31 +13,31 @@
 :root {
   /* Neutrals */
   --color-white: #ffffff;
-  --color-mist: #f3efe6;
-  --color-line: #ece7de;
-  --color-slate: #64616c;
-  --color-slate-dark: #95929e;
+  --color-mist: #f4f5f7;
+  --color-line: #e4e6e9;
+  --color-slate: #5c616a;
+  --color-slate-dark: #9ba1aa;
   --color-line-dark: rgba(255, 255, 255, 0.1);
-  --color-ink-soft: #1c1b22;
-  --color-ink: #121116;
+  --color-ink-soft: #262a31;
+  --color-ink: #0d0f12;
 
   /* Accent -- verified blue */
-  --color-accent: #2563eb;
-  --color-accent-press: #1d4ed8;
-  --color-accent-tint: #eef3fe;
-  --color-accent-on-ink: #93b4f8;
+  --color-accent: #2b4fe0;
+  --color-accent-press: #1f3bae;
+  --color-accent-tint: #ebeffd;
+  --color-accent-on-ink: #7a94f0;
 
   /* Surfaces / text */
-  --color-bg: #fbf9f5;
+  --color-bg: #ffffff;
   --color-surface: var(--color-white);
   --color-border: var(--color-line);
-  --color-border-hover: #d5cebf;
-  --color-text: #141318;
+  --color-border-hover: #9ba1aa;
+  --color-text: #0d0f12;
   --color-text-muted: var(--color-slate);
 
   /* Primary CTA: ink pill, white on dark grounds (.on-ink). */
-  --color-brand: #1a1921;
-  --color-brand-hover: #2c2b33;
+  --color-brand: #0d0f12;
+  --color-brand-hover: #24272c;
   --color-on-brand: #ffffff;
 
   /* Status */
@@ -57,7 +57,7 @@
   --shadow-card: 0 2px 8px rgba(20, 19, 24, 0.04), 0 1px 2px rgba(20, 19, 24, 0.02);
   --shadow-raised: 0 20px 40px -8px rgba(20, 19, 24, 0.09), 0 4px 12px -2px rgba(20, 19, 24, 0.04);
 
-  --ease-brand: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-brand: cubic-bezier(0.22, 1, 0.36, 1);
   --duration-fast: 160ms;
   --duration-base: 220ms;
 
@@ -92,9 +92,9 @@
   --color-accent-tint: var(--color-accent-tint);
   --color-accent-on-ink: var(--color-accent-on-ink);
 
-  --font-sans: var(--font-jakarta);
-  --font-display: var(--font-jakarta);
-  --font-serif: var(--font-newsreader);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-satoshi);
+  --font-ethiopic: var(--font-noto-ethiopic);
   --font-wordmark: var(--font-satoshi);
   --font-icon: var(--font-material-symbols);
 }
@@ -132,7 +132,7 @@ body {
   --color-border: var(--color-line-dark);
   --color-surface: var(--color-ink-soft);
   --color-brand: #ffffff;
-  --color-brand-hover: #f3efe6;
+  --color-brand-hover: #e9eaed;
   --color-on-brand: var(--color-ink);
 }
 .on-ink a:not(.pv-btn) {

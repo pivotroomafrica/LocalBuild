@@ -1,44 +1,76 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { PublicDirectoryCard } from "@/lib/public/data";
-import { ExpertPhoto } from "@/components/site/ExpertPhoto";
-import { CategoryIcon, SearchIcon, VerifiedIcon } from "@/components/site/icons";
-import { formatEtb, matchesName, summaryLine } from "@/components/site/format";
+import { ExpertCard } from "@/components/site/ExpertCard";
 
-type SortKey = "featured" | "price-low" | "price-high" | "name-az";
-type PriceFilter = "all" | "under-2500" | "2500-4000" | "over-4000";
-type ViewMode = "grid" | "list";
+type SortKey = "best" | "price-low" | "price-high";
+type PriceFilter = "any" | "under-5000" | "5000-15000" | "over-15000";
+type FormatFilter = "any" | "online" | "in_person";
+
+const PAGE_SIZE = 20;
+
+const PRICE_LABELS: Record<PriceFilter, string> = {
+  any: "any",
+  "under-5000": "under ETB 5,000",
+  "5000-15000": "ETB 5,000–15,000",
+  "over-15000": "over ETB 15,000",
+};
 
 function withinPrice(price: number | null, filter: PriceFilter) {
-  if (filter === "all") return true;
+  if (filter === "any") return true;
   if (price == null) return false;
-  if (filter === "under-2500") return price <= 2500;
-  if (filter === "2500-4000") return price >= 2500 && price <= 4000;
-  return price > 4000;
+  if (filter === "under-5000") return price < 5000;
+  if (filter === "5000-15000") return price >= 5000 && price <= 15000;
+  return price > 15000;
 }
 
-function PriceStack({ expert, unit }: { expert: PublicDirectoryCard; unit: string }) {
-  if (expert.startingPrice == null) return <span />;
+function matchesText(expert: PublicDirectoryCard, query: string) {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  return [expert.fullName, expert.headline, expert.currentPosition, expert.currentCompany, ...expert.categoryNames]
+    .filter(Boolean)
+    .some((value) => value!.toLowerCase().includes(needle));
+}
+
+/** A text-styled native <select> ("Format: any ▾"), so it stays accessible
+ * and works on every phone without a custom popup. */
+function InlineSelect<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (value: T) => void;
+}) {
+  const current = options.find((option) => option.value === value)?.label ?? "";
   return (
-    // ETB prices are much longer than intro's "$500", so stack the unit
-    // under the price instead of beside it (inline style: the scoped theme
-    // CSS is unlayered and would beat Tailwind utilities).
-    <div className="expert-dir-price-stack" style={{ flexDirection: "column", alignItems: "flex-start", gap: 0 }}>
-      <span className="expert-dir-price whitespace-nowrap">From {formatEtb(expert.startingPrice)}</span>
-      <span className="expert-dir-session">{unit}</span>
-    </div>
+    <label className="inline-select">
+      <span aria-hidden="true">
+        {label}: {current}
+      </span>
+      <span className="ms" aria-hidden="true">
+        arrow_drop_down
+      </span>
+      <select aria-label={label} value={value} onChange={(event) => onChange(event.target.value as T)}>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
 /**
- * /experts (intro design). Real published experts and the real category
- * taxonomy (categories drive the filter strip only -- cards don't show
- * category chips, so the photo gets the space); `q` / `category` arrive pre-seeded from the URL so the header
- * search and footer links still land on a filtered view. "Book Now" opens the
- * real profile, where the booking rail checks live availability -- there is
- * no separate quick-book form here.
+ * /experts (website design). The real published directory, already ranked
+ * by activity (049c); category, format and price filters run in the
+ * browser. "Match me" hands the description to /match.
  */
 export function ExpertsDirectoryClient({
   experts,
@@ -51,249 +83,180 @@ export function ExpertsDirectoryClient({
   initialQuery: string;
   initialCategory: string | null;
 }) {
-  const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const router = useRouter();
+  const [problem, setProblem] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [category, setCategory] = useState<string | null>(
     initialCategory && categories.includes(initialCategory) ? initialCategory : null,
   );
-  const [priceFilter, setPriceFilter] = useState<PriceFilter>("all");
-  const [sortBy, setSortBy] = useState<SortKey>("featured");
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [format, setFormat] = useState<FormatFilter>("any");
+  const [price, setPrice] = useState<PriceFilter>("any");
+  const [sort, setSort] = useState<SortKey>("best");
+  const [shown, setShown] = useState(PAGE_SIZE);
 
-  const filtered = useMemo(() => {
+  const results = useMemo(() => {
     const list = experts.filter(
       (expert) =>
+        matchesText(expert, query) &&
         (!category || expert.categoryNames.includes(category)) &&
-        matchesName(expert, searchQuery) &&
-        withinPrice(expert.startingPrice, priceFilter),
+        (format === "any" || (format === "online" ? expert.onlineEnabled : expert.inPersonEnabled)) &&
+        withinPrice(expert.startingPrice, price),
     );
-    if (sortBy === "price-low") return [...list].sort((a, b) => (a.startingPrice ?? 0) - (b.startingPrice ?? 0));
-    if (sortBy === "price-high") return [...list].sort((a, b) => (b.startingPrice ?? 0) - (a.startingPrice ?? 0));
-    if (sortBy === "name-az") return [...list].sort((a, b) => a.fullName.localeCompare(b.fullName));
-    return list;
-  }, [experts, category, searchQuery, priceFilter, sortBy]);
+    if (sort === "best") return list;
+    const direction = sort === "price-low" ? 1 : -1;
+    return [...list].sort(
+      (a, b) => direction * ((a.startingPrice ?? Infinity) - (b.startingPrice ?? Infinity)) || a.fullName.localeCompare(b.fullName),
+    );
+  }, [experts, query, category, format, price, sort]);
 
-  const isFiltering = searchQuery.trim() !== "" || category !== null || priceFilter !== "all" || sortBy !== "featured";
-
-  function resetFilters() {
-    setSearchQuery("");
-    setCategory(null);
-    setPriceFilter("all");
-    setSortBy("featured");
+  function submitMatch(event: React.FormEvent) {
+    event.preventDefault();
+    const text = problem.trim();
+    if (!text) {
+      document.getElementById("q")?.focus();
+      return;
+    }
+    router.push(`/match?problem=${encodeURIComponent(text)}`);
   }
 
-  return (
-    <div className="experts-directory-main">
-      <section className="experts-page-hero">
-        <div className="experts-hero-inner">
-          {experts.length > 0 ? (
-            <div className="experts-hero-tag">
-              <span>✦</span> {experts.length} VETTED {experts.length === 1 ? "EXPERT" : "EXPERTS"}
-            </div>
-          ) : null}
-          <h1 className="experts-hero-title">Browse &amp; Book Experienced Experts</h1>
-          <p className="experts-hero-subtitle">
-            Book private 1-on-1 sessions with founders, executives and operators who&apos;ve been where you&apos;re
-            trying to go.
-          </p>
+  function pickCategory(name: string | null) {
+    setCategory(name);
+    setShown(PAGE_SIZE);
+  }
 
-          <div className="experts-search-bar-wrap">
-            <SearchIcon className="search-bar-icon" width={20} height={20} />
-            <input
-              type="text"
-              placeholder="Search experts by name..."
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              className="experts-search-input"
-            />
-            {searchQuery ? (
-              <button type="button" onClick={() => setSearchQuery("")} className="experts-search-clear">
-                ✕ Clear
-              </button>
-            ) : null}
+  const countLabel =
+    `${results.length} ${results.length === 1 ? "expert" : "experts"}` + (category ? ` in ${category.toLowerCase()}` : "");
+
+  return (
+    <>
+      <section style={{ background: "#f4f5f7" }}>
+        <div className="wrap stack" style={{ paddingBlock: "72px 56px", gap: 32 }}>
+          <div className="stack" style={{ gap: 12 }}>
+            <h1 className="h1">Find an expert</h1>
+            <p className="lede">
+              Describe what you&apos;re facing and we&apos;ll rank experts by how close their experience is. Or filter
+              the list yourself.
+            </p>
           </div>
-          <p className="mt-3 text-sm text-[#6a6871]">
-            Not sure who you need?{" "}
-            <Link href="/match" className="font-semibold text-[var(--color-accent)] hover:underline">
-              Describe your problem and get matched
-            </Link>
-          </p>
+          <form className="matchbar" onSubmit={submitMatch}>
+            <label htmlFor="q" className="sr">
+              Describe your problem
+            </label>
+            <div className="box">
+              <span className="ms" aria-hidden="true">
+                search
+              </span>
+              <input
+                id="q"
+                type="text"
+                maxLength={1000}
+                value={problem}
+                onChange={(event) => setProblem(event.target.value)}
+                placeholder="e.g. Expanding a restaurant to a second branch"
+              />
+            </div>
+            <button type="submit" className="btn btn-ink lg" style={{ height: 56 }}>
+              Match me{" "}
+              <span className="ms af" aria-hidden="true">
+                arrow_forward
+              </span>
+            </button>
+          </form>
         </div>
       </section>
 
-      {categories.length > 0 ? (
-        <div className="experts-categories-strip">
-          <div className="experts-categories-wrap">
-            {[null, ...categories].map((name) => (
-              <button
-                key={name ?? "all"}
-                type="button"
-                onClick={() => setCategory(name)}
-                className={`experts-cat-pill ${category === name ? "active" : ""}`}
-              >
-                <span className="cat-pill-icon">
-                  <CategoryIcon name={name} className="cat-pill-svg h-[15px] w-[15px]" />
-                </span>
-                <span>{name ?? "All Experts"}</span>
+      <section id="results" style={{ background: "#ffffff" }}>
+        <div className="wrap stack" style={{ paddingBlock: "40px 128px", gap: 32 }}>
+          {categories.length > 0 ? (
+            <div className="scroller" role="group" aria-label="Filter by topic">
+              {[null, ...categories].map((name) => (
+                <button
+                  key={name ?? "all"}
+                  type="button"
+                  className="chip"
+                  aria-pressed={category === name}
+                  onClick={() => pickCategory(name)}
+                >
+                  {name ?? "All"}
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          <div className="filterbar">
+            <span className="muted num" style={{ fontSize: 15 }}>
+              {countLabel}
+              {query ? (
+                <>
+                  {" "}
+                  matching &ldquo;{query}&rdquo; ·{" "}
+                  <button type="button" className="textbtn" onClick={() => setQuery("")}>
+                    Clear
+                  </button>
+                </>
+              ) : null}
+            </span>
+            <div className="selects">
+              <InlineSelect
+                label="Format"
+                value={format}
+                onChange={setFormat}
+                options={[
+                  { value: "any", label: "any" },
+                  { value: "online", label: "Google Meet" },
+                  { value: "in_person", label: "In person" },
+                ]}
+              />
+              <InlineSelect
+                label="Price"
+                value={price}
+                onChange={setPrice}
+                options={(Object.keys(PRICE_LABELS) as PriceFilter[]).map((key) => ({
+                  value: key,
+                  label: PRICE_LABELS[key],
+                }))}
+              />
+              <InlineSelect
+                label="Sort"
+                value={sort}
+                onChange={setSort}
+                options={[
+                  { value: "best", label: "best match" },
+                  { value: "price-low", label: "price, low to high" },
+                  { value: "price-high", label: "price, high to low" },
+                ]}
+              />
+            </div>
+          </div>
+
+          {results.length > 0 ? (
+            <div className="xgrid">
+              {results.slice(0, shown).map((expert) => (
+                <ExpertCard key={expert.slug} expert={expert} showFormat />
+              ))}
+            </div>
+          ) : (
+            <div className="stack" style={{ gap: 8, alignItems: "center", paddingBlock: 48, textAlign: "center" }}>
+              <span className="d" style={{ fontSize: 22 }}>
+                {experts.length === 0 ? "We're adding experts now" : "No experts match these filters"}
+              </span>
+              <span className="muted">
+                {experts.length === 0
+                  ? "The first vetted experts are being onboarded. Check back soon."
+                  : "Try another topic, or describe your problem above and we'll match you."}
+              </span>
+            </div>
+          )}
+
+          {results.length > shown ? (
+            <div style={{ display: "flex", justifyContent: "center", paddingBlockStart: 24 }}>
+              <button type="button" className="btn btn-line md even" onClick={() => setShown((n) => n + PAGE_SIZE)}>
+                Show more experts
               </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      <div className="experts-toolbar-bar">
-        <div className="experts-count-meta">
-          <span className="experts-count-number">{filtered.length}</span>
-          <span className="experts-count-label">
-            {filtered.length === 1 ? "Expert" : "Experts"} available to book · prices incl. VAT
-          </span>
-          {isFiltering ? (
-            <button type="button" onClick={resetFilters} className="reset-filters-pill-btn">
-              Reset Filters ✕
-            </button>
+            </div>
           ) : null}
         </div>
-
-        <div className="experts-toolbar-controls">
-          <div className="filter-select-wrap">
-            <label htmlFor="price-filter" className="filter-select-label">
-              Price:
-            </label>
-            <select
-              id="price-filter"
-              value={priceFilter}
-              onChange={(event) => setPriceFilter(event.target.value as PriceFilter)}
-              className="toolbar-select-dropdown"
-            >
-              <option value="all">All Rates</option>
-              <option value="under-2500">Under 2,500 ETB</option>
-              <option value="2500-4000">2,500 – 4,000 ETB</option>
-              <option value="over-4000">4,000+ ETB</option>
-            </select>
-          </div>
-
-          <div className="filter-select-wrap">
-            <label htmlFor="sort-filter" className="filter-select-label">
-              Sort:
-            </label>
-            <select
-              id="sort-filter"
-              value={sortBy}
-              onChange={(event) => setSortBy(event.target.value as SortKey)}
-              className="toolbar-select-dropdown"
-            >
-              <option value="featured">Featured First</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-              <option value="name-az">Name: A to Z</option>
-            </select>
-          </div>
-
-          <div className="view-mode-toggle">
-            <button
-              type="button"
-              onClick={() => setViewMode("grid")}
-              className={`view-mode-btn ${viewMode === "grid" ? "active" : ""}`}
-              aria-label="Grid view"
-              aria-pressed={viewMode === "grid"}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
-                <rect x="3" y="3" width="7" height="7" />
-                <rect x="14" y="3" width="7" height="7" />
-                <rect x="14" y="14" width="7" height="7" />
-                <rect x="3" y="14" width="7" height="7" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("list")}
-              className={`view-mode-btn ${viewMode === "list" ? "active" : ""}`}
-              aria-label="List view"
-              aria-pressed={viewMode === "list"}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
-                <line x1="8" y1="6" x2="21" y2="6" />
-                <line x1="8" y1="12" x2="21" y2="12" />
-                <line x1="8" y1="18" x2="21" y2="18" />
-                <line x1="3" y1="6" x2="3.01" y2="6" />
-                <line x1="3" y1="12" x2="3.01" y2="12" />
-                <line x1="3" y1="18" x2="3.01" y2="18" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {filtered.length === 0 ? (
-        <div className="experts-empty-state">
-          <div className="empty-icon flex items-center justify-center">
-            <SearchIcon width={44} height={44} className="text-gray-400" />
-          </div>
-          <h3 className="empty-title">{experts.length === 0 ? "No experts on Pivotroom yet" : "No experts match your filters"}</h3>
-          <p className="empty-sub">
-            {experts.length === 0
-              ? "We're adding people. Check back soon."
-              : "Try a different name, choose “All Experts”, or reset your filters."}
-          </p>
-          {experts.length > 0 ? (
-            <button type="button" onClick={resetFilters} className="empty-reset-cta">
-              Reset All Filters
-            </button>
-          ) : null}
-        </div>
-      ) : viewMode === "grid" ? (
-        <div className="experts-grid-layout">
-          {filtered.map((expert) => (
-            <div key={expert.slug} className="expert-dir-card">
-              <Link href={`/experts/${expert.slug}`} className="expert-card-top-link">
-                <div className="expert-dir-img-wrap">
-                  <ExpertPhoto photoUrl={expert.photoUrl} fullName={expert.fullName} className="expert-dir-img" lazy />
-                </div>
-                <div className="expert-dir-body">
-                  <div className="expert-dir-name-row">
-                    <h3 className="expert-dir-name">{expert.fullName}</h3>
-                    <VerifiedIcon className="expert-dir-check" />
-                  </div>
-                  <p className="expert-dir-headline">{summaryLine(expert)}</p>
-                </div>
-              </Link>
-              <div className="expert-dir-footer">
-                <PriceStack expert={expert} unit="per session" />
-                <Link href={`/experts/${expert.slug}`} className="expert-dir-book-btn whitespace-nowrap">
-                  Book Now
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="experts-list-layout">
-          {filtered.map((expert) => (
-            <div key={expert.slug} className="expert-list-row">
-              <Link href={`/experts/${expert.slug}`} className="expert-list-left-link">
-                <ExpertPhoto photoUrl={expert.photoUrl} fullName={expert.fullName} className="expert-list-avatar" lazy />
-                <div className="expert-list-details">
-                  <div className="expert-list-title-row">
-                    <span className="expert-list-name">{expert.fullName}</span>
-                    <VerifiedIcon className="expert-dir-check" />
-                  </div>
-                  <p className="expert-list-bio">{summaryLine(expert)}</p>
-                </div>
-              </Link>
-              <div className="expert-list-right">
-                {expert.startingPrice != null ? (
-                  <div className="expert-list-price-wrap">
-                    <span className="expert-list-price">From {formatEtb(expert.startingPrice)}</span>
-                    <span className="expert-list-unit">per session</span>
-                  </div>
-                ) : null}
-                <Link href={`/experts/${expert.slug}`} className="expert-dir-book-btn whitespace-nowrap">
-                  Book Now
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+      </section>
+    </>
   );
 }

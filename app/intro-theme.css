@@ -5536,8 +5536,22 @@
 /* Fonts come from next/font in app/layout.tsx. Palette tokens shared with
  * the rest of the app (--color-*) are defined once in app/globals.css. */
 .intro-theme {
-  --font-sans: var(--font-jakarta), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-serif: var(--font-newsreader), Georgia, serif;
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif: var(--font-satoshi), var(--font-inter), sans-serif;
+  /* Website redesign palette (ink, mist, line, blue) for the screens that
+   * still use this stylesheet. */
+  --bg-dark: #0d0f12;
+  --bg-dark-card: #1a1d22;
+  --bg-dark-surface: #262a31;
+  --bg-beige: #ffffff;
+  --bg-beige-tint: #f4f5f7;
+  --bg-beige-darker: #e4e6e9;
+  --text-dark: #0d0f12;
+  --text-muted: #5c616a;
+  --text-light-muted: #9ba1aa;
+  --border-light: #e4e6e9;
+  --border-hover: #9ba1aa;
+  --blue-verified: #2b4fe0;
 }
 
 .intro-theme .detail-right-col {

@@ -1,305 +1,399 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { PublicDirectoryCard } from "@/lib/public/data";
-import { ExpertPhoto } from "@/components/site/ExpertPhoto";
-import { ExpertTile } from "@/components/site/ExpertTile";
-import { CategoryIcon, SearchIcon, VerifiedIcon } from "@/components/site/icons";
-import { formatEtb, matchesName, summaryLine } from "@/components/site/format";
+import { ExpertCard } from "@/components/site/ExpertCard";
 
-type SortKey = "featured" | "price-low" | "price-high";
-
-const HOW_IT_WORKS = [
+const STEPS = [
   {
-    step: "01",
-    title: "Find your expert",
-    description: "Browse vetted founders, executives and operators, and narrow down by the problem you're working on.",
+    n: "01",
+    icon: "edit_note",
+    title: "Describe your problem",
+    body: "A few lines on what you are working on. No account needed to see your matches.",
   },
   {
-    step: "02",
-    title: "Book a 1-on-1 session",
-    description: "Pick a session length the expert offers and reserve a real time straight from their availability.",
+    n: "02",
+    icon: "person",
+    title: "Pick your expert",
+    body: "Read their background, see their price and duration, and choose a time that suits you both.",
   },
   {
-    step: "03",
-    title: "Get personalized advice",
-    description: "Meet online or in person, bring your questions, and leave with clear next steps for your situation.",
+    n: "03",
+    icon: "payments",
+    title: "Pay up front",
+    body: "Pay through Chapa with telebirr, CBE Birr or a bank card. The expert is paid only after the session takes place.",
+  },
+  {
+    n: "04",
+    icon: "videocam",
+    title: "Meet",
+    body: "On Google Meet or in person, your choice. Your full session, undivided.",
   },
 ];
 
-function sortExperts(list: PublicDirectoryCard[], sortBy: SortKey) {
-  if (sortBy === "featured") return list;
-  const direction = sortBy === "price-low" ? 1 : -1;
-  return [...list].sort((a, b) => direction * ((a.startingPrice ?? 0) - (b.startingPrice ?? 0)));
+/** What the matcher returns, shown beside the example brief. Describes the
+ * feature instead of showing invented people. */
+const MATCH_OUTPUT = [
+  { icon: "groups", title: "The experts best placed to help", why: "Read against each expert's actual experience" },
+  { icon: "lightbulb", title: "The reason for each one", why: "Why their background fits your situation" },
+  { icon: "payments", title: "Their price before you click", why: "VAT included, no fee until you book" },
+];
+
+/** Founder-type roles, read from the expert's own current position. */
+const FOUNDER_PATTERN = /\b(co-?founder|founder|owner|ceo|managing director)\b/i;
+
+function isFounder(expert: PublicDirectoryCard): boolean {
+  return FOUNDER_PATTERN.test(`${expert.currentPosition ?? ""} ${expert.headline ?? ""}`);
 }
 
-/**
- * Homepage (intro design). Every number and name on it is real: the hero
- * count is the published-expert count, the category bar is the real
- * expert_categories taxonomy, the grid is the published directory, and the
- * search is the same name-only search the header modal uses. Sections that
- * only exist with fabricated data (press logos, testimonials, investors,
- * star ratings, gift cards) are intentionally not rendered.
- */
-export function HomeClient({ experts, categories }: { experts: PublicDirectoryCard[]; categories: string[] }) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [category, setCategory] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<SortKey>("featured");
+type ShelfProps = {
+  id: string;
+  eyebrow: string;
+  title: string;
+  sub: string;
+  link: { href: string; label: string };
+  experts: PublicDirectoryCard[];
+};
 
-  const searchMatches = useMemo(() => experts.filter((expert) => matchesName(expert, searchQuery)), [experts, searchQuery]);
+function Shelf({ id, eyebrow, title, sub, link, experts }: ShelfProps) {
+  const rowRef = useRef<HTMLDivElement>(null);
 
-  const directory = useMemo(
-    () => sortExperts(searchMatches.filter((expert) => !category || expert.categoryNames.includes(category)), sortBy),
-    [searchMatches, category, sortBy],
-  );
-
-  function selectCategory(name: string | null) {
-    setCategory(name);
-    document.getElementById("experts-directory")?.scrollIntoView({ behavior: "smooth" });
+  function slide(direction: 1 | -1) {
+    const row = rowRef.current;
+    if (!row) return;
+    const rtl = getComputedStyle(row).direction === "rtl" ? -1 : 1;
+    row.scrollBy({ left: direction * rtl * row.clientWidth * 0.8 });
   }
 
   return (
-    <>
-      <section className="hero-section">
-        <div className="hero-glow-1" />
-        <div className="hero-glow-2" />
-        <div className="hero-container">
-          {experts.length > 0 ? (
-            <div className="hero-badge-pill">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-              {experts.length} vetted {experts.length === 1 ? "expert" : "experts"} ready for 1-on-1 sessions
-            </div>
+    <div className="shelf">
+      <div className="wrap shelf-head">
+        <div className="txt">
+          <span className="eyebrow">{eyebrow}</span>
+          <h2 id={id}>{title}</h2>
+          <p>{sub}</p>
+        </div>
+        <div className="nav">
+          <Link href={link.href} className="link-arrow" style={{ marginInlineEnd: 12 }}>
+            {link.label}{" "}
+            <span className="ms af" aria-hidden="true">
+              arrow_forward
+            </span>
+          </Link>
+          {experts.length > 2 ? (
+            <>
+              <button type="button" className="rbtn hide-sm" aria-label="Previous" onClick={() => slide(-1)}>
+                <span className="ms flip" aria-hidden="true">
+                  arrow_forward
+                </span>
+              </button>
+              <button type="button" className="rbtn hide-sm" aria-label="Next" onClick={() => slide(1)}>
+                <span className="ms" aria-hidden="true">
+                  arrow_forward
+                </span>
+              </button>
+            </>
           ) : null}
+        </div>
+      </div>
+      <div className="hscroll" ref={rowRef} role="list" aria-labelledby={id}>
+        {experts.map((expert) => (
+          <div role="listitem" key={expert.slug} style={{ display: "contents" }}>
+            <ExpertCard expert={expert} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-          <h1 className="hero-title">Book Africa&apos;s most experienced experts &amp; get advice 1-on-1</h1>
+function QuoteAndWhy() {
+  return (
+    <>
+      <figure className="wrap qgrid">
+        <div className="qphoto">
+          {/* eslint-disable-next-line @next/next/no-img-element -- static image, used with permission. */}
+          <img src="/images/ermyas-amelga.webp" alt="Ermyas Amelga speaking on Meri Podcast" loading="lazy" />
+        </div>
+        <div className="qtext">
+          <blockquote>
+            <p lang="am" className="am">
+              “እዚህ ሀገር የሚገጥሙን ነገሮች ቢዝነስ ቡክ ውስጥ የሉም።”
+            </p>
+            <p className="en">“The things we face in this country aren’t found in any business book.”</p>
+          </blockquote>
+          <figcaption className="stack" style={{ gap: 2 }}>
+            <span className="d" style={{ fontSize: 20, lineHeight: 1.2 }}>
+              Ermyas Amelga
+            </span>
+            <span className="muted" style={{ fontSize: 15 }}>
+              On Meri Podcast
+            </span>
+          </figcaption>
+        </div>
+      </figure>
+      <div className="wrap" style={{ paddingBlockStart: 24 }}>
+        <div className="gapbox">
+          <h3>He is right. That is why Pivotroom exists.</h3>
+          <div className="stack" style={{ gap: 24, minWidth: 0 }}>
+            <p>
+              The answers to Ethiopian business problems are not in a book. They are in the heads of people who have
+              already faced them here: the banker who has financed hundreds of export contracts, the founder who got
+              through customs, forex and licensing and still made a profit. We find those people, check what they
+              have actually done, and put an hour of their time within your reach.
+            </p>
+            <a href="#match" className="btn btn-white md" style={{ alignSelf: "flex-start" }}>
+              <span className="gl">Find someone who has been there</span>
+              <span className="gs">Find my match</span>{" "}
+              <span className="ms af" aria-hidden="true">
+                arrow_forward
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
 
-          <p className="hero-subtitle">
-            Skip months of guesswork. Connect 1-on-1 with founders, executives and operators who&apos;ve already
-            solved the problems you&apos;re facing.
+function MatchSection({ categories }: { categories: string[] }) {
+  const router = useRouter();
+  const [brief, setBrief] = useState("");
+  const [picked, setPicked] = useState<string[]>([]);
+
+  function toggle(topic: string) {
+    setPicked((current) => (current.includes(topic) ? current.filter((t) => t !== topic) : [...current, topic]));
+  }
+
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    const text = brief.trim();
+    const topicLine = picked.length > 0 ? `I need help with: ${picked.join(", ")}.` : "";
+    const problem = [text, topicLine].filter(Boolean).join(" ");
+    if (!problem) {
+      document.getElementById("brief")?.focus();
+      return;
+    }
+    router.push(`/match?problem=${encodeURIComponent(problem)}`);
+  }
+
+  return (
+    <section id="match" style={{ background: "#ffffff" }}>
+      <div className="wrap section stack" style={{ gap: 40 }}>
+        <div className="stack" style={{ gap: 16 }}>
+          <h2 className="h2">
+            Start with what
+            <br />
+            you&apos;re facing
+          </h2>
+          <p className="muted" style={{ margin: 0, maxWidth: "52ch" }}>
+            Describe it in a few lines and we&apos;ll match you with the people who have already solved it. Or start
+            from a topic.
           </p>
-
-          <div className="hero-search-wrapper">
-            <div className="hero-search-box">
-              <SearchIcon className="text-[#8c8996]" />
-              <input
-                type="text"
-                placeholder="Search experts by name..."
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                className="hero-search-input"
+        </div>
+        <div className="matchgrid">
+          <div className="matchcol">
+            <form className="brief" onSubmit={submit}>
+              <label htmlFor="brief" className="sr">
+                What are you working on?
+              </label>
+              <textarea
+                id="brief"
+                rows={4}
+                maxLength={1000}
+                value={brief}
+                onChange={(event) => setBrief(event.target.value)}
+                placeholder="Describe your problem or your plan in a few lines. We read it against each expert's actual experience and show you the people best placed to help, with the reason for each."
               />
-              {searchQuery ? (
-                <button type="button" onClick={() => setSearchQuery("")} className="px-2 text-xs text-gray-400 hover:text-white">
-                  Clear
+              <div className="row">
+                <span>Matched in minutes · No fee until you book</span>
+                <button type="submit" className="btn btn-ink md">
+                  Find my match{" "}
+                  <span className="ms af" aria-hidden="true">
+                    arrow_forward
+                  </span>
                 </button>
-              ) : null}
-              <a href="#experts-directory" className="hero-search-btn-cta">
-                Find an Expert
-              </a>
-            </div>
-
-            {searchQuery.trim() !== "" ? (
-              <div className="hero-suggestions-dropdown luxury-shadow-lg">
-                <div className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-gray-400">
-                  Matching experts ({searchMatches.length})
+              </div>
+            </form>
+            {categories.length > 0 ? (
+              <div className="stack" style={{ gap: 16 }}>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+                  <span className="eyebrow">Or pick the topics you need</span>
+                  <span className="muted num" style={{ fontSize: 14 }}>
+                    {picked.length > 0 ? `${picked.length} selected` : ""}
+                  </span>
                 </div>
-                {searchMatches.slice(0, 5).map((expert) => (
-                  <Link key={expert.slug} href={`/experts/${expert.slug}`} className="suggestion-item">
-                    <ExpertPhoto photoUrl={expert.photoUrl} fullName={expert.fullName} className="suggestion-avatar" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 truncate text-sm font-bold text-white">
-                        {expert.fullName}
-                        <VerifiedIcon className="h-3.5 w-3.5 flex-shrink-0" />
-                      </div>
-                      <div className="truncate text-xs text-gray-400">{summaryLine(expert)}</div>
-                    </div>
-                    {expert.startingPrice != null ? (
-                      <div className="flex-shrink-0 text-right">
-                        <span className="text-xs font-bold text-white">{formatEtb(expert.startingPrice)}</span>
-                        <span className="block text-[11px] text-gray-400">from / session</span>
-                      </div>
-                    ) : null}
-                  </Link>
-                ))}
-                <Link
-                  href={`/experts?q=${encodeURIComponent(searchQuery.trim())}`}
-                  className="mt-1 block border-t border-white/10 py-2 text-center text-xs font-semibold text-gray-400 hover:text-white"
-                >
-                  Search the full directory →
-                </Link>
+                <div className="topics" role="group" aria-label="Topics">
+                  {categories.map((topic) => {
+                    const on = picked.includes(topic);
+                    return (
+                      <button
+                        key={topic}
+                        type="button"
+                        className={on ? "topic on" : "topic"}
+                        aria-pressed={on}
+                        onClick={() => toggle(topic)}
+                      >
+                        {topic}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             ) : null}
           </div>
+          <figure className="exbox">
+            <figcaption>
+              <span className="ms" aria-hidden="true">
+                chat_bubble
+              </span>
+              Example brief
+            </figcaption>
+            <p className="q">
+              &ldquo;We run a 40-seat restaurant in Bole and want to open a second branch. Should we take a bank loan
+              or bring in a partner?&rdquo;
+            </p>
+            <span className="muted" style={{ marginBlockStart: "auto", fontSize: 14 }}>
+              What you get back
+            </span>
+            <div className="stack" style={{ gap: 8 }}>
+              {MATCH_OUTPUT.map((row) => (
+                <div key={row.title} className="exrow">
+                  <span className="av" aria-hidden="true">
+                    <span className="ms" style={{ fontSize: 20 }}>
+                      {row.icon}
+                    </span>
+                  </span>
+                  <span className="tx">
+                    <span className="n">{row.title}</span>
+                    <span className="w">{row.why}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </figure>
+        </div>
+      </div>
+    </section>
+  );
+}
 
-          <div className="hero-ctas">
-            <a href="#experts-directory" className="btn-hero-primary">
-              Browse All Experts
+/**
+ * Home (website design). Every expert shown is a real published profile,
+ * ordered by real activity (049c). The founders/professionals shelves are
+ * split by the expert's own stated role. Shelves with nobody in them are
+ * left out rather than padded.
+ */
+export function HomeClient({ experts, categories }: { experts: PublicDirectoryCard[]; categories: string[] }) {
+  const anyTop = experts.some((expert) => expert.stats.isTopExpert);
+  const founders = experts.filter(isFounder);
+  const professionals = experts.filter((expert) => !isFounder(expert));
+
+  return (
+    <>
+      <section className="hero ink">
+        <div className="in">
+          <span style={{ fontSize: 14, color: "#9ba1aa" }}>Vetted founders, executives and professionals</span>
+          <h1>One hour with someone who has done it.</h1>
+          <p>
+            Tell us what you&apos;re facing. We&apos;ll match you with the person who has already solved it, and you
+            book a paid one-to-one session.
+          </p>
+          <div className="ctas">
+            <a href="#match" className="btn btn-white lg">
+              Find my match{" "}
+              <span className="ms af" aria-hidden="true">
+                arrow_forward
+              </span>
             </a>
-            <Link href="/match" className="btn-hero-secondary">
-              Get matched by AI
+            <Link href="/experts" className="lk link-arrow" style={{ fontWeight: 400 }}>
+              Browse all experts{" "}
+              <span className="ms af" aria-hidden="true">
+                arrow_forward
+              </span>
             </Link>
           </div>
         </div>
       </section>
 
-      <section className="guarantees-section">
-        <div className="guarantees-container">
-          <div className="guarantee-card">
-            <div className="guarantee-icon-wrap">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-              </svg>
-            </div>
-            <h3 className="guarantee-title">Learn from people who&apos;ve done it</h3>
-            <p className="guarantee-desc">
-              Every expert on Pivotroom is reviewed and approved before their profile goes live.
-            </p>
+      {experts.length > 0 ? (
+        <section style={{ background: "#ffffff" }}>
+          <div className="shelves">
+            <Shelf
+              id="shelf-top"
+              eyebrow={anyTop ? "Top experts" : "Our experts"}
+              title="The people worth an hour of your time."
+              sub="Ranked by sessions completed and by what clients said afterwards. Every one vetted by our team. Every price on the card before you click."
+              link={{ href: "/experts", label: "See all experts" }}
+              experts={experts.slice(0, 12)}
+            />
           </div>
-
-          <div className="guarantee-card">
-            <div className="guarantee-icon-wrap">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M15 10l5 5-5 5" />
-                <path d="M4 4v7a4 4 0 0 0 4 4h12" />
-              </svg>
-            </div>
-            <h3 className="guarantee-title">Personalized advice just for you</h3>
-            <p className="guarantee-desc">
-              Book a focused 1-on-1 session, online or in person, and get guidance for your exact situation.
-            </p>
+        </section>
+      ) : (
+        <section style={{ background: "#ffffff" }}>
+          <div className="wrap section stack" style={{ gap: 12, alignItems: "flex-start" }}>
+            <span className="eyebrow">Our experts</span>
+            <h2 className="h2">We&apos;re adding people now.</h2>
+            <p className="lede">The first vetted experts are being onboarded. Check back soon.</p>
           </div>
+        </section>
+      )}
 
-          <div className="guarantee-card">
-            <div className="guarantee-icon-wrap">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
-            </div>
-            <h3 className="guarantee-title">Book and pay securely</h3>
-            <p className="guarantee-desc">
-              Reserve a real time from the expert&apos;s calendar and pay by Chapa or bank transfer, verified before
-              your session is confirmed.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="category-filter-section">
-        <div className="category-filter-container">
-          <div className="category-pills-list no-scrollbar">
-            {[null, ...categories].map((name) => (
-              <button
-                key={name ?? "all"}
-                type="button"
-                onClick={() => selectCategory(name)}
-                className={`category-pill ${category === name ? "active" : ""}`}
-              >
-                <CategoryIcon name={name} />
-                <span>{name ?? "All"}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="category-actions-right">
-            <span className="category-counter">
-              {directory.length} {directory.length === 1 ? "Expert" : "Experts"}
-            </span>
-            <select
-              value={sortBy}
-              onChange={(event) => setSortBy(event.target.value as SortKey)}
-              className="sort-select"
-              aria-label="Sort experts"
-            >
-              <option value="featured">Featured</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-            </select>
-          </div>
-        </div>
-      </section>
-
-      <section id="experts-directory" className="experts-section">
-        <div className="experts-container">
-          {searchQuery.trim() ? (
-            <div className="section-header-wrap">
-              <div>
-                <p className="section-subtext">
-                  Showing results matching &ldquo;<strong>{searchQuery.trim()}</strong>&rdquo;
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery("")}
-                    className="ml-3 text-xs font-semibold text-indigo-600 hover:underline"
-                  >
-                    Clear search
-                  </button>
-                </p>
-              </div>
-            </div>
-          ) : null}
-
-          {directory.length === 0 ? (
-            <div className="rounded-2xl border border-[#e5dfd5] bg-white py-20 text-center">
-              <p className="text-xl font-bold text-[#1a1921]">
-                {experts.length === 0 ? "No experts on Pivotroom yet" : "No experts found"}
-              </p>
-              <p className="mb-6 mt-2 text-[#6a6871]">
-                {experts.length === 0
-                  ? "We're adding people. Check back soon."
-                  : "Nothing matches that search and category combination."}
-              </p>
-              {experts.length > 0 ? (
-                <div className="flex items-center justify-center gap-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchQuery("");
-                      setCategory(null);
-                    }}
-                    className="rounded-full bg-[#1a1921] px-6 py-2.5 font-medium text-white"
-                  >
-                    Reset Search
-                  </button>
-                  <Link href="/experts" className="rounded-full bg-[#f4efe7] px-6 py-2.5 font-medium text-[#1a1921] hover:bg-[#e8e1d5]">
-                    Browse the Directory →
-                  </Link>
+      <section id="how" style={{ background: "#f4f5f7" }}>
+        <div className="wrap section stack" style={{ gap: 40 }}>
+          <h2 className="h2">How a session works</h2>
+          <ol className="steps">
+            {STEPS.map((step) => (
+              <li key={step.n}>
+                <div className="top">
+                  <span className="ms" aria-hidden="true">
+                    {step.icon}
+                  </span>
+                  <span className="eyebrow num">{step.n}</span>
                 </div>
-              ) : null}
+                <span className="t">{step.title}</span>
+                <span className="b">{step.body}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section style={{ background: "#ffffff" }}>
+        <div className="shelves tail">
+          {founders.length > 0 ? (
+            <div className="stack">
+              <Shelf
+                id="shelf-founders"
+                eyebrow="Founders"
+                title="Founders who have already made the mistake & plan you are about to make."
+                sub="They built companies here, with Ethiopian banks, suppliers, customers and regulators. One hour with them can save you a year and a great deal of money."
+                link={{ href: "/experts", label: "See all experts" }}
+                experts={founders}
+              />
+              <QuoteAndWhy />
             </div>
           ) : (
-            <div className="home-group-section">
-              <div className="home-group-header">
-                <h2 className="home-group-title">{category ?? "All Experts"}</h2>
-              </div>
-              <div className="experts-grid">
-                {directory.map((expert) => (
-                  <ExpertTile key={expert.slug} expert={expert} />
-                ))}
-              </div>
+            <div className="stack">
+              <QuoteAndWhy />
             </div>
           )}
+          {professionals.length > 0 ? (
+            <Shelf
+              id="shelf-pros"
+              eyebrow="Professionals"
+              title="Bankers, lawyers and marketers with the answer Google and AI can only guess at."
+              sub="Specialists who do this work every day. Bring one specific question. Leave with a straight answer and the next step."
+              link={{ href: "/experts", label: "See all experts" }}
+              experts={professionals}
+            />
+          ) : null}
         </div>
       </section>
 
-      <section id="how-it-works" className="how-section">
-        <div className="how-container">
-          <div className="how-header">
-            <span className="how-tag">Simple &amp; Seamless</span>
-            <h2 className="how-title">How Pivotroom Works</h2>
-            <p className="text-lg text-[#6a6871]">Get years of hard-won experience in a single conversation.</p>
-          </div>
-
-          <div className="how-steps-grid">
-            {HOW_IT_WORKS.map((item) => (
-              <div key={item.step} className="how-step-card">
-                <div className="how-step-num">{item.step}</div>
-                <h3 className="how-step-title">{item.title}</h3>
-                <p className="how-step-desc">{item.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <MatchSection categories={categories} />
     </>
   );
 }

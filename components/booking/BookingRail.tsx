@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Button } from "@/components/ui/Button";
-import { Icon } from "@/components/ui/Icon";
 import { RailSelect } from "@/components/booking/rail/RailSelect";
 import { RailIntakeReview } from "@/components/booking/rail/RailIntakeReview";
 import { RailPayment } from "@/components/booking/rail/RailPayment";
@@ -53,7 +51,7 @@ function deriveStage(snapshot: RailBookingSnapshot | null): Stage {
 function formatStartingPrice(offerings: SessionOffering[]): string | null {
   if (offerings.length === 0) return null;
   const cheapest = offerings.reduce((min, o) => (o.price < min.price ? o : min), offerings[0]);
-  return `From ${new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(cheapest.price)} ${cheapest.currency}`;
+  return `From ${cheapest.currency} ${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(cheapest.price)}`;
 }
 
 function detectTimezone(): string | undefined {
@@ -64,8 +62,24 @@ function detectTimezone(): string | undefined {
   }
 }
 
-const MOBILE_BAR_LABEL: Record<Stage, string> = {
+const STAGE_TITLE: Record<Stage, string> = {
   select: "Book a session",
+  intake_review: "Your details",
+  payment: "Payment",
+  confirmed: "You're booked",
+  hold_expired: "Time expired",
+};
+
+const STAGE_STEP: Record<Stage, number | null> = {
+  select: 1,
+  intake_review: 2,
+  payment: 3,
+  confirmed: null,
+  hold_expired: 1,
+};
+
+const MOBILE_BAR_LABEL: Record<Stage, string> = {
+  select: "Book",
   intake_review: "Continue booking",
   payment: "Complete payment",
   confirmed: "View confirmation",
@@ -206,78 +220,121 @@ export function BookingRail(props: Props) {
         return <RailConfirmed booking={snapshot!.booking} customerTimezone={customerTimezone} />;
       case "hold_expired":
         return (
-          <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 text-center">
-            <p className="mb-1 text-sm font-medium text-[var(--color-text)]">Your reserved time expired</p>
-            <p className="mb-4 text-sm text-[var(--color-text-muted)]">Choose an available time to continue.</p>
-            <Button type="button" onClick={handleRestart}>
+          <div className="stack" style={{ gap: 16 }}>
+            <p className="muted" style={{ margin: 0 }}>
+              Your reserved time expired before payment. Choose an available time to continue.
+            </p>
+            <button type="button" className="btn btn-ink md block" onClick={handleRestart}>
               Choose another time
-            </Button>
-          </section>
+            </button>
+          </div>
         );
     }
   })();
 
   const startingPrice = formatStartingPrice(sessionOfferings);
+  const step = STAGE_STEP[stage];
+
+  const cardContent = (
+    <>
+      <div className="stack" style={{ gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <h2 className="d" style={{ margin: 0, fontSize: 20, lineHeight: 1.2 }}>
+            {STAGE_TITLE[stage]}
+          </h2>
+          {step ? (
+            <span className="muted num" style={{ fontSize: 14 }}>
+              Step {step} of 3
+            </span>
+          ) : null}
+        </div>
+        <div className="stepbars" aria-hidden="true">
+          {[1, 2, 3].map((n) => (
+            <span key={n} className={n <= (step ?? 3) ? "on" : undefined} />
+          ))}
+        </div>
+      </div>
+      {body}
+    </>
+  );
 
   return (
     <>
-      <div aria-live="polite" className="sr-only">
+      <div aria-live="polite" className="sr">
         {STAGE_ANNOUNCEMENTS[stage]}
       </div>
 
-      {/* Desktop: persistent sticky rail -- never a narrow compressed
-          sidebar below the lg breakpoint (spec: switch to the mobile sheet
-          architecture instead of compressing). */}
-      <aside className="hidden w-full shrink-0 lg:block lg:sticky lg:top-8 lg:w-[400px]">{body}</aside>
+      {/* Desktop: the sticky booking card. Below 1040px the same state
+          machine runs in the bottom sheet instead (never a second engine). */}
+      <div className="bookaside">
+        <div className="bookcard">{cardContent}</div>
+      </div>
 
-      {/* Mobile: sticky bottom bar + full-height sheet running the exact
-          same state machine/props -- never a separate mobile booking
-          engine. */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 lg:hidden">
-        <div className="mx-auto flex max-w-2xl items-center justify-between gap-4">
-          <span className="tabular-nums-brand text-sm font-medium text-[var(--color-text)]">
-            {stage === "select" ? (startingPrice ?? "") : ""}
+      <div className="bookbar" role="region" aria-label={`Book ${props.expertName}`}>
+        <div className="stack" style={{ lineHeight: 1.35, minWidth: 0 }}>
+          <span className="num" style={{ fontSize: 16, fontWeight: 600 }}>
+            {stage === "select" ? (startingPrice ?? "") : STAGE_TITLE[stage]}
           </span>
-          <button
-            ref={triggerRef}
-            type="button"
-            onClick={() => setMobileOpen(true)}
-            className="inline-flex h-11 min-w-[44px] items-center justify-center rounded-full bg-[var(--color-brand)] px-6 text-sm font-medium text-[var(--color-on-brand)]"
-          >
-            {MOBILE_BAR_LABEL[stage]}
-          </button>
+          {stage === "select" && sessionOfferings.length > 0 ? (
+            <span className="muted" style={{ fontSize: 14 }}>
+              {sessionOfferings.map((o) => o.durationMinutes).join(", ")} min · VAT included
+            </span>
+          ) : null}
         </div>
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          className="btn btn-ink md even"
+          style={{ flex: "none", paddingInline: 32 }}
+        >
+          {MOBILE_BAR_LABEL[stage]}
+        </button>
       </div>
 
       {mobileOpen ? (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end lg:hidden" role="dialog" aria-modal="true">
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={closeMobileSheet}
-            className="absolute inset-0 bg-black/40"
-          />
-          <div
-            ref={sheetRef}
-            className="relative z-10 max-h-[92dvh] overflow-y-auto overscroll-contain rounded-t-[var(--radius-card)] bg-[var(--color-bg)] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm font-medium text-[var(--color-text-muted)]">Book a session</span>
+        <div role="dialog" aria-modal="true" aria-label="Book a session">
+          <button type="button" aria-label="Close booking" onClick={closeMobileSheet} className="sheet-scrim" />
+          <div ref={sheetRef} className="sheet">
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                paddingBlock: "8px 16px",
+                marginBlockEnd: 16,
+                borderBottom: "1px solid var(--pr-line)",
+              }}
+            >
+              <span className="stack" style={{ lineHeight: 1.3, minWidth: 0 }}>
+                <span className="muted" style={{ fontSize: 13 }}>
+                  Booking with
+                </span>
+                <span className="d" style={{ fontSize: 17 }}>
+                  {props.expertName}
+                </span>
+              </span>
               <button
                 type="button"
                 onClick={closeMobileSheet}
-                aria-label="Close booking sheet"
-                className="flex h-11 w-11 items-center justify-center rounded-full hover:bg-[var(--color-mist)]"
+                aria-label="Close booking"
+                className="rbtn"
+                style={{ border: 0, marginInlineEnd: -10 }}
               >
-                <Icon name="close" decorative />
+                <span className="ms" aria-hidden="true" style={{ fontSize: 24 }}>
+                  close
+                </span>
               </button>
             </div>
             {(stage === "intake_review" || stage === "payment") && snapshot?.booking.hold_expires_at ? (
-              <p className="mb-3 text-xs text-[var(--color-text-muted)]">
-                Closing this won&apos;t cancel your reserved time -- reopen it anytime before it expires.
+              <p className="muted" style={{ margin: "0 0 12px", fontSize: 13 }}>
+                Closing this won&apos;t cancel your reserved time. Reopen it any time before it expires.
               </p>
             ) : null}
-            {body}
+            <div className="bookcard" style={{ border: 0, padding: 0 }}>
+              {cardContent}
+            </div>
           </div>
         </div>
       ) : null}

@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -265,12 +265,15 @@ export type Database = {
           calendar_meeting_url: string | null
           calendar_sync_status: string
           calendar_synced_at: string | null
+          commission_amount: number | null
+          commission_rate: number | null
           created_at: string
           currency: string
           customer_id: string
           customer_timezone: string | null
           duration_minutes: number
           end_at: string
+          expert_payout_amount: number | null
           expert_profile_id: string
           expert_timezone: string
           hold_expires_at: string | null
@@ -278,13 +281,10 @@ export type Database = {
           session_format: string
           session_type_id: string | null
           start_at: string
-          commission_amount: number | null
-          commission_rate: number | null
-          expert_payout_amount: number | null
           total_price: number | null
+          updated_at: string
           vat_amount: number | null
           vat_rate: number | null
-          updated_at: string
         }
         Insert: {
           base_price: number
@@ -294,12 +294,15 @@ export type Database = {
           calendar_meeting_url?: string | null
           calendar_sync_status?: string
           calendar_synced_at?: string | null
+          commission_amount?: number | null
+          commission_rate?: number | null
           created_at?: string
           currency?: string
           customer_id: string
           customer_timezone?: string | null
           duration_minutes: number
           end_at: string
+          expert_payout_amount?: number | null
           expert_profile_id: string
           expert_timezone: string
           hold_expires_at?: string | null
@@ -307,13 +310,10 @@ export type Database = {
           session_format: string
           session_type_id?: string | null
           start_at: string
-          commission_amount?: number | null
-          commission_rate?: number | null
-          expert_payout_amount?: number | null
           total_price?: number | null
+          updated_at?: string
           vat_amount?: number | null
           vat_rate?: number | null
-          updated_at?: string
         }
         Update: {
           base_price?: number
@@ -323,12 +323,15 @@ export type Database = {
           calendar_meeting_url?: string | null
           calendar_sync_status?: string
           calendar_synced_at?: string | null
+          commission_amount?: number | null
+          commission_rate?: number | null
           created_at?: string
           currency?: string
           customer_id?: string
           customer_timezone?: string | null
           duration_minutes?: number
           end_at?: string
+          expert_payout_amount?: number | null
           expert_profile_id?: string
           expert_timezone?: string
           hold_expires_at?: string | null
@@ -336,13 +339,10 @@ export type Database = {
           session_format?: string
           session_type_id?: string | null
           start_at?: string
-          commission_amount?: number | null
-          commission_rate?: number | null
-          expert_payout_amount?: number | null
           total_price?: number | null
+          updated_at?: string
           vat_amount?: number | null
           vat_rate?: number | null
-          updated_at?: string
         }
         Relationships: [
           {
@@ -656,10 +656,12 @@ export type Database = {
           created_at: string
           current_company: string | null
           current_position: string | null
+          experience: Json
           expertise_summary: string | null
           headline: string | null
           id: string
           in_person_enabled: boolean
+          languages: string[]
           linkedin_url: string | null
           online_enabled: boolean
           problems_help_with: string | null
@@ -667,6 +669,7 @@ export type Database = {
           profile_status: string
           published_at: string | null
           published_by: string | null
+          response_time: string | null
           review_message: string | null
           reviewed_at: string | null
           reviewed_by: string | null
@@ -689,10 +692,12 @@ export type Database = {
           created_at?: string
           current_company?: string | null
           current_position?: string | null
+          experience?: Json
           expertise_summary?: string | null
           headline?: string | null
           id?: string
           in_person_enabled?: boolean
+          languages?: string[]
           linkedin_url?: string | null
           online_enabled?: boolean
           problems_help_with?: string | null
@@ -700,6 +705,7 @@ export type Database = {
           profile_status?: string
           published_at?: string | null
           published_by?: string | null
+          response_time?: string | null
           review_message?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -722,10 +728,12 @@ export type Database = {
           created_at?: string
           current_company?: string | null
           current_position?: string | null
+          experience?: Json
           expertise_summary?: string | null
           headline?: string | null
           id?: string
           in_person_enabled?: boolean
+          languages?: string[]
           linkedin_url?: string | null
           online_enabled?: boolean
           problems_help_with?: string | null
@@ -733,6 +741,7 @@ export type Database = {
           profile_status?: string
           published_at?: string | null
           published_by?: string | null
+          response_time?: string | null
           review_message?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -770,6 +779,74 @@ export type Database = {
             foreignKeyName: "expert_profiles_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expert_reviews: {
+        Row: {
+          body: string
+          booking_id: string
+          created_at: string
+          customer_id: string
+          expert_profile_id: string
+          hidden_by: string | null
+          id: string
+          is_hidden: boolean
+          rating: number
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          booking_id: string
+          created_at?: string
+          customer_id: string
+          expert_profile_id: string
+          hidden_by?: string | null
+          id?: string
+          is_hidden?: boolean
+          rating: number
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          booking_id?: string
+          created_at?: string
+          customer_id?: string
+          expert_profile_id?: string
+          hidden_by?: string | null
+          id?: string
+          is_hidden?: boolean
+          rating?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expert_reviews_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expert_reviews_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expert_reviews_expert_profile_id_fkey"
+            columns: ["expert_profile_id"]
+            isOneToOne: false
+            referencedRelation: "expert_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expert_reviews_hidden_by_fkey"
+            columns: ["hidden_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1195,6 +1272,15 @@ export type Database = {
         }
         Returns: number
       }
+      expert_public_stats: {
+        Args: { p_expert_profile_id: string }
+        Returns: {
+          is_top_expert: boolean
+          rating_avg: number
+          review_count: number
+          sessions_completed: number
+        }[]
+      }
       expert_recurring_and_override_windows_for_date: {
         Args: {
           p_date: string
@@ -1305,6 +1391,27 @@ export type Database = {
           starting_price: number
         }[]
       }
+      get_expert_directory_public_v2: {
+        Args: never
+        Returns: {
+          category_names: string[]
+          current_company: string
+          current_position: string
+          full_name: string
+          headline: string
+          in_person_enabled: boolean
+          is_top_expert: boolean
+          languages: string[]
+          online_enabled: boolean
+          profile_image_path: string
+          rating_avg: number
+          review_count: number
+          sessions_completed: number
+          slug: string
+          starting_duration_minutes: number
+          starting_price: number
+        }[]
+      }
       get_expert_match_candidates_public: {
         Args: never
         Returns: {
@@ -1340,6 +1447,46 @@ export type Database = {
           slug: string
           who_i_help: string
           years_experience_range: string
+        }[]
+      }
+      get_expert_profile_public_v2: {
+        Args: { p_slug: string }
+        Returns: {
+          career_highlights: string
+          category_names: string[]
+          city: string
+          country: string
+          current_company: string
+          current_position: string
+          experience: Json
+          expertise_summary: string
+          full_name: string
+          headline: string
+          in_person_enabled: boolean
+          is_top_expert: boolean
+          languages: string[]
+          linkedin_url: string
+          online_enabled: boolean
+          problems_help_with: string
+          profile_image_path: string
+          rating_avg: number
+          response_time: string
+          review_count: number
+          sessions_completed: number
+          short_bio: string
+          slug: string
+          who_i_help: string
+          years_experience_range: string
+        }[]
+      }
+      get_expert_reviews_public: {
+        Args: { p_slug: string }
+        Returns: {
+          body: string
+          created_at: string
+          duration_minutes: number
+          rating: number
+          reviewer_name: string
         }[]
       }
       get_expert_session_types_public: {
@@ -1453,6 +1600,10 @@ export type Database = {
           p_recurring_rule_id: string
           p_start_time?: string
         }
+        Returns: string
+      }
+      submit_expert_review: {
+        Args: { p_body: string; p_booking_reference: string; p_rating: number }
         Returns: string
       }
       submit_manual_payment: {

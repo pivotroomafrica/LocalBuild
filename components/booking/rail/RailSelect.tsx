@@ -2,12 +2,10 @@
 
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Chip } from "@/components/ui/Chip";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import { SelectField } from "@/components/ui/SelectField";
 import { FormMessage } from "@/components/ui/FormMessage";
-import { Icon } from "@/components/ui/Icon";
 import {
   fetchBookableSlotsAction,
   createBookingHoldAction,
@@ -19,7 +17,7 @@ import {
   signUpForRailAction,
   type RailAuthActionState,
 } from "@/lib/auth/actions";
-import { SESSION_FORMAT_LABELS, type BookableSlot, type SessionFormat } from "@/types/booking";
+import type { BookableSlot, SessionFormat } from "@/types/booking";
 import {
   EMPLOYMENT_TYPES,
   EMPLOYMENT_TYPE_LABELS,
@@ -253,189 +251,235 @@ export function RailSelect({
 
   if (sessionOfferings.length === 0) {
     return (
-      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 text-center">
-        <p className="text-sm text-[var(--color-text-muted)]">
-          Session options are being finalized.
-        </p>
-      </div>
+      <p className="notice" style={{ margin: 0 }}>
+        Session options are being finalized.
+      </p>
     );
   }
 
-  const formatLabel = [onlineEnabled ? "Online" : null, inPersonEnabled ? "In person" : null]
+  const tzLabel =
+    customerTimezone === "Africa/Addis_Ababa" ? "Addis Ababa time" : customerTimezone ? `${customerTimezone} time` : "";
+  const selectedOffering = sessionOfferings.find((offering) => offering.durationMinutes === duration) ?? null;
+  const summary = [
+    duration ? `${duration} min` : null,
+    selectedOffering ? `ETB ${selectedOffering.price.toLocaleString("en-US")}` : null,
+    format ? (format === "online" ? "Google Meet" : "In person") : null,
+    selectedSlot
+      ? new Date(selectedSlot.startAt).toLocaleString("en-GB", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: customerTimezone || undefined,
+        })
+      : null,
+  ]
     .filter(Boolean)
     .join(" · ");
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-      <h2 className="mb-3 text-xl font-extrabold tracking-[-0.02em] text-[var(--color-text)]">Session options</h2>
+    <div className="stack" style={{ gap: 24 }}>
+      <fieldset>
+        <legend>Length</legend>
+        <div className={`opt-grid ${sessionOfferings.length === 1 ? "c2" : "c3"}`}>
+          {sessionOfferings.map((offering) => (
+            <button
+              key={offering.durationMinutes}
+              type="button"
+              className="chip tall"
+              aria-pressed={duration === offering.durationMinutes}
+              onClick={() => {
+                setDuration(offering.durationMinutes);
+                setSelectedSlot(null);
+              }}
+            >
+              <span style={{ fontSize: 15, fontWeight: 600 }}>{offering.durationMinutes} min</span>
+              <span className="sub" style={{ fontSize: 14 }}>
+                ETB {offering.price.toLocaleString("en-US")}
+              </span>
+            </button>
+          ))}
+        </div>
+        <span className="muted" style={{ fontSize: 13 }}>
+          Prices include VAT.
+        </span>
+      </fieldset>
 
-      <div className="flex flex-col gap-2">
-        {sessionOfferings.map((offering) => (
-          <button
-            key={offering.durationMinutes}
-            type="button"
-            onClick={() => {
-              setDuration(offering.durationMinutes);
-              setSelectedSlot(null);
-            }}
-            aria-pressed={duration === offering.durationMinutes}
-            className={`flex items-center justify-between rounded-[var(--radius-input)] border px-4 py-3 text-sm transition-colors ${
-              duration === offering.durationMinutes
-                ? "border-[var(--color-accent)] bg-[var(--color-accent-tint)]"
-                : "border-[var(--color-border)] bg-[var(--color-bg)] hover:border-[var(--color-text-muted)]"
-            }`}
-          >
-            <span className="text-[var(--color-text)]">{offering.durationMinutes} min</span>
-            <span className="tabular-nums-brand font-medium text-[var(--color-text)]">
-              {offering.price.toLocaleString()} {offering.currency}
-            </span>
-          </button>
-        ))}
-      </div>
-      {formatLabel ? <p className="mt-2 text-xs text-[var(--color-text-muted)]">Available: {formatLabel}</p> : null}
-      <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-        Prices include VAT.
-      </p>
-
-      {duration && availableFormats.length > 1 ? (
-        <div className="mt-4">
-          <p className="mb-2 text-xs font-medium text-[var(--color-text-muted)]">Format</p>
-          <div className="flex flex-wrap gap-2">
+      {availableFormats.length > 0 ? (
+        <fieldset>
+          <legend>Where</legend>
+          <div className="opt-grid c2">
             {availableFormats.map((f) => (
-              <Chip
+              <button
                 key={f}
-                selected={format === f}
+                type="button"
+                className="chip"
+                style={{ minHeight: 48, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                aria-pressed={format === f}
                 onClick={() => {
                   setFormat(f);
                   setSelectedSlot(null);
                 }}
               >
-                {SESSION_FORMAT_LABELS[f]}
-              </Chip>
+                <span className="ms" aria-hidden="true" style={{ fontSize: 20 }}>
+                  {f === "online" ? "videocam" : "person"}
+                </span>
+                {f === "online" ? "Google Meet" : "In person"}
+              </button>
             ))}
           </div>
-        </div>
+        </fieldset>
       ) : null}
 
       {duration && format ? (
-        <div className="mt-4" data-testid="rail-date-time">
-          <p className="mb-2 text-xs font-medium text-[var(--color-text-muted)]">
-            Date & time{customerTimezone ? ` (${customerTimezone})` : ""}
-          </p>
-
-          <div className="mb-2 flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => setMonthCursor((c) => new Date(Date.UTC(c.getUTCFullYear(), c.getUTCMonth() - 1, 1)))}
-              className="text-sm text-[var(--color-accent)] hover:underline"
-              aria-label="Previous month"
-            >
-              <Icon name="chevron_left" size={20} decorative />
-            </button>
-            <span className="text-sm font-medium text-[var(--color-text)]">{monthLabel(monthCursor)}</span>
-            <button
-              type="button"
-              onClick={() => setMonthCursor((c) => new Date(Date.UTC(c.getUTCFullYear(), c.getUTCMonth() + 1, 1)))}
-              className="text-sm text-[var(--color-accent)] hover:underline"
-              aria-label="Next month"
-            >
-              <Icon name="chevron_right" size={20} decorative />
-            </button>
-          </div>
+        <fieldset data-testid="rail-date-time">
+          <legend style={{ width: "100%" }}>
+            <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+              <span>Day</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 400 }}>
+                <button
+                  type="button"
+                  className="rbtn"
+                  style={{ width: 32, height: 32 }}
+                  onClick={() =>
+                    setMonthCursor((c) => new Date(Date.UTC(c.getUTCFullYear(), c.getUTCMonth() - 1, 1)))
+                  }
+                  aria-label="Previous month"
+                >
+                  <span className="ms" aria-hidden="true">
+                    chevron_left
+                  </span>
+                </button>
+                <span className="muted" style={{ fontSize: 14, minWidth: 110, textAlign: "center" }}>
+                  {monthLabel(monthCursor)}
+                </span>
+                <button
+                  type="button"
+                  className="rbtn"
+                  style={{ width: 32, height: 32 }}
+                  onClick={() =>
+                    setMonthCursor((c) => new Date(Date.UTC(c.getUTCFullYear(), c.getUTCMonth() + 1, 1)))
+                  }
+                  aria-label="Next month"
+                >
+                  <span className="ms" aria-hidden="true">
+                    chevron_right
+                  </span>
+                </button>
+              </span>
+            </span>
+          </legend>
 
           {slotsLoading ? (
-            <p className="text-sm text-[var(--color-text-muted)]">Loading available times…</p>
+            <p className="muted" style={{ margin: 0, fontSize: 15 }}>
+              Loading available times…
+            </p>
           ) : slotsError ? (
-            <FormMessage variant="error">{slotsError}</FormMessage>
+            <p role="alert" className="notice err" style={{ margin: 0 }}>
+              {slotsError}
+            </p>
           ) : availableDates.length === 0 ? (
-            <div className="rounded-[var(--radius-input)] bg-[var(--color-bg)] px-4 py-3 text-sm text-[var(--color-text-muted)]">
-              No available times in {monthLabel(monthCursor)}. Try another month or session length.
-            </div>
+            <p className="notice" style={{ margin: 0 }}>
+              No free times in {monthLabel(monthCursor)}. Try the next month or another session length.
+            </p>
           ) : (
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-wrap gap-2">
-                {availableDates.map((date) => (
-                  <Chip
+            <div className="opt-grid c5">
+              {availableDates.map((date) => {
+                const day = new Date(`${date}T00:00:00`);
+                return (
+                  <button
                     key={date}
-                    selected={selectedDate === date}
+                    type="button"
+                    className="chip day"
+                    aria-pressed={selectedDate === date}
+                    aria-label={day.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
                     onClick={() => {
                       setSelectedDate(date);
                       setSelectedSlot(null);
                     }}
                   >
-                    {new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </Chip>
-                ))}
-              </div>
-
-              {selectedDate ? (
-                <div className="flex flex-wrap gap-2">
-                  {timesForSelectedDate.map((slot) => (
-                    <Chip
-                      key={slot.startAt}
-                      selected={selectedSlot?.startAt === slot.startAt}
-                      onClick={() => setSelectedSlot(slot)}
-                    >
-                      {new Date(slot.startAt).toLocaleTimeString(undefined, {
-                        hour: "numeric",
-                        minute: "2-digit",
-                        timeZone: customerTimezone || undefined,
-                      })}
-                    </Chip>
-                  ))}
-                </div>
-              ) : null}
+                    <span className="sub">{day.toLocaleDateString("en-GB", { weekday: "short" })}</span>
+                    <span className="big">{day.getDate()}</span>
+                  </button>
+                );
+              })}
             </div>
           )}
-        </div>
+        </fieldset>
       ) : null}
 
-      {selectedSlot ? (
-        <div className="mt-4 rounded-[var(--radius-input)] bg-[var(--color-bg)] p-4">
-          <p className="text-sm text-[var(--color-text)]">
-            {new Date(selectedSlot.startAt).toLocaleString(undefined, {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-              timeZone: customerTimezone || undefined,
-            })}
+      {duration && format && selectedDate && timesForSelectedDate.length > 0 ? (
+        <fieldset>
+          <legend>
+            Time{" "}
+            {tzLabel ? (
+              <span className="muted" style={{ fontWeight: 400 }}>
+                · {tzLabel}
+              </span>
+            ) : null}
+          </legend>
+          <div className="opt-grid c3">
+            {timesForSelectedDate.map((slot) => (
+              <button
+                key={slot.startAt}
+                type="button"
+                className="chip"
+                aria-pressed={selectedSlot?.startAt === slot.startAt}
+                onClick={() => setSelectedSlot(slot)}
+              >
+                {new Date(slot.startAt).toLocaleTimeString("en-GB", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  timeZone: customerTimezone || undefined,
+                })}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+      ) : null}
+
+      <div className="stack" style={{ gap: 12, paddingBlockStart: 20, borderTop: "1px solid var(--pr-line)" }}>
+        {summary ? <span className="summary-line">{summary}</span> : null}
+        {holdState.error && gate === "none" ? (
+          <p role="alert" className="notice err" style={{ margin: 0 }}>
+            {holdState.error}
           </p>
-
-          {gate === "none" ? (
-            <>
-              {holdState.error ? (
-                <div className="mt-3">
-                  <FormMessage variant="error">{holdState.error}</FormMessage>
-                </div>
-              ) : null}
-              {!isLoggedIn || !profileComplete ? (
-                <div className="mt-4">
-                  <Button type="button" onClick={() => setGate(!isLoggedIn ? "auth" : "profile")}>
-                    Continue
-                  </Button>
-                </div>
-              ) : (
-                <form action={holdFormAction} className="mt-4">
-                  <input type="hidden" name="expert_slug" value={expertSlug} />
-                  <input type="hidden" name="duration_minutes" value={duration ?? ""} />
-                  <input type="hidden" name="session_format" value={format ?? ""} />
-                  <input type="hidden" name="start_at" value={selectedSlot.startAt} />
-                  <input type="hidden" name="customer_timezone" value={customerTimezone} />
-                  <Button type="submit" isLoading={holdPending} loadingText="Reserving…">
-                    Reserve This Time
-                  </Button>
-                </form>
+        ) : null}
+        {!selectedSlot ? (
+          <button type="button" className="btn block" style={{ minHeight: 52 }} disabled>
+            Pick a time to continue
+          </button>
+        ) : gate !== "none" ? null : !isLoggedIn || !profileComplete ? (
+          <button
+            type="button"
+            className="btn btn-ink block"
+            style={{ minHeight: 52 }}
+            onClick={() => setGate(!isLoggedIn ? "auth" : "profile")}
+          >
+            Continue{" "}
+            <span className="ms af" aria-hidden="true">
+              arrow_forward
+            </span>
+          </button>
+        ) : (
+          <form action={holdFormAction}>
+            <input type="hidden" name="expert_slug" value={expertSlug} />
+            <input type="hidden" name="duration_minutes" value={duration ?? ""} />
+            <input type="hidden" name="session_format" value={format ?? ""} />
+            <input type="hidden" name="start_at" value={selectedSlot.startAt} />
+            <input type="hidden" name="customer_timezone" value={customerTimezone} />
+            <button type="submit" className="btn btn-ink block" style={{ minHeight: 52 }} disabled={holdPending}>
+              {holdPending ? "Reserving…" : "Reserve this time"}
+              {holdPending ? null : (
+                <span className="ms af" aria-hidden="true">
+                  arrow_forward
+                </span>
               )}
-            </>
-          ) : null}
-        </div>
-      ) : null}
+            </button>
+          </form>
+        )}
+      </div>
 
       {selectedSlot && gate === "auth" ? (
         <div className="mt-4 rounded-[var(--radius-input)] border border-[var(--color-border)] p-4">
@@ -535,6 +579,6 @@ export function RailSelect({
           </form>
         </div>
       ) : null}
-    </section>
+    </div>
   );
 }
