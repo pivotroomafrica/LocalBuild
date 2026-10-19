@@ -117,3 +117,17 @@ AI matching (needs a provider decision), commission/VAT/payout ledger (needs app
 | AI matching with OpenAI, key later | `048`: `get_expert_match_candidates_public()` + `ai_match_requests` usage log (no problem text stored). `/match` page; keyword pre-filter → ≤ 15 candidates → one structured-output call → only offered experts kept. No key / over limit / API error → keyword matches. | **Applied**; OpenAI call tested with a mocked API only |
 
 Interpretation to confirm: commission = 20% of the expert's price (excluding VAT). To change any rate later, update the single `platform_settings` row; new bookings pick it up, existing bookings keep their snapshot.
+
+## 8. Website redesign, phase 1 (2026-10-19)
+
+Public pages rebuilt from the Pivotroom website design (`app/site.css`, scoped under `.pr`). Real data only:
+
+| Design element | Implemented as |
+|---|---|
+| "Top expert" badge, ranking | `049c`: sessions completed = paid bookings whose end time has passed (nothing sets `completed` yet); badge needs 3+ sessions, 2+ visible reviews, 4.5+ average. Directory ordered by that. |
+| "After the session" reviews | `049b` `expert_reviews`; written only through `submit_expert_review()` (own booking, paid, ended, once). Customer page `/dashboard/sessions/[ref]/review`; admins hide/show on `/admin/experts/[id]`. Public shows first name + last initial. |
+| Languages, "Replies within a day", experience timeline | `049a` columns, edited on the expert profile form. Reply time is the expert's own stated commitment (no messaging to measure it). |
+| Founders / Professionals shelves | Split by the expert's own stated role (founder/owner/CEO/managing director). |
+| "10% off your first session" | **Not built yet** (needs the discount rules); the home promo section is left out until it exists. |
+| Fake numbers, example people, onboarding assistant, Google/phone sign-in | Not shown. About page uses live counts; the matcher example lists what you get, not invented experts. |
+| Legal pages | Draft text in `lib/legal/content.ts`, shown with a "Draft under legal review" notice until `LEGAL_REVIEWED = true`. Bracketed values need answers. |

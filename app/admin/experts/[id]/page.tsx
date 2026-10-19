@@ -19,6 +19,7 @@ import {
   EXPERT_EXPERIENCE_RANGE_LABELS,
   type ExpertExperienceRange,
 } from "@/types/expert";
+import { setReviewHiddenAction } from "@/lib/reviews/actions";
 
 export default async function AdminExpertDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -31,10 +32,15 @@ export default async function AdminExpertDetailPage({ params }: { params: Promis
 
   const { expertProfile, categoryIds, sessionOfferings } = data;
 
-  const [identity, photoUrl, { data: categories }] = await Promise.all([
+  const [identity, photoUrl, { data: categories }, { data: reviews }] = await Promise.all([
     getApplicantIdentity(supabase, expertProfile.user_id),
     getExpertPhotoUrl(supabase, expertProfile.profile_image_path),
     supabase.from("expert_categories").select("id, name").in("id", categoryIds.length > 0 ? categoryIds : [""]),
+    supabase
+      .from("expert_reviews")
+      .select("id, rating, body, is_hidden, created_at")
+      .eq("expert_profile_id", expertProfile.id)
+      .order("created_at", { ascending: false }),
   ]);
 
   const categoryNames = (categories ?? []).map((c) => c.name);
@@ -141,6 +147,33 @@ export default async function AdminExpertDetailPage({ params }: { params: Promis
             {expertProfile.application_status === "rejected" ? "Rejection reason sent to applicant" : "Changes requested from applicant"}
           </h2>
           <p className="text-sm text-[var(--color-text)]">{expertProfile.review_message}</p>
+        </section>
+      ) : null}
+
+      {reviews && reviews.length > 0 ? (
+        <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
+          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Client reviews</h2>
+          <ul className="flex flex-col divide-y divide-[var(--color-border)]">
+            {reviews.map((review) => (
+              <li key={review.id} className="flex flex-wrap items-start justify-between gap-3 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-[var(--color-text)]">
+                    {review.rating} out of 5 · {new Date(review.created_at).toLocaleDateString()}
+                    {review.is_hidden ? " · Hidden" : ""}
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--color-text-muted)]">{review.body}</p>
+                </div>
+                <form action={setReviewHiddenAction}>
+                  <input type="hidden" name="review_id" value={review.id} />
+                  <input type="hidden" name="expert_profile_id" value={expertProfile.id} />
+                  <input type="hidden" name="hidden" value={review.is_hidden ? "false" : "true"} />
+                  <button type="submit" className="text-sm font-medium text-[var(--color-accent)] hover:underline">
+                    {review.is_hidden ? "Show on profile" : "Hide from profile"}
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
 

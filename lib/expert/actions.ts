@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { slugify } from "@/lib/expert/slug";
 import { getExpertApplicationData, getMissingRequiredFields } from "@/lib/expert/data";
+import { validateExperience, validateLanguages, validateResponseTime } from "@/lib/expert/profileDetails";
 import {
   validateCareerHighlights,
   validateCurrentCompany,
@@ -156,6 +157,15 @@ export async function updateExpertProfileAction(
   const careerHighlights = validateCareerHighlights(String(formData.get("career_highlights") ?? ""));
   if (!careerHighlights.valid) return { error: careerHighlights.error };
 
+  const languages = validateLanguages(String(formData.get("languages") ?? ""));
+  if (!languages.valid) return { error: languages.error };
+
+  const responseTime = validateResponseTime(String(formData.get("response_time") ?? ""));
+  if (!responseTime.valid) return { error: responseTime.error };
+
+  const experience = validateExperience(String(formData.get("experience") ?? "[]"));
+  if (!experience.valid) return { error: experience.error };
+
   const { error } = await supabase
     .from("expert_profiles")
     .update({
@@ -171,6 +181,9 @@ export async function updateExpertProfileAction(
       problems_help_with: problemsHelpWith.value,
       who_i_help: whoIHelp.value,
       career_highlights: careerHighlights.value,
+      languages: languages.value,
+      response_time: responseTime.value,
+      experience: experience.value,
     })
     .eq("user_id", user.id);
 

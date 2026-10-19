@@ -8,6 +8,7 @@ import { SessionActionsPanel } from "@/components/booking/SessionActionsPanel";
 import { isReschedulableByCustomer, isCancellableByCustomer } from "@/lib/booking/data";
 import { SESSION_FORMAT_LABELS, type SessionFormat } from "@/types/booking";
 import type { PaymentStatus } from "@/types/payment";
+import { getOwnReviewForBooking, isReviewable } from "@/lib/reviews/data";
 
 /**
  * Session detail (spec sections 12-14). Ownership is enforced both by RLS
@@ -39,6 +40,7 @@ export default async function DashboardSessionDetailPage({
 
   const { booking, intake, payments, derivedState, rescheduleHistory, cancellation, pendingChangeRequest } = detail;
   const action = pendingActionForSession(derivedState, booking.booking_reference);
+  const ownReview = isReviewable(booking) ? await getOwnReviewForBooking(supabase, booking.id) : null;
 
   return (
     <div className="flex flex-col gap-8">
@@ -59,6 +61,26 @@ export default async function DashboardSessionDetailPage({
         >
           {action.label}
         </Link>
+      ) : null}
+
+      {isReviewable(booking) ? (
+        <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+          {ownReview ? (
+            <p className="text-sm text-[var(--color-text-muted)]">
+              You reviewed this session: {ownReview.rating} out of 5.
+            </p>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-[var(--color-text)]">How was your session? Your review helps the next client decide.</p>
+              <Link
+                href={`/dashboard/sessions/${booking.booking_reference}/review`}
+                className="inline-flex items-center justify-center rounded-full bg-[var(--color-brand)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-hover)]"
+              >
+                Leave a review
+              </Link>
+            </div>
+          )}
+        </section>
       ) : null}
 
       {pendingChangeRequest ? (
