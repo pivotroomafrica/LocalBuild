@@ -7,6 +7,58 @@ import { formatEtb, initialsOf, summaryLine } from "@/components/site/format";
 
 const initialState: MatchState = { status: "idle" };
 
+const STEPS = ["Reading what you wrote", "Comparing it with each expert's actual experience", "Picking the ones best placed to help"];
+
+/** The design's three-step progress while the match runs. The steps move
+ * on a timer; the results replace them as soon as they arrive. */
+function MatchingSteps() {
+  const [phase, setPhase] = useState(0);
+  useEffect(() => {
+    const timers = [900, 2200].map((ms, i) => setTimeout(() => setPhase(i + 1), ms));
+    return () => timers.forEach(clearTimeout);
+  }, []);
+  return (
+    <div role="status" aria-live="polite" className="stack" style={{ gap: 14, marginBlockEnd: 32 }}>
+      {STEPS.map((label, i) => (
+        <div key={label} className={i < phase ? "mstep ok" : i === phase ? "mstep on" : "mstep"}>
+          {i === phase ? (
+            <span className="spin" aria-hidden="true" />
+          ) : (
+            <span className="ms" aria-hidden="true">
+              {i < phase ? "check_circle" : "radio_button_unchecked"}
+            </span>
+          )}
+          {label}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+type Refine = "person" | "price" | "amharic";
+
+const REFINE: { key: Refine; label: string; icon: string }[] = [
+  { key: "person", label: "In person in Addis", icon: "location_on" },
+  { key: "price", label: "Lowest price first", icon: "payments" },
+  { key: "amharic", label: "Session in Amharic", icon: "translate" },
+];
+
+/** Re-rank (never drop) the matches by what the client ticked. */
+function rerank(results: MatchResult[], on: Set<Refine>): MatchResult[] {
+  let list = results.map((result, index) => ({ result, index }));
+  const lift = (test: (r: MatchResult) => boolean) => {
+    list = [...list.filter(({ result }) => test(result)), ...list.filter(({ result }) => !test(result))];
+  };
+  if (on.has("price")) {
+    list = [...list].sort(
+      (a, b) => (a.result.expert.startingPrice ?? Infinity) - (b.result.expert.startingPrice ?? Infinity) || a.index - b.index,
+    );
+  }
+  if (on.has("amharic")) lift((r) => r.expert.languages.some((l) => l.toLowerCase() === "amharic"));
+  if (on.has("person")) lift((r) => r.expert.inPersonEnabled);
+  return list.map(({ result }) => result);
+}
+
 const MAX_CHARS = 1000;
 const MIN_CHARS = 15;
 
@@ -118,7 +170,8 @@ export function MatchClient({ initialProblem }: { initialProblem: string }) {
     setEditing(state.status === "error");
   }
 
-  const results = state.status === "done" ? (state.results ?? []) : [];
+  const [refine, setRefine] = useState<Set<Refine>>(new Set());
+  const results = rerank(state.status === "done" ? (state.results ?? []) : [], refine);
   const ranked = state.mode === "ai";
   const brief = state.problem ?? problem;
 
@@ -202,10 +255,7 @@ export function MatchClient({ initialProblem }: { initialProblem: string }) {
 
       {isPending ? (
         <section className="wrap" style={{ maxWidth: 1280, paddingBlock: "clamp(40px, 6vw, 72px) 120px" }}>
-          <p role="status" className="muted" style={{ margin: "0 0 24px", display: "flex", alignItems: "center", gap: 12 }}>
-            <span className="spin" aria-hidden="true" />
-            Reading what you wrote against each expert&apos;s experience…
-          </p>
+          <MatchingSteps />
           <div className="mgrid" aria-hidden="true">
             <div className="skel" />
             <div className="skel" />
@@ -230,6 +280,11 @@ export function MatchClient({ initialProblem }: { initialProblem: string }) {
                   {ranked
                     ? "We read what you wrote against what each expert has actually done, not their job titles. Here is who fits, and why."
                     : state.notice}
+                  {refine.size > 0
+                    ? ` Re-ranked for: ${REFINE.filter((item) => refine.has(item.key))
+                        .map((item) => item.label.toLowerCase())
+                        .join(", ")}.`
+                    : ""}
                 </p>
               </div>
               <div className="mgrid">
@@ -242,7 +297,30 @@ export function MatchClient({ initialProblem }: { initialProblem: string }) {
                   <h2 className="d" style={{ margin: 0, fontSize: 22 }}>
                     Not quite right?
                   </h2>
-                  <span className="muted">Add more detail and we&apos;ll match again, or look through everyone.</span>
+                  <span className="muted">Tell us what matters and we&apos;ll re-rank.</span>
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {REFINE.map((item) => (
+                    <button
+                      key={item.key}
+                      type="button"
+                      className="rf"
+                      aria-pressed={refine.has(item.key)}
+                      onClick={() =>
+                        setRefine((current) => {
+                          const next = new Set(current);
+                          if (next.has(item.key)) next.delete(item.key);
+                          else next.add(item.key);
+                          return next;
+                        })
+                      }
+                    >
+                      <span className="ms" aria-hidden="true">
+                        {item.icon}
+                      </span>
+                      {item.label}
+                    </button>
+                  ))}
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 20, fontSize: 15, fontWeight: 500 }}>
                   <Link href="/experts" className="link-arrow" style={{ minHeight: 44 }}>

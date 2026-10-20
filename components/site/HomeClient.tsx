@@ -8,28 +8,28 @@ import { ExpertCard } from "@/components/site/ExpertCard";
 
 const STEPS = [
   {
-    n: "01",
-    icon: "edit_note",
+    n: "001",
+    img: "/images/how-1.svg",
     title: "Describe your problem",
     body: "A few lines on what you are working on. No account needed to see your matches.",
   },
   {
-    n: "02",
-    icon: "person",
-    title: "Pick your expert",
-    body: "Read their background, see their price and duration, and choose a time that suits you both.",
+    n: "002",
+    img: "/images/how-2.svg",
+    title: "Get matched",
+    body: "We read it against what each expert has actually done and show you the best placed to help, with the reason for each.",
   },
   {
-    n: "03",
-    icon: "payments",
+    n: "003",
+    img: "/images/how-3.svg",
     title: "Pay up front",
-    body: "Pay through Chapa with telebirr, CBE Birr or a bank card. The expert is paid only after the session takes place.",
+    body: "Pay with Chapa: telebirr, CBE Birr or a card. The expert is paid only after the session takes place.",
   },
   {
-    n: "04",
-    icon: "videocam",
+    n: "004",
+    img: "/images/how-4.svg",
     title: "Meet",
-    body: "On Google Meet or in person, your choice. Your full session, undivided.",
+    body: "On Google Meet or in person, your choice. Move it free up to 24 hours before.",
   },
 ];
 
@@ -135,8 +135,13 @@ function QuoteAndWhy() {
         </div>
       </figure>
       <div className="wrap" style={{ paddingBlockStart: 24 }}>
-        <div className="gapbox">
-          <h3>He is right. That is why Pivotroom exists.</h3>
+        <div className="gapbox light">
+          <div className="stack" style={{ gap: 14 }}>
+            <span className="gaplbl">Our answer</span>
+            <h3>
+              He is right. <span style={{ color: "#2b4fe0" }}>That is why Pivotroom exists.</span>
+            </h3>
+          </div>
           <div className="stack" style={{ gap: 24, minWidth: 0 }}>
             <p>
               The answers to Ethiopian business problems are not in a book. They are in the heads of people who have
@@ -144,7 +149,7 @@ function QuoteAndWhy() {
               through customs, forex and licensing and still made a profit. We find those people, check what they
               have actually done, and put an hour of their time within your reach.
             </p>
-            <a href="#match" className="btn btn-white md" style={{ alignSelf: "flex-start" }}>
+            <a href="#match" className="btn btn-ink lg" style={{ alignSelf: "flex-start", paddingInline: "24px 20px" }}>
               <span className="gl">Find someone who has been there</span>
               <span className="gs">Find my match</span>{" "}
               <span className="ms af" aria-hidden="true">
@@ -293,24 +298,38 @@ export function HomeClient({ experts, categories }: { experts: PublicDirectoryCa
 
   return (
     <>
-      <section className="hero ink">
-        <div className="in">
-          <span style={{ fontSize: 14, color: "#9ba1aa" }}>Vetted founders, executives and professionals</span>
-          <h1>One hour with someone who has done it.</h1>
-          <p>
-            Tell us what you&apos;re facing. We&apos;ll match you with the person who has already solved it, and you
-            book a paid one-to-one session.
-          </p>
-          <div className="ctas">
-            <a href="#match" className="btn btn-white lg">
-              Find my match{" "}
-              <span className="ms af" aria-hidden="true">
-                arrow_forward
-              </span>
-            </a>
-            <Link href="/experts" className="lk link-arrow" style={{ fontWeight: 400 }}>
+      <section className="hero2" aria-labelledby="hero-title">
+        <div className="hp">
+          <div className="hp-top">
+            <span className="hp-meta">
+              Vetted founders, executives
+              <br className="hide-sm" /> and professionals
+            </span>
+          </div>
+          <div className="hp-main">
+            <h1 id="hero-title" className="d hp-h">
+              One hour with someone
+              <br className="hide-sm" /> who has already done it.
+              <br />
+              <span className="hp-acc">Book them today.</span>{" "}
+              <a className="hp-cta" href="#match">
+                Find my match{" "}
+                <span className="hp-ci" aria-hidden="true">
+                  <span className="ms" style={{ fontSize: 16 }}>
+                    arrow_outward
+                  </span>
+                </span>
+              </a>
+            </h1>
+            <p className="hp-sub">
+              Tell us what you&apos;re facing. We match you with the person who has already solved it, and you book a
+              paid one-to-one session.
+            </p>
+          </div>
+          <div className="hp-bot">
+            <Link href="/experts" className="hp-link">
               Browse all experts{" "}
-              <span className="ms af" aria-hidden="true">
+              <span className="ms af" aria-hidden="true" style={{ fontSize: 16 }}>
                 arrow_forward
               </span>
             </Link>
@@ -342,19 +361,18 @@ export function HomeClient({ experts, categories }: { experts: PublicDirectoryCa
       )}
 
       <section id="how" style={{ background: "#f4f5f7" }}>
-        <div className="wrap section stack" style={{ gap: 40 }}>
+        <div className="wrap section stack" style={{ gap: "clamp(40px, 5vw, 64px)" }}>
           <h2 className="h2">How a session works</h2>
-          <ol className="steps">
+          <ol className="hw-grid">
             {STEPS.map((step) => (
-              <li key={step.n}>
-                <div className="top">
-                  <span className="ms" aria-hidden="true">
-                    {step.icon}
-                  </span>
-                  <span className="eyebrow num">{step.n}</span>
+              <li key={step.n} className="hw-col">
+                <span className="hw-n num">{step.n}</span>
+                <div className="hw-ic">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- static line illustration. */}
+                  <img src={step.img} alt="" width={120} height={96} />
                 </div>
-                <span className="t">{step.title}</span>
-                <span className="b">{step.body}</span>
+                <h3 className="d">{step.title}</h3>
+                <p>{step.body}</p>
               </li>
             ))}
           </ol>

@@ -65,8 +65,15 @@ export function RailConfirmed({ booking, customerTimezone }: { booking: Booking;
       ) : null}
 
       <Link
+        href={`/dashboard/sessions/${booking.booking_reference}/confirmed`}
+        className="mt-4 inline-flex h-12 w-full items-center justify-center rounded-full bg-[var(--color-brand)] px-7 text-sm font-medium text-[var(--color-on-brand)] transition-colors hover:bg-[var(--color-brand-hover)]"
+      >
+        See your booking
+      </Link>
+
+      <Link
         href="/dashboard/sessions"
-        className="mt-4 inline-flex h-12 w-full items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-7 text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-bg)]"
+        className="mt-3 inline-flex h-12 w-full items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-7 text-sm font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-bg)]"
       >
         View my sessions
       </Link>

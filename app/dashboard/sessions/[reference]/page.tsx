@@ -5,7 +5,7 @@ import { requireCustomerPage, getCustomerSessionDetail } from "@/lib/dashboard/d
 import { formatSessionDateTime, pendingActionForSession } from "@/lib/dashboard/presentation";
 import { SessionStatusPill, PaymentStatusPill } from "@/components/session/StatusPill";
 import { SessionActionsPanel } from "@/components/booking/SessionActionsPanel";
-import { isReschedulableByCustomer, isCancellableByCustomer } from "@/lib/booking/data";
+import { hasNotStarted } from "@/lib/booking/data";
 import { SESSION_FORMAT_LABELS, type SessionFormat } from "@/types/booking";
 import type { PaymentStatus } from "@/types/payment";
 import { getOwnReviewForBooking, isReviewable } from "@/lib/reviews/data";
@@ -63,6 +63,23 @@ export default async function DashboardSessionDetailPage({
         </Link>
       ) : null}
 
+      {booking.booking_status === "confirmed" && hasNotStarted(booking) ? (
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href={`/dashboard/sessions/${booking.booking_reference}/confirmed`}
+            className="inline-flex items-center justify-center rounded-full bg-[var(--color-brand)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-hover)]"
+          >
+            Booking confirmation
+          </Link>
+          <Link
+            href={`/dashboard/sessions/${booking.booking_reference}/manage`}
+            className="inline-flex items-center justify-center rounded-full border border-[var(--color-text)] bg-[var(--color-surface)] px-5 py-2.5 text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-mist)]"
+          >
+            Reschedule or cancel
+          </Link>
+        </div>
+      ) : null}
+
       {isReviewable(booking) ? (
         <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
           {ownReview ? (
@@ -101,8 +118,8 @@ export default async function DashboardSessionDetailPage({
         durationMinutes={booking.duration_minutes}
         sessionFormat={booking.session_format as SessionFormat}
         customerTimezone={booking.customer_timezone}
-        canReschedule={Boolean(detail.expertSlug) && isReschedulableByCustomer(booking)}
-        canCancel={isCancellableByCustomer(booking)}
+        canReschedule={false}
+        canCancel={false}
         pendingChangeRequestId={pendingChangeRequest?.id ?? null}
       />
 

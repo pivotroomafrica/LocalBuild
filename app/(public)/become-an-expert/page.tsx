@@ -118,27 +118,37 @@ export default async function BecomeAnExpertPage({ searchParams }: { searchParam
 
   return (
     <>
-      <section className="hero ink">
-        <div className="in" style={{ minHeight: "min(calc(100svh - 72px), 680px)" }}>
-          <span style={{ fontSize: 14, color: "#9ba1aa" }}>For people who have built, led or solved something real</span>
-          <h1>Somebody needs exactly what you know. Give them an hour, at your price.</h1>
-          <p>
-            Founders and managers keep making mistakes you learned from years ago. On Pivotroom they book an hour with
-            you and pay before it starts. You set the price. You choose the hours.
+      <section className="xhero" aria-labelledby="apply-title">
+        <div className="xh-in">
+          <Link className="xh-pill" href={applyHref}>
+            <span className="xh-dot" aria-hidden="true" />
+            Applications open for our founding experts{" "}
+            <span className="ms" aria-hidden="true" style={{ fontSize: 16, color: "#5c616a" }}>
+              chevron_right
+            </span>
+          </Link>
+          <h1 id="apply-title" className="xh-h">
+            The mistakes you have already paid for are worth something to someone else.
+          </h1>
+          <p className="xh-p">
+            Somewhere in Ethiopia a founder is about to make a mistake you learned from years ago. On Pivotroom they
+            book an hour with you and pay before it starts. You set the price. You choose the hours.
           </p>
           {from === "availability" ? (
-            <p className="notice" style={{ background: "#262a31", color: "#ffffff" }}>
+            <p className="notice" style={{ margin: 0 }}>
               Availability opens after your expert application is approved.
             </p>
           ) : null}
-          <div className="ctas">
-            <Link href={applyHref} className="btn btn-white lg">
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: "12px 24px", marginTop: 8 }}>
+            <Link href={applyHref} className="btn btn-ink icta">
               Start your application{" "}
-              <span className="ms af" aria-hidden="true">
-                arrow_forward
+              <span className="icta-i" aria-hidden="true">
+                <span className="ms af" style={{ fontSize: 16 }}>
+                  arrow_forward
+                </span>
               </span>
             </Link>
-            <a href="#terms" className="lk link-arrow" style={{ fontWeight: 400 }}>
+            <a href="#terms" className="link-arrow" style={{ minHeight: 44, color: "#0d0f12" }}>
               Read the terms first{" "}
               <span className="ms af" aria-hidden="true">
                 arrow_forward

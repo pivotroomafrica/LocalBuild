@@ -32,10 +32,12 @@ const FAQS: Faq[] = [
 
 const CATEGORIES = ["All", "Booking", "Payments", "Sessions", "Account", "Experts"];
 
-/** /help (website design): search, topic filter, collapsible answers. */
+/** /help (website design): a light card on a dark stage, search, topic
+ * filter and numbered questions that open one at a time. */
 export function HelpClient() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
+  const [open, setOpen] = useState(0);
 
   const byText = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -44,106 +46,133 @@ export function HelpClient() {
   const items = category === "All" ? byText : byText.filter((faq) => faq.cat === category);
 
   return (
-    <>
-      <section style={{ background: "#f4f5f7" }}>
-        <div className="wrap stack" style={{ maxWidth: 1280, paddingBlock: "clamp(48px, 7vw, 88px)", gap: 16 }}>
-          <span className="eyebrow">Help and FAQ</span>
-          <h1 className="h1">Answers before you have to ask.</h1>
-          <p className="lede">Booking, paying, meeting your expert and managing your account, in plain words.</p>
-          <label className="matchbar" style={{ marginBlockStart: 8 }}>
-            <span className="box">
-              <span className="ms" aria-hidden="true">
-                search
-              </span>
-              <span className="sr">Search the help pages</span>
-              <input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search, for example refund or Google Meet"
-              />
+    <section className="hstage" aria-labelledby="help-title">
+      <div className="hglow" aria-hidden="true" />
+      <div className="hcard">
+        <div className="hhead">
+          <span className="hpill">
+            <span className="num" style={{ color: "#9ba1aa" }}>
+              {FAQS.length}
             </span>
+            <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: "#0d0f12" }} />
+            Help and FAQ
+          </span>
+          <h1 id="help-title" className="d" style={{ margin: 0, fontSize: "clamp(34px, 5vw, 60px)", lineHeight: 1.04, letterSpacing: "-0.03em", textWrap: "balance" }}>
+            Answers before you have to ask.
+          </h1>
+          <p className="muted" style={{ margin: 0, maxWidth: "46ch", fontSize: "clamp(15px, 1.3vw, 17px)" }}>
+            Booking, paying, meeting your expert and managing your account, in plain words.
+          </p>
+          <label className="hsearch">
+            <span className="ms" aria-hidden="true" style={{ fontSize: 22, color: "#5c616a" }}>
+              search
+            </span>
+            <span className="sr">Search the help pages</span>
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setOpen(0);
+              }}
+              placeholder="Search, for example refund or Google Meet"
+            />
           </label>
-        </div>
-      </section>
-      <section style={{ background: "#ffffff" }}>
-        <div className="wrap stack" style={{ maxWidth: 1280, paddingBlock: "40px 120px", gap: 32 }}>
-          <div className="scroller" role="group" aria-label="Topics">
+          <div className="hcats" role="group" aria-label="Topics">
             {CATEGORIES.map((label) => {
               const count = label === "All" ? byText.length : byText.filter((faq) => faq.cat === label).length;
               return (
                 <button
                   key={label}
                   type="button"
-                  className="chip"
+                  className="hcat"
                   aria-pressed={category === label}
-                  onClick={() => setCategory(label)}
+                  onClick={() => {
+                    setCategory(label);
+                    setOpen(0);
+                  }}
                 >
-                  {label}{" "}
-                  <span className="muted num" style={{ fontSize: 13, marginInlineStart: 4 }}>
-                    {count}
-                  </span>
+                  {label} <span className="ct num">{count}</span>
                 </button>
               );
             })}
           </div>
+        </div>
 
-          {items.length > 0 ? (
-            <div className="faqs" style={{ maxWidth: 880 }}>
-              {items.map((faq) => (
-                <details key={faq.q} className="faq">
-                  <summary>
-                    <span className="stack" style={{ gap: 2, paddingBlock: 14 }}>
-                      <span className="muted" style={{ fontSize: 13, fontWeight: 500 }}>
-                        {faq.cat}
-                      </span>
-                      <span className="d" style={{ fontSize: 18 }}>
-                        {faq.q}
+        {items.length > 0 ? (
+          <div className="qlist">
+            {items.map((faq, index) => {
+              const isOpen = open === index;
+              return (
+                <div key={faq.q} className={isOpen ? "qi open" : "qi"}>
+                  <button
+                    type="button"
+                    className="qrow"
+                    aria-expanded={isOpen}
+                    aria-controls={`qa-${index}`}
+                    onClick={() => setOpen(isOpen ? -1 : index)}
+                  >
+                    <span className="qn num" aria-hidden="true">
+                      {index + 1}
+                    </span>
+                    <span className="qt">
+                      <span className="qc">{faq.cat}</span>
+                      <span className="qq">{faq.q}</span>
+                    </span>
+                    <span className="qb" aria-hidden="true">
+                      <span className="ms" style={{ fontSize: 20 }}>
+                        {isOpen ? "close" : "add"}
                       </span>
                     </span>
-                    <span className="ms chev" aria-hidden="true">
-                      arrow_drop_down
-                    </span>
-                  </summary>
-                  <p>{faq.a}</p>
-                </details>
-              ))}
-            </div>
-          ) : (
-            <div className="stack" style={{ gap: 8, alignItems: "flex-start" }}>
-              <span className="d" style={{ fontSize: 20 }}>
-                No answers match &ldquo;{query}&rdquo;
-              </span>
-              <span className="muted">Try a shorter word, or write to us and a person will reply.</span>
-              <button
-                type="button"
-                className="textbtn"
-                onClick={() => {
-                  setQuery("");
-                  setCategory("All");
-                }}
-              >
-                Clear the search
-              </button>
-            </div>
-          )}
+                  </button>
+                  {isOpen ? (
+                    <div id={`qa-${index}`} className="qa" role="region">
+                      <p>{faq.a}</p>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div
+            className="stack"
+            style={{ padding: 28, background: "rgba(255,255,255,.7)", borderRadius: 24, gap: 8, alignItems: "center", textAlign: "center" }}
+          >
+            <span className="d" style={{ fontSize: 20 }}>
+              No answers match &ldquo;{query}&rdquo;
+            </span>
+            <span className="muted">Try a shorter word, or write to us and a person will reply.</span>
+            <button
+              type="button"
+              className="textbtn"
+              style={{ minHeight: 44, fontWeight: 500 }}
+              onClick={() => {
+                setQuery("");
+                setCategory("All");
+                setOpen(0);
+              }}
+            >
+              Clear the search
+            </button>
+          </div>
+        )}
 
-          <div className="ink stuck">
-            <div className="stack" style={{ gap: 4 }}>
-              <span className="d" style={{ fontSize: 22, color: "#ffffff" }}>
-                Still stuck?
-              </span>
-              <span style={{ color: "#9ba1aa" }}>Write to us. Include your booking reference if you have one.</span>
-            </div>
-            <a className="btn btn-white md" href={`mailto:${CONTACT_EMAIL}`}>
-              {CONTACT_EMAIL}{" "}
-              <span className="ms af" aria-hidden="true">
+        <div className="stack" style={{ gap: 6, alignItems: "center", textAlign: "center" }}>
+          <span className="muted" style={{ fontSize: 15 }}>
+            Have any other questions?
+          </span>
+          <a className="mailto" href={`mailto:${CONTACT_EMAIL}`}>
+            Write to {CONTACT_EMAIL}{" "}
+            <span className="mi" aria-hidden="true">
+              <span className="ms af" style={{ fontSize: 14 }}>
                 arrow_forward
               </span>
-            </a>
-          </div>
+            </span>
+          </a>
+          <span style={{ color: "#9ba1aa", fontSize: 13 }}>Include your booking reference if you have one. A person replies.</span>
         </div>
-      </section>
-    </>
+      </div>
+    </section>
   );
 }

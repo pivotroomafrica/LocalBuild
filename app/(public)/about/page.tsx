@@ -1,23 +1,9 @@
 import Link from "next/link";
 import { getCategoryNamesForRequest, getDirectoryForRequest } from "@/lib/public/cached";
 import { initialsOf } from "@/components/site/format";
+import { AboutRules } from "@/components/site/AboutRules";
 
 export const metadata = { title: "About — Pivotroom" };
-
-const RULES = [
-  { icon: "key", title: "Access", body: "You reach someone you could not have reached alone. No feeds, no endless scrolling." },
-  { icon: "videocam", title: "Presence", body: "One session, one person, full attention. Nothing competes with the conversation." },
-  {
-    icon: "verified",
-    title: "Standing",
-    body: "Our experts' time has real value, and we treat it that way, from vetting to pricing.",
-  },
-  {
-    icon: "receipt_long",
-    title: "Plain dealing",
-    body: "Price, length and terms are on the page before you book. No surprises afterwards.",
-  },
-];
 
 const VETTING = [
   { n: "01", title: "They apply", body: "With a written application about what they have built, who they help and what they charge." },
@@ -54,18 +40,45 @@ export default async function AboutPage() {
 
   return (
     <>
-      <section className="hero ink">
-        <div className="in" style={{ minHeight: "min(calc(100svh - 72px), 600px)" }}>
-          <span style={{ fontSize: 14, color: "#9ba1aa" }}>About Pivotroom</span>
-          <h1>Experience is the one thing you can&apos;t download.</h1>
-          <p>
-            So we built a place to borrow it. Pivotroom puts you in a room, for one paid session, with someone who has
-            already done what you are about to try.
-          </p>
+      <section className="ahero" aria-labelledby="about-title">
+        <div className="wrap ah-grid">
+          <div className="ah-copy">
+            <span className="muted" style={{ fontSize: 14 }}>
+              About Pivotroom
+            </span>
+            <h1 id="about-title" className="d ah-h">
+              East Africa&apos;s best business advice was never written down.{" "}
+              <span style={{ color: "#2b4fe0" }}>Now you can book it.</span>
+            </h1>
+            <p className="ah-p">
+              It lives in the heads of people who have already done what you are about to try. Pivotroom finds them,
+              checks what they have actually done, and puts you in a room with them for one paid session. It costs less
+              than the mistake.
+            </p>
+          </div>
+          <div className="ah-map">
+            {/* eslint-disable-next-line @next/next/no-img-element -- static map illustration. */}
+            <img
+              src="/images/about-map.svg"
+              alt="Dotted map of East Africa with Ethiopia highlighted and Addis Ababa marked as headquarters"
+              width={560}
+              height={590}
+            />
+            <span className="ah-tag" style={{ left: "53.97%", top: "31.07%" }}>
+              <span className="ah-hq">HQ</span>
+              <b>Addis Ababa</b>
+            </span>
+          </div>
         </div>
+        <a className="ah-explore" href="#story">
+          Explore{" "}
+          <span className="ms" aria-hidden="true">
+            south
+          </span>
+        </a>
       </section>
 
-      <section style={{ background: "#ffffff" }}>
+      <section id="story" style={{ background: "#ffffff" }}>
         <div className="wrap section split">
           <h2 className="h2">Why we built Pivotroom</h2>
           <div className="stack" style={{ gap: 16, fontSize: 18, lineHeight: 1.65 }}>
@@ -100,31 +113,7 @@ export default async function AboutPage() {
         </section>
       ) : null}
 
-      <section style={{ background: "#f4f5f7" }}>
-        <div className="wrap section stack" style={{ gap: 40 }}>
-          <div className="stack" style={{ gap: 12 }}>
-            <h2 className="h2">Four rules we don&apos;t bend</h2>
-            <p className="muted" style={{ margin: 0, maxWidth: "56ch" }}>
-              Every decision on Pivotroom, from the way a profile looks to the way money moves, is tested against these.
-            </p>
-          </div>
-          <ul className="lookfor">
-            {RULES.map((rule) => (
-              <li key={rule.title} style={{ background: "#ffffff" }}>
-                <span className="ms" aria-hidden="true" style={{ fontSize: 22 }}>
-                  {rule.icon}
-                </span>
-                <span className="d" style={{ fontSize: 20 }}>
-                  {rule.title}
-                </span>
-                <span className="muted" style={{ fontSize: 15, lineHeight: 1.55 }}>
-                  {rule.body}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+      <AboutRules />
 
       <section className="ink" style={{ background: "#0d0f12", color: "#ffffff" }}>
         <div className="wrap section split">

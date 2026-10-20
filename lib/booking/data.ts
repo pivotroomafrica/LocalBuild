@@ -507,3 +507,8 @@ export async function getAdminBookingDetail(
     pendingChangeRequest,
   };
 }
+
+/** True while the session's start time is still ahead. */
+export function hasNotStarted(booking: Pick<Booking, "start_at">): boolean {
+  return new Date(booking.start_at).getTime() > Date.now();
+}
