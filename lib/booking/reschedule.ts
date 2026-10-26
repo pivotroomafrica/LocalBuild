@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getBookableSlots } from "@/lib/booking/data";
 import type { BookableSlot, SessionFormat } from "@/types/booking";
+import { kickJobs } from "@/lib/jobs/inProcess";
 
 const GENERIC_ERROR = "We couldn't complete that. Please try again.";
 
@@ -98,6 +99,7 @@ export async function rescheduleBookingAction(
 
   if (error) return { error: toSafeError(error.message) };
 
+  kickJobs();
   revalidatePath(`/dashboard/sessions/${bookingReference}`);
   revalidatePath("/dashboard/sessions");
   revalidatePath("/dashboard");

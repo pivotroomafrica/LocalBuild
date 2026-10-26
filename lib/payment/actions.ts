@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getBookingByReference } from "@/lib/booking/data";
 import { RECEIPT_ALLOWED_TYPES, RECEIPT_MAX_BYTES } from "@/types/payment";
+import { kickJobs } from "@/lib/jobs/inProcess";
+import { notifyAdminsManualPayment } from "@/lib/notify/account";
 
 const GENERIC_ERROR = "We couldn't submit that. Please try again.";
 
@@ -115,6 +117,7 @@ export async function submitManualPaymentAction(
 
   if (error) return { error: toSafeError(error.message) };
 
+  notifyAdminsManualPayment(bookingReference);
   revalidatePath(`/booking/${bookingReference}/payment`);
   return { success: true };
 }
@@ -137,6 +140,7 @@ export async function verifyPaymentAction(
   const { error } = await supabase.rpc("verify_manual_payment", { p_payment_id: paymentId });
   if (error) return { error: toSafeError(error.message) };
 
+  kickJobs();
   revalidatePath("/admin/payments");
   revalidatePath(`/admin/payments/${paymentId}`);
   return { success: true };
@@ -160,6 +164,7 @@ export async function rejectPaymentAction(
   });
   if (error) return { error: toSafeError(error.message) };
 
+  kickJobs();
   revalidatePath("/admin/payments");
   revalidatePath(`/admin/payments/${paymentId}`);
   return { success: true };

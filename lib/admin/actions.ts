@@ -8,6 +8,9 @@ import { getExpertApplicationDataById, getMissingRequiredFields } from "@/lib/ex
 import { validateReviewMessage } from "@/lib/validation/expert";
 import { HIDEABLE_FIELDS, parseExpertiseFields, parseIdentityFields, parseResponseTime } from "@/lib/expert/profileFields";
 import { syncExpertCategories } from "@/lib/expert/categorySync";
+import { notifyExpertOutcome } from "@/lib/notify/account";
+import { createServiceRoleClient } from "@/lib/supabase/service";
+import { kickJobs } from "@/lib/jobs/inProcess";
 
 export type AdminActionState = {
   error?: string;
@@ -59,11 +62,12 @@ export async function requestChangesAction(
     .update({ application_status: "changes_requested", review_message: message.value })
     .eq("id", expertProfileId)
     .eq("application_status", "submitted")
-    .select("id");
+    .select("id, user_id, updated_at");
 
   if (error) return { error: GENERIC_ERROR };
   if (!data || data.length === 0) return { error: STALE_STATE_ERROR };
 
+  notifyExpertOutcome(data[0].user_id, "changes_requested", message.value, `${expertProfileId}:${data[0].updated_at}`);
   revalidateExpertPages(expertProfileId);
   return { success: true };
 }
@@ -90,11 +94,12 @@ export async function rejectApplicationAction(
     .update({ application_status: "rejected", review_message: message.value })
     .eq("id", expertProfileId)
     .eq("application_status", "submitted")
-    .select("id");
+    .select("id, user_id");
 
   if (error) return { error: GENERIC_ERROR };
   if (!data || data.length === 0) return { error: STALE_STATE_ERROR };
 
+  notifyExpertOutcome(data[0].user_id, "rejected", message.value, expertProfileId);
   revalidateExpertPages(expertProfileId);
   return { success: true };
 }
@@ -134,11 +139,12 @@ export async function approveApplicationAction(
     .update({ application_status: "approved", profile_status: "ready" })
     .eq("id", expertProfileId)
     .eq("application_status", "submitted")
-    .select("id");
+    .select("id, user_id");
 
   if (error) return { error: GENERIC_ERROR };
   if (!data || data.length === 0) return { error: STALE_STATE_ERROR };
 
+  notifyExpertOutcome(data[0].user_id, "approved", null, expertProfileId);
   revalidateExpertPages(expertProfileId);
   return { success: true };
 }
@@ -188,6 +194,24 @@ export async function publishExpertAction(
   if (!applicationData.expertProfile.slug) {
     return { error: "Cannot publish: this profile has no public URL slug." };
   }
+  // A live profile with no open times can't be booked. Read with the
+  // service role: availability rows are the expert's own (RLS).
+  const service = createServiceRoleClient();
+  const today = new Date().toISOString().slice(0, 10);
+  const [{ count: ruleCount }, { count: oneOffCount }] = await Promise.all([
+    service
+      .from("expert_monthly_availability_rules")
+      .select("id", { count: "exact", head: true })
+      .eq("expert_profile_id", expertProfileId),
+    service
+      .from("expert_one_off_availability")
+      .select("id", { count: "exact", head: true })
+      .eq("expert_profile_id", expertProfileId)
+      .gte("available_date", today),
+  ]);
+  if (!ruleCount && !oneOffCount) {
+    return { error: "Cannot publish yet: the expert hasn't set any hours clients can book. Ask them to add availability first." };
+  }
 
   const { data, error } = await supabase
     .from("expert_profiles")
@@ -195,10 +219,12 @@ export async function publishExpertAction(
     .eq("id", expertProfileId)
     .eq("application_status", "approved")
     .eq("profile_status", "ready")
-    .select("id");
+    .select("id, user_id");
 
   if (error) return { error: GENERIC_ERROR };
   if (!data || data.length === 0) return { error: STALE_STATE_ERROR };
+
+  notifyExpertOutcome(data[0].user_id, "published", null, expertProfileId);
 
   revalidateExpertPages(expertProfileId);
   revalidatePath("/experts");
@@ -446,6 +472,7 @@ export async function adminRescheduleBookingAction(
     return { error: GENERIC_ERROR };
   }
 
+  kickJobs();
   revalidatePath(`/admin/bookings/${bookingReference}`);
   revalidatePath("/admin/bookings");
   return { success: true };
@@ -484,6 +511,7 @@ export async function adminCancelBookingAction(
     return { error: GENERIC_ERROR };
   }
 
+  kickJobs();
   revalidatePath(`/admin/bookings/${bookingReference}`);
   revalidatePath("/admin/bookings");
   return { success: true };

@@ -1,6 +1,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/service";
 import { getChapaClient } from "./factory";
 import { getChapaMode } from "./config";
+import { kickJobs } from "@/lib/jobs/inProcess";
 
 export type ChapaFinalizeOutcome = {
   finalPaymentStatus: string;
@@ -71,6 +72,7 @@ export async function verifyAndFinalizeChapaTransaction(txRef: string): Promise<
   }
 
   const row = data[0];
+  if (row.newly_finalized) kickJobs();
   return {
     finalPaymentStatus: row.final_payment_status,
     finalBookingStatus: row.final_booking_status,

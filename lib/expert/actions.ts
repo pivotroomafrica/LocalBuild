@@ -15,6 +15,8 @@ import {
 } from "@/lib/validation/expert";
 import { calculateDurationPrice } from "@/lib/expert/pricing";
 import type { ExpertProfile } from "@/types/expert";
+import { kickJobs } from "@/lib/jobs/inProcess";
+import { notifyAdminsApplicationSubmitted } from "@/lib/notify/account";
 
 const GENERIC_ERROR = "We couldn't save your changes. Please try again.";
 
@@ -356,6 +358,8 @@ export async function submitApplicationAction(
 
   if (error) return { error: GENERIC_ERROR };
 
+  notifyAdminsApplicationSubmitted(data.expertProfile.id, user.id, new Date().toISOString());
+
   revalidatePath("/expert/application");
   invalidatePublicExperts();
   return { success: true };
@@ -421,6 +425,7 @@ export async function requestExpertRescheduleAction(
     return { error: "We couldn't send that request. Please try again." };
   }
 
+  kickJobs();
   revalidatePath(`/expert/sessions/${bookingReference}`);
   revalidatePath("/expert/sessions");
   revalidatePath("/expert/dashboard");
@@ -468,6 +473,7 @@ export async function cancelExpertBookingAction(
     return { error: "We couldn't complete that. Please try again." };
   }
 
+  kickJobs();
   revalidatePath(`/expert/sessions/${bookingReference}`);
   revalidatePath("/expert/sessions");
   revalidatePath("/expert/dashboard");

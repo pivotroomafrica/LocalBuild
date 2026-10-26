@@ -579,3 +579,26 @@ export function expertRescheduleRequestedEmail(params: {
 function truncate(value: string, max: number): string {
   return value.length > max ? `${value.slice(0, max)}…` : value;
 }
+
+// =========================================================================
+// Short account notices outside the booking lifecycle (expert application
+// status, admin alerts) -- sent directly, not through integration_jobs.
+// =========================================================================
+export function noticeEmail(params: {
+  subject: string;
+  heading: string;
+  paragraphs: string[];
+  ctaLabel: string;
+  ctaUrl: string;
+}): EmailContent {
+  const html = renderShell({
+    heading: params.heading,
+    bodyHtml: params.paragraphs
+      .map((p, i) => `<p style="margin:${i === 0 ? 0 : 12}px 0 0 0;white-space:pre-wrap;">${escapeHtml(p)}</p>`)
+      .join(""),
+    ctaLabel: params.ctaLabel,
+    ctaUrl: params.ctaUrl,
+  });
+  const text = formatText(params.heading, "", ...params.paragraphs.flatMap((p) => [p, ""]), `${params.ctaLabel}: ${params.ctaUrl}`);
+  return { subject: params.subject, html, text };
+}
