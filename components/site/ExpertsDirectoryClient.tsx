@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import type { PublicDirectoryCard } from "@/lib/public/data";
 import { ExpertCard } from "@/components/site/ExpertCard";
 
@@ -70,7 +69,7 @@ function InlineSelect<T extends string>({
 /**
  * /experts (website design). The real published directory, already ranked
  * by activity (049c); category, format and price filters run in the
- * browser. "Match me" hands the description to /match.
+ * browser, as does the text search.
  */
 export function ExpertsDirectoryClient({
   experts,
@@ -83,8 +82,6 @@ export function ExpertsDirectoryClient({
   initialQuery: string;
   initialCategory: string | null;
 }) {
-  const router = useRouter();
-  const [problem, setProblem] = useState("");
   const [query, setQuery] = useState(initialQuery);
   const [category, setCategory] = useState<string | null>(
     initialCategory && categories.includes(initialCategory) ? initialCategory : null,
@@ -109,14 +106,9 @@ export function ExpertsDirectoryClient({
     );
   }, [experts, query, category, format, price, sort]);
 
-  function submitMatch(event: React.FormEvent) {
+  function submitSearch(event: React.FormEvent) {
     event.preventDefault();
-    const text = problem.trim();
-    if (!text) {
-      document.getElementById("q")?.focus();
-      return;
-    }
-    router.push(`/match?problem=${encodeURIComponent(text)}`);
+    document.getElementById("results")?.scrollIntoView({ behavior: "smooth" });
   }
 
   function pickCategory(name: string | null) {
@@ -134,13 +126,12 @@ export function ExpertsDirectoryClient({
           <div className="stack" style={{ gap: 12 }}>
             <h1 className="h1">Find an expert</h1>
             <p className="lede">
-              Describe what you&apos;re facing and we&apos;ll rank experts by how close their experience is. Or filter
-              the list yourself.
+              Search by what you&apos;re working on, or filter by topic, format and price. Every price is on the card.
             </p>
           </div>
-          <form className="matchbar" onSubmit={submitMatch}>
+          <form className="matchbar" role="search" onSubmit={submitSearch}>
             <label htmlFor="q" className="sr">
-              Describe your problem
+              Search experts
             </label>
             <div className="box">
               <span className="ms" aria-hidden="true">
@@ -148,15 +139,18 @@ export function ExpertsDirectoryClient({
               </span>
               <input
                 id="q"
-                type="text"
-                maxLength={1000}
-                value={problem}
-                onChange={(event) => setProblem(event.target.value)}
-                placeholder="e.g. Expanding a restaurant to a second branch"
+                type="search"
+                maxLength={120}
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setShown(PAGE_SIZE);
+                }}
+                placeholder="e.g. export, bank loan, hiring, branding"
               />
             </div>
             <button type="submit" className="btn btn-ink lg" style={{ height: 56 }}>
-              Match me{" "}
+              Search{" "}
               <span className="ms af" aria-hidden="true">
                 arrow_forward
               </span>
@@ -221,7 +215,7 @@ export function ExpertsDirectoryClient({
                 value={sort}
                 onChange={setSort}
                 options={[
-                  { value: "best", label: "best match" },
+                  { value: "best", label: "recommended" },
                   { value: "price-low", label: "price, low to high" },
                   { value: "price-high", label: "price, high to low" },
                 ]}
@@ -243,7 +237,7 @@ export function ExpertsDirectoryClient({
               <span className="muted">
                 {experts.length === 0
                   ? "The first vetted experts are being onboarded. Check back soon."
-                  : "Try another topic, or describe your problem above and we'll match you."}
+                  : "Try another topic or a different search."}
               </span>
             </div>
           )}

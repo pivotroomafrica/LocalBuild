@@ -23,8 +23,8 @@ export default async function ExpertApplicationExpertisePage({
         <div className="stack" style={{ gap: 6 }}>
           <h1 className="ws-h1">What you&apos;ve solved</h1>
           <p className="muted" style={{ margin: 0, maxWidth: "62ch" }}>
-            Step 2 of 3, about 5 minutes. Write the way a client would describe their problem: this is what we use to
-            match clients to you.
+            Step 2 of 3, about 5 minutes. Write the way a client would describe their problem: this is how clients
+            recognise that you can help.
           </p>
         </div>
         <ExpertiseStepForm

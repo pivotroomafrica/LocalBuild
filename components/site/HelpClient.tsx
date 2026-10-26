@@ -8,8 +8,7 @@ type Faq = { cat: string; q: string; a: string };
 /** Answers describe what the product does today. Refund timing is still a
  * company decision, marked [X] like the legal drafts. */
 const FAQS: Faq[] = [
-  ["Booking", "How does Find my match work?", "Describe what you are facing in a few lines. We read it against each published expert's experience and show you up to five people best placed to help, with the reason for each. You choose who to book."],
-  ["Booking", "Can I book without being matched?", "Yes. Go to Find an expert, filter by topic, and open any profile to see prices, session lengths and open times."],
+  ["Booking", "How do I find the right expert?", "Go to Find an expert, search or filter by topic, format and price, and open any profile to see what they have done, their prices, session lengths and open times."],
   ["Booking", "How far ahead can I book?", "From 24 hours ahead up to 90 days ahead. Experts open their own times, and every open time is shown on their profile."],
   ["Booking", "Can a colleague join my session?", "Sessions are booked one to one. If you would like someone to join, say so in what you write for the expert and ask whether they agree."],
   ["Payments", "How do I pay?", "Through Chapa, with telebirr, CBE Birr or a bank card, or by bank transfer, which our team verifies. You pay when you book, and your booking is confirmed once the payment is verified."],

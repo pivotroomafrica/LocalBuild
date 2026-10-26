@@ -18,8 +18,8 @@ export function NotFoundContent() {
           usually go next.
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
-          <Link href="/match" className="btn btn-ink lg">
-            Find my match{" "}
+          <Link href="/experts" className="btn btn-ink lg">
+            Find an expert{" "}
             <span className="ms af" aria-hidden="true">
               arrow_forward
             </span>
@@ -30,7 +30,6 @@ export function NotFoundContent() {
         </div>
         <nav className="quick" aria-label="Popular pages" style={{ marginBlockStart: 24 }}>
           {[
-            { href: "/experts", label: "Find an expert" },
             { href: "/dashboard", label: "My sessions" },
             { href: "/become-an-expert", label: "Become an expert" },
             { href: "/help", label: "Help and FAQ" },

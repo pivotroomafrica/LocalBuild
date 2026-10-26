@@ -127,8 +127,8 @@ export function SiteChrome({ isLoggedIn, isApprovedExpert }: Props) {
                 Sign in
               </Link>
             )}
-            <Link href="/match" className="btn btn-ink hide-sm">
-              Get matched{" "}
+            <Link href="/experts" className="btn btn-ink hide-sm">
+              Book an expert{" "}
               <span className="ms af" aria-hidden="true">
                 arrow_forward
               </span>
@@ -153,12 +153,6 @@ export function SiteChrome({ isLoggedIn, isApprovedExpert }: Props) {
                 <span className="tl">{tab.label}</span>
               </Link>
             ))}
-            <span className="tsep" aria-hidden="true" />
-            <Link className="tmatch" href="/match" aria-label="Find my match">
-              <span className="ms" aria-hidden="true">
-                auto_awesome
-              </span>
-            </Link>
           </div>
         </nav>
       ) : null}

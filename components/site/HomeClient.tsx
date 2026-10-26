@@ -1,8 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type { PublicDirectoryCard } from "@/lib/public/data";
 import { ExpertCard } from "@/components/site/ExpertCard";
 
@@ -10,14 +9,14 @@ const STEPS = [
   {
     n: "001",
     img: "/images/how-1.svg",
-    title: "Describe your problem",
-    body: "A few lines on what you are working on. No account needed to see your matches.",
+    title: "Find your expert",
+    body: "Search or pick a topic. Every profile shows what they have actually done, and every price is on the card.",
   },
   {
     n: "002",
     img: "/images/how-2.svg",
-    title: "Get matched",
-    body: "We read it against what each expert has actually done and show you the best placed to help, with the reason for each.",
+    title: "Pick a time",
+    body: "Choose a session length and one of their open times, then tell them in a few lines what you want to solve.",
   },
   {
     n: "003",
@@ -31,14 +30,6 @@ const STEPS = [
     title: "Meet",
     body: "On Google Meet or in person, your choice. Move it free up to 24 hours before.",
   },
-];
-
-/** What the matcher returns, shown beside the example brief. Describes the
- * feature instead of showing invented people. */
-const MATCH_OUTPUT = [
-  { icon: "groups", title: "The experts best placed to help", why: "Read against each expert's actual experience" },
-  { icon: "lightbulb", title: "The reason for each one", why: "Why their background fits your situation" },
-  { icon: "payments", title: "Their price before you click", why: "VAT included, no fee until you book" },
 ];
 
 /** Founder-type roles, read from the expert's own current position. */
@@ -149,13 +140,13 @@ function QuoteAndWhy() {
               through customs, forex and licensing and still made a profit. We find those people, check what they
               have actually done, and put an hour of their time within your reach.
             </p>
-            <a href="#match" className="btn btn-ink lg" style={{ alignSelf: "flex-start", paddingInline: "24px 20px" }}>
+            <Link href="/experts" className="btn btn-ink lg" style={{ alignSelf: "flex-start", paddingInline: "24px 20px" }}>
               <span className="gl">Find someone who has been there</span>
-              <span className="gs">Find my match</span>{" "}
+              <span className="gs">Find an expert</span>{" "}
               <span className="ms af" aria-hidden="true">
                 arrow_forward
               </span>
-            </a>
+            </Link>
           </div>
         </div>
       </div>
@@ -163,122 +154,24 @@ function QuoteAndWhy() {
   );
 }
 
-function MatchSection({ categories }: { categories: string[] }) {
-  const router = useRouter();
-  const [brief, setBrief] = useState("");
-  const [picked, setPicked] = useState<string[]>([]);
-
-  function toggle(topic: string) {
-    setPicked((current) => (current.includes(topic) ? current.filter((t) => t !== topic) : [...current, topic]));
-  }
-
-  function submit(event: React.FormEvent) {
-    event.preventDefault();
-    const text = brief.trim();
-    const topicLine = picked.length > 0 ? `I need help with: ${picked.join(", ")}.` : "";
-    const problem = [text, topicLine].filter(Boolean).join(" ");
-    if (!problem) {
-      document.getElementById("brief")?.focus();
-      return;
-    }
-    router.push(`/match?problem=${encodeURIComponent(problem)}`);
-  }
-
+/** Topic shortcuts into the directory, from the real category list. */
+function TopicsSection({ categories }: { categories: string[] }) {
+  if (categories.length === 0) return null;
   return (
-    <section id="match" style={{ background: "#ffffff" }}>
-      <div className="wrap section stack" style={{ gap: 40 }}>
+    <section id="topics" style={{ background: "#ffffff" }}>
+      <div className="wrap section stack" style={{ gap: 32 }}>
         <div className="stack" style={{ gap: 16 }}>
-          <h2 className="h2">
-            Start with what
-            <br />
-            you&apos;re facing
-          </h2>
+          <h2 className="h2">Start from a topic</h2>
           <p className="muted" style={{ margin: 0, maxWidth: "52ch" }}>
-            Describe it in a few lines and we&apos;ll match you with the people who have already solved it. Or start
-            from a topic.
+            Pick what you need help with and see the experts who work on it.
           </p>
         </div>
-        <div className="matchgrid">
-          <div className="matchcol">
-            <form className="brief" onSubmit={submit}>
-              <label htmlFor="brief" className="sr">
-                What are you working on?
-              </label>
-              <textarea
-                id="brief"
-                rows={4}
-                maxLength={1000}
-                value={brief}
-                onChange={(event) => setBrief(event.target.value)}
-                placeholder="Describe your problem or your plan in a few lines. We read it against each expert's actual experience and show you the people best placed to help, with the reason for each."
-              />
-              <div className="row">
-                <span>Matched in minutes · No fee until you book</span>
-                <button type="submit" className="btn btn-ink md">
-                  Find my match{" "}
-                  <span className="ms af" aria-hidden="true">
-                    arrow_forward
-                  </span>
-                </button>
-              </div>
-            </form>
-            {categories.length > 0 ? (
-              <div className="stack" style={{ gap: 16 }}>
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-                  <span className="eyebrow">Or pick the topics you need</span>
-                  <span className="muted num" style={{ fontSize: 14 }}>
-                    {picked.length > 0 ? `${picked.length} selected` : ""}
-                  </span>
-                </div>
-                <div className="topics" role="group" aria-label="Topics">
-                  {categories.map((topic) => {
-                    const on = picked.includes(topic);
-                    return (
-                      <button
-                        key={topic}
-                        type="button"
-                        className={on ? "topic on" : "topic"}
-                        aria-pressed={on}
-                        onClick={() => toggle(topic)}
-                      >
-                        {topic}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
-          </div>
-          <figure className="exbox">
-            <figcaption>
-              <span className="ms" aria-hidden="true">
-                chat_bubble
-              </span>
-              Example brief
-            </figcaption>
-            <p className="q">
-              &ldquo;We run a 40-seat restaurant in Bole and want to open a second branch. Should we take a bank loan
-              or bring in a partner?&rdquo;
-            </p>
-            <span className="muted" style={{ marginBlockStart: "auto", fontSize: 14 }}>
-              What you get back
-            </span>
-            <div className="stack" style={{ gap: 8 }}>
-              {MATCH_OUTPUT.map((row) => (
-                <div key={row.title} className="exrow">
-                  <span className="av" aria-hidden="true">
-                    <span className="ms" style={{ fontSize: 20 }}>
-                      {row.icon}
-                    </span>
-                  </span>
-                  <span className="tx">
-                    <span className="n">{row.title}</span>
-                    <span className="w">{row.why}</span>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </figure>
+        <div className="topics">
+          {categories.map((topic) => (
+            <Link key={topic} href={`/experts?category=${encodeURIComponent(topic)}`} className="topic">
+              {topic}
+            </Link>
+          ))}
         </div>
       </div>
     </section>
@@ -312,18 +205,17 @@ export function HomeClient({ experts, categories }: { experts: PublicDirectoryCa
               <br className="hide-sm" /> who has already done it.
               <br />
               <span className="hp-acc">Book them today.</span>{" "}
-              <a className="hp-cta" href="#match">
-                Find my match{" "}
+              <Link className="hp-cta" href="/experts">
+                Find an expert{" "}
                 <span className="hp-ci" aria-hidden="true">
                   <span className="ms" style={{ fontSize: 16 }}>
                     arrow_outward
                   </span>
                 </span>
-              </a>
+              </Link>
             </h1>
             <p className="hp-sub">
-              Tell us what you&apos;re facing. We match you with the person who has already solved it, and you book a
-              paid one-to-one session.
+              Find the person who has already solved what you&apos;re facing, and book a paid one-to-one session.
             </p>
           </div>
           <div className="hp-bot">
@@ -411,7 +303,7 @@ export function HomeClient({ experts, categories }: { experts: PublicDirectoryCa
         </div>
       </section>
 
-      <MatchSection categories={categories} />
+      <TopicsSection categories={categories} />
     </>
   );
 }

@@ -50,7 +50,7 @@ const STEPS = [
   {
     n: "05",
     title: "Take your first booking",
-    body: "Clients find you through search and through matching. You meet on Google Meet or in person.",
+    body: "Clients find you in the expert directory and by topic. You meet on Google Meet or in person.",
   },
 ];
 
@@ -63,7 +63,7 @@ const LOOK_FOR = [
   {
     icon: "person",
     title: "Problems you have actually solved",
-    body: "Name them. The more specific you are, the better we can match you with clients.",
+    body: "Name them. The more specific you are, the easier it is for the right clients to find you.",
   },
   {
     icon: "chat_bubble",

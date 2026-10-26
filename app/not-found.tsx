@@ -20,8 +20,8 @@ export default function NotFound() {
             <Link href="/become-an-expert">Become an expert</Link>
             <Link href="/about">About</Link>
           </nav>
-          <Link href="/match" className="btn btn-ink hide-sm">
-            Get matched{" "}
+          <Link href="/experts" className="btn btn-ink hide-sm">
+            Book an expert{" "}
             <span className="ms af" aria-hidden="true">
               arrow_forward
             </span>

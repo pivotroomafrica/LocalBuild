@@ -83,10 +83,10 @@ export default async function DashboardOverviewPage() {
             <span className="d" style={{ fontSize: 24, lineHeight: 1.2 }}>
               Nothing booked yet
             </span>
-            <span style={{ color: "#9ba1aa" }}>Tell us what you&apos;re facing and we&apos;ll find the person who has solved it.</span>
+            <span style={{ color: "#9ba1aa" }}>Find the person who has already solved what you&apos;re facing.</span>
           </div>
-          <Link href="/match" className="btn btn-white md">
-            Find my match{" "}
+          <Link href="/experts" className="btn btn-white md">
+            Find an expert{" "}
             <span className="ms af" aria-hidden="true">
               arrow_forward
             </span>

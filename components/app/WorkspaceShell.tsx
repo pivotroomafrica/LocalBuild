@@ -125,8 +125,8 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
             {area !== "client" ? <span className="ws-badge">{area === "admin" ? "Admin" : "Expert"}</span> : null}
           </span>
           {area === "client" ? (
-            <Link href="/match" className="btn btn-ink hide-sm">
-              Find my match{" "}
+            <Link href="/experts" className="btn btn-ink hide-sm">
+              Find an expert{" "}
               <span className="ms af" aria-hidden="true">
                 arrow_forward
               </span>

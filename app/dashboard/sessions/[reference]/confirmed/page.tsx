@@ -300,7 +300,7 @@ export default async function BookingConfirmedPage({ params }: { params: Promise
             arrow_forward
           </span>
         </Link>
-        <Link href="/match" className="btn btn-line md even">
+        <Link href="/experts" className="btn btn-line md even">
           Book a second expert
         </Link>
       </div>

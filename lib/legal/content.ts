@@ -146,7 +146,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
     title: "Privacy policy",
     intro: "What we collect when you use Pivotroom, why we collect it, who sees it, and how to control it.",
     short: [
-      "We collect what we need to run bookings, payments and matching.",
+      "We collect what we need to run bookings and payments.",
       "Chapa handles your payment details. We never see your card number or wallet PIN.",
       "Experts see your name and what you wrote for the session, never your phone number or email.",
       "We do not sell your data. You can ask to see, change or delete it at any time.",
@@ -166,7 +166,6 @@ export const LEGAL_DOCS: LegalDoc[] = [
           "Profile details you add: your current role, employment type, industry and years of experience. Experts also add a photo and a description of their background.",
           "Booking details: the sessions you book, what you write for the expert before a session, reschedules, cancellations and reviews.",
           "Payment details: when you pay through Chapa, Chapa processes the payment and we receive the amount, a reference and the status. If you pay by bank transfer, we keep the receipt you upload so our team can verify it. We never see or store your card number or wallet PIN.",
-          "Matching: when you use Find my match, we count the request and store a one-way code derived from your network address to prevent abuse. We do not store what you wrote.",
           "Technical details: your device, browser and network address, and cookies needed to keep you signed in.",
         ],
       },
@@ -174,7 +173,6 @@ export const LEGAL_DOCS: LegalDoc[] = [
         title: "How we use it",
         paras: [
           "To run your account, take bookings and payments, send Google Meet links and confirmations, and handle refunds.",
-          "To match you with experts. When you describe what you are working on, we compare it with published expert profiles and may send it, together with those profiles, to our AI provider to rank the best fits. You always choose who to book; no decision with legal or financial effect is made about you automatically.",
           "To keep Pivotroom safe: reviewing experts, preventing fraud and enforcing our terms.",
           "To improve the service, using aggregated information wherever possible.",
         ],
@@ -183,7 +181,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         title: "Who we share it with",
         paras: [
           "The expert you book sees your name, your professional background, what you wrote for the session, and the session details. Your phone number and email address are not shown to them.",
-          "Service providers who help us run Pivotroom: Supabase for our database and file storage, Chapa for payments, Google for Meet and calendar invitations, Resend for email, OpenAI for matching, and our hosting provider. They may use your data only to provide their service to us.",
+          "Service providers who help us run Pivotroom: Supabase for our database and file storage, Chapa for payments, Google for Meet and calendar invitations, Resend for email, and our hosting provider. They may use your data only to provide their service to us.",
           "Authorities, when Ethiopian law requires it.",
           "We do not sell your personal data, and we do not share it with advertisers.",
         ],

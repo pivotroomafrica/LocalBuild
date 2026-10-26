@@ -89,8 +89,8 @@ export default async function AboutPage() {
             </p>
             <p style={{ margin: 0 }}>If you knew one of them, you could ask. Most people don&apos;t. So they guess, and guessing is expensive.</p>
             <p style={{ margin: 0 }}>
-              Pivotroom changes who gets to ask. Tell us what you are facing. We match you with the people whose
-              experience fits, show you their price up front, and you meet them on Google Meet or in person.
+              Pivotroom changes who gets to ask. Find the people whose experience fits, see their price up front,
+              and meet them on Google Meet or in person.
             </p>
             <p style={{ margin: 0 }}>The expert is paid for their time. You leave with an answer, not a reading list.</p>
           </div>
@@ -176,15 +176,15 @@ export default async function AboutPage() {
         <div className="wrap stack" style={{ paddingBlockEnd: "clamp(80px, 9vw, 128px)", gap: 32 }}>
           <h2 className="h2">Where to go from here</h2>
           <div className="ctas2">
-            <Link href="/match">
+            <Link href="/experts">
               <span className="muted" style={{ fontSize: 14, fontWeight: 500 }}>
                 For clients
               </span>
               <span className="d" style={{ fontSize: 26, lineHeight: 1.2 }}>
-                Tell us what you&apos;re facing. We&apos;ll find the person who has solved it.
+                Find the person who has already solved what you&apos;re facing.
               </span>
               <span className="link-arrow" style={{ color: "#2b4fe0" }}>
-                Find my match{" "}
+                Find an expert{" "}
                 <span className="ms af" aria-hidden="true">
                   arrow_forward
                 </span>

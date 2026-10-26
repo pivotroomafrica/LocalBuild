@@ -91,7 +91,7 @@ export function ManageBooking(props: Props) {
               </span>
             </Link>
           ) : (
-            <Link href="/match" className="btn btn-ink md">
+            <Link href="/experts" className="btn btn-ink md">
               Find another expert{" "}
               <span className="ms af" aria-hidden="true">
                 arrow_forward
@@ -203,14 +203,14 @@ export function ManageBooking(props: Props) {
             </span>
           </Link>
         ) : null}
-        <Link className="opt" href="/match">
+        <Link className="opt" href="/experts">
           <span className="oi" aria-hidden="true">
             <span className="ms">group</span>
           </span>
           <span className="stack" style={{ flex: 1 }}>
             <span style={{ fontWeight: 500 }}>See who else could help, sooner</span>
             <span className="muted" style={{ fontSize: 14 }}>
-              Describe what you need and we&apos;ll match you again.
+              Browse experts in the same area with earlier open times.
             </span>
           </span>
           <span className="ms af" aria-hidden="true">
