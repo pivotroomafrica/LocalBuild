@@ -1,249 +1,190 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ensureExpertProfileDraft } from "@/lib/expert/actions";
-import { getExpertApplicationData, getSectionCompletion } from "@/lib/expert/data";
+import { getCompletionChecklist, getExpertApplicationData, getSectionCompletion } from "@/lib/expert/data";
 import { ExpertApplicationNav } from "@/components/layout/ExpertApplicationNav";
 import { SubmitApplicationPanel } from "@/components/expert/SubmitApplicationPanel";
+import type { ApplicationSection } from "@/lib/expert/data";
 
-const PRIMARY_CTA_CLASSES =
-  "inline-flex w-full items-center justify-center rounded-full bg-[var(--color-brand)] px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[var(--color-brand-hover)] shadow-[0_4px_14px_rgba(20,19,24,0.18)]";
+const STEPS: { section: ApplicationSection; title: string; href: string }[] = [
+  { section: "profile", title: "1. Who you are", href: "/expert/application/profile" },
+  { section: "expertise", title: "2. What you've solved", href: "/expert/application/expertise" },
+  { section: "sessions", title: "3. Sessions and hours", href: "/expert/application/sessions" },
+];
 
 export default async function ExpertApplicationPage() {
-  await ensureExpertProfileDraft();
+  const ensured = await ensureExpertProfileDraft();
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const data = await getExpertApplicationData(supabase, user!.id);
+  const data = await getExpertApplicationData(supabase, ensured.user_id);
   if (!data) {
-    return <p className="text-sm text-[var(--color-danger)]">We couldn&apos;t load your application. Please try again.</p>;
+    return (
+      <p className="notice err" role="alert">
+        We couldn&apos;t load your application. Please try again.
+      </p>
+    );
   }
 
   const { expertProfile } = data;
   const applicationStatus = expertProfile.application_status;
   const profileStatus = expertProfile.profile_status;
-  const isSubmitted = applicationStatus === "submitted";
 
-  // Single source of truth for completeness -- the same checklist items
-  // that gate submission server-side (getMissingRequiredFields), grouped
-  // by section. The checklist below and the primary CTA can never
-  // disagree, because both read from this one call.
+  // One source of truth for completeness: the same checklist gates
+  // submission server-side (getMissingRequiredFields).
+  const checklist = getCompletionChecklist(data);
   const sections = getSectionCompletion(data);
-  const sectionRows: { label: string; complete: boolean }[] = [
-    { label: "Profile", complete: sections.profile },
-    { label: "Expertise", complete: sections.expertise },
-    { label: "Session Pricing", complete: sections.sessions },
-  ];
+  const allComplete = sections.profile && sections.expertise && sections.sessions;
+  const firstIncomplete = STEPS.find((step) => !sections[step.section]);
+  const termsAccepted = expertProfile.terms_accepted_at != null;
 
-  const statusLabel: Record<string, string> = {
-    draft: "Draft",
-    submitted: "Submitted",
-    changes_requested: "Changes Requested",
-    approved: profileStatus === "published" ? "Published" : "Approved",
-    rejected: "Rejected",
-  };
-  const displayStatus =
-    profileStatus === "suspended" ? "Suspended" : statusLabel[applicationStatus] ?? applicationStatus;
-
-  // Human-readable summary of the pricing configuration -- not internal
-  // database rows, per spec section 15.
-  const baseRateLabel =
+  const pricingSummary =
     expertProfile.base_hourly_price != null
-      ? `${Number(expertProfile.base_hourly_price).toLocaleString()} ETB`
-      : "Not set";
-  const durationsLabel =
-    data.sessionOfferings.length > 0
-      ? `${data.sessionOfferings
-          .map((o) => o.duration_minutes)
-          .sort((a, b) => a - b)
-          .join(", ")} minutes`
-      : "None selected";
-  const formatLabel =
-    [expertProfile.online_enabled ? "Online" : null, expertProfile.in_person_enabled ? "In Person" : null]
-      .filter(Boolean)
-      .join(" + ") || "Not set";
-
-  // Priority order: every post-submission lifecycle state (submitted,
-  // changes_requested, approved, published, rejected, suspended) shows
-  // its own fixed status panel regardless of section completeness --
-  // those states are admin-controlled, not something finishing a section
-  // changes. Only in the pre-submission "draft" state does the
-  // first-incomplete-section / submit flow apply.
-  const primaryCta =
-    applicationStatus === "submitted"
-      ? ({ kind: "submitted" } as const)
-      : applicationStatus === "changes_requested"
-        ? ({ kind: "changes_requested" } as const)
-        : applicationStatus === "rejected"
-          ? ({ kind: "rejected" } as const)
-          : applicationStatus === "approved" && profileStatus === "suspended"
-            ? ({ kind: "suspended" } as const)
-            : applicationStatus === "approved" && profileStatus === "published"
-              ? ({ kind: "published" } as const)
-              : applicationStatus === "approved"
-                ? ({ kind: "approved" } as const)
-                : !sections.profile
-                  ? ({ kind: "continue", label: "Continue to Profile", href: "/expert/application/profile" } as const)
-                  : !sections.expertise
-                    ? ({ kind: "continue", label: "Continue to Expertise", href: "/expert/application/expertise" } as const)
-                    : !sections.sessions
-                      ? ({ kind: "continue", label: "Continue to Sessions", href: "/expert/application/sessions" } as const)
-                      : ({ kind: "submit" } as const);
+      ? `${Number(expertProfile.base_hourly_price).toLocaleString()} ETB for 60 minutes · ${
+          data.sessionOfferings.length > 0
+            ? `${data.sessionOfferings
+                .map((o) => o.duration_minutes)
+                .sort((a, b) => a - b)
+                .join(", ")} min`
+            : "no lengths chosen"
+        } · ${
+          [expertProfile.online_enabled ? "Online" : null, expertProfile.in_person_enabled ? "In person" : null]
+            .filter(Boolean)
+            .join(" + ") || "no format chosen"
+        }`
+      : null;
 
   return (
     <div>
       <ExpertApplicationNav current="/expert/application" />
 
-      <div className="flex flex-col gap-8">
-        <div>
-          <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">
-            Expert Application
-          </h1>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            Status: <span className="font-medium">{displayStatus}</span>
-            {expertProfile.submitted_at && (isSubmitted || applicationStatus === "changes_requested")
-              ? ` — ${new Date(expertProfile.submitted_at).toLocaleDateString()}`
-              : ""}
+      <div className="stack" style={{ gap: 24 }}>
+        <div className="stack" style={{ gap: 6 }}>
+          <h1 className="ws-h1">Review and submit</h1>
+          <p className="muted" style={{ margin: 0, maxWidth: "62ch" }}>
+            Our team reads every application. Once approved, we check how your profile will look, then publish it on
+            Pivotroom.
           </p>
         </div>
 
-        {/* Manual navigation into any section, in any order -- the
-            Save & Continue buttons on each section are a recommended
-            path, not the only path (spec section 7). */}
-        <section className="grid gap-3 sm:grid-cols-3">
-          <Link
-            href="/expert/application/profile"
-            className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 hover:border-[var(--color-border-hover)] hover:shadow-[var(--shadow-raised)] hover:-translate-y-0.5 shadow-[var(--shadow-card)] transition-all"
-          >
-            <h2 className="text-[15px] font-extrabold tracking-[-0.01em]">Professional Profile</h2>
-            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-              Headline, experience, bio, photo
-            </p>
-          </Link>
-          <Link
-            href="/expert/application/expertise"
-            className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 hover:border-[var(--color-border-hover)] hover:shadow-[var(--shadow-raised)] hover:-translate-y-0.5 shadow-[var(--shadow-card)] transition-all"
-          >
-            <h2 className="text-[15px] font-extrabold tracking-[-0.01em]">Expertise Categories</h2>
-            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-              {data.categoryIds.length} of 3 selected
-            </p>
-          </Link>
-          <Link
-            href="/expert/application/sessions"
-            className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 hover:border-[var(--color-border-hover)] hover:shadow-[var(--shadow-raised)] hover:-translate-y-0.5 shadow-[var(--shadow-card)] transition-all"
-          >
-            <h2 className="text-[15px] font-extrabold tracking-[-0.01em]">Session Pricing</h2>
-            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-              {baseRateLabel} · {durationsLabel} · {formatLabel}
-            </p>
-            {expertProfile.base_hourly_price != null ? (
-              <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                Prices shown are before VAT. Customers pay them plus VAT; Pivotroom&apos;s commission is
-                included.
-              </p>
-            ) : null}
-          </Link>
-        </section>
+        <StatusNotice
+          applicationStatus={applicationStatus}
+          profileStatus={profileStatus}
+          reviewMessage={expertProfile.review_message}
+          slug={expertProfile.slug}
+        />
 
-        <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
-          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em]">Application Completion</h2>
-          <ul className="flex flex-col gap-2">
-            {sectionRows.map((row) => (
-              <li key={row.label} className="flex items-center justify-between text-sm">
-                <span className="text-[var(--color-text)]">{row.label}</span>
-                <span
-                  className={
-                    row.complete ? "text-[var(--color-success)]" : "text-[var(--color-text-muted)]"
-                  }
-                >
-                  {row.complete ? "Complete" : "Incomplete"}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <section>
-          {primaryCta.kind === "submitted" ? (
-            <div className="rounded-xl border border-[#c6f0dc] bg-[var(--color-success-bg)] px-4 py-3 text-sm text-[var(--color-success)]">
-              <p className="font-medium">Application Submitted</p>
-              <p className="mt-1">
-                Your application is ready for review. You can keep editing any section above —
-                your changes are saved, and your application stays submitted.
-              </p>
-            </div>
-          ) : primaryCta.kind === "changes_requested" ? (
-            <div className="flex flex-col gap-4">
-              <div className="rounded-xl border border-[#fbd5d0] bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger)]">
-                <p className="font-medium">Changes Requested</p>
-                <p className="mt-1">
-                  {expertProfile.review_message ??
-                    "An admin has requested changes to your application. Please review and update it below."}
+        {STEPS.map((step) => {
+          const missing = checklist.filter((item) => item.section === step.section && !item.complete);
+          return (
+            <section key={step.section} className="panel stack" style={{ gap: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
+                <h2 className="ws-h2">{step.title}</h2>
+                <Link href={step.href} style={{ fontWeight: 500 }}>
+                  Edit
+                </Link>
+              </div>
+              {missing.length === 0 ? (
+                <p className="muted" style={{ margin: 0 }}>
+                  {step.section === "expertise"
+                    ? `Complete · ${data.categoryIds.length} of 3 areas`
+                    : step.section === "sessions" && pricingSummary
+                      ? pricingSummary
+                      : "Complete"}
                 </p>
-              </div>
-              <SubmitApplicationPanel
-                canSubmit
-                label="Resubmit Application"
-                successMessage="Application resubmitted. It's back in the review queue."
-              />
-            </div>
-          ) : primaryCta.kind === "rejected" ? (
-            <div className="rounded-xl border border-[#fbd5d0] bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger)]">
-              <p className="font-medium">Application Not Approved</p>
-              <p className="mt-1">
-                {expertProfile.review_message ?? "Your application was not approved at this time."}
-              </p>
-            </div>
-          ) : primaryCta.kind === "approved" ? (
-            <div className="rounded-xl border border-[#c6f0dc] bg-[var(--color-success-bg)] px-4 py-3 text-sm text-[var(--color-success)]">
-              <p className="font-medium">Application Approved</p>
-              <p className="mt-1">
-                Your application has been approved. An admin will publish your profile soon.
-              </p>
-              <div className="mt-2 flex flex-col gap-1">
-                <Link href="/expert/application/preview" className="inline-block font-medium underline">
-                  Preview your public profile
-                </Link>
-                <Link href="/expert/availability" className="inline-block font-medium underline">
-                  Set Availability
-                </Link>
-              </div>
-            </div>
-          ) : primaryCta.kind === "published" ? (
-            <div className="rounded-xl border border-[#c6f0dc] bg-[var(--color-success-bg)] px-4 py-3 text-sm text-[var(--color-success)]">
-              <p className="font-medium">Your Profile Is Live</p>
-              <p className="mt-1">Customers can now find and view your expert profile.</p>
-              <div className="mt-2 flex flex-col gap-1">
-                <Link href={`/experts/${expertProfile.slug}`} className="inline-block font-medium underline">
-                  View your public profile
-                </Link>
-                <Link href="/expert/availability" className="inline-block font-medium underline">
-                  Manage Availability
-                </Link>
-              </div>
-            </div>
-          ) : primaryCta.kind === "suspended" ? (
-            <div className="rounded-xl border border-[#fbd5d0] bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger)]">
-              <p className="font-medium">Profile Suspended</p>
-              <p className="mt-1">
-                Your profile is temporarily suspended and is not visible in the public directory.
-              </p>
-              <Link href="/expert/availability" className="mt-2 inline-block font-medium underline">
-                Manage Availability
+              ) : (
+                <p style={{ margin: 0 }}>
+                  <span className="muted">Still needed: </span>
+                  {missing.map((item) => item.label).join(", ")}
+                </p>
+              )}
+            </section>
+          );
+        })}
+
+        <p style={{ margin: 0 }}>
+          <Link href="/expert/application/preview">Preview how your profile will look</Link>
+        </p>
+
+        {applicationStatus === "draft" ? (
+          firstIncomplete ? (
+            <div className="oq-actions">
+              <Link href={firstIncomplete.href} className="btn btn-ink md">
+                Continue with {firstIncomplete.title.replace(/^\d\.\s/, "").toLowerCase()}
               </Link>
             </div>
-          ) : primaryCta.kind === "continue" ? (
-            <Link href={primaryCta.href} className={PRIMARY_CTA_CLASSES}>
-              {primaryCta.label}
-            </Link>
           ) : (
-            <SubmitApplicationPanel canSubmit />
-          )}
-        </section>
+            <SubmitApplicationPanel canSubmit={allComplete} termsAccepted={termsAccepted} />
+          )
+        ) : applicationStatus === "changes_requested" ? (
+          <SubmitApplicationPanel
+            canSubmit
+            termsAccepted={termsAccepted}
+            label="Resubmit for review"
+            successMessage="Application resubmitted. It's back with our review team."
+          />
+        ) : null}
       </div>
     </div>
   );
+}
+
+function StatusNotice({
+  applicationStatus,
+  profileStatus,
+  reviewMessage,
+  slug,
+}: {
+  applicationStatus: string;
+  profileStatus: string;
+  reviewMessage: string | null;
+  slug: string;
+}) {
+  if (applicationStatus === "submitted") {
+    return (
+      <p className="notice" style={{ margin: 0 }}>
+        <strong>Submitted.</strong> Our team is reviewing your application. You can keep improving any step; your
+        application stays submitted.
+      </p>
+    );
+  }
+  if (applicationStatus === "changes_requested") {
+    return (
+      <p className="notice err" style={{ margin: 0 }}>
+        <strong>Changes requested.</strong>{" "}
+        {reviewMessage ?? "Please update your application and resubmit it."}
+      </p>
+    );
+  }
+  if (applicationStatus === "rejected") {
+    return (
+      <p className="notice err" style={{ margin: 0 }}>
+        <strong>Not approved.</strong> {reviewMessage ?? "Your application was not approved at this time."}
+      </p>
+    );
+  }
+  if (applicationStatus === "approved" && profileStatus === "suspended") {
+    return (
+      <p className="notice err" style={{ margin: 0 }}>
+        <strong>Profile paused.</strong> Your profile is not visible to clients right now.{" "}
+        <Link href="/expert/availability">Manage availability</Link>
+      </p>
+    );
+  }
+  if (applicationStatus === "approved" && profileStatus === "published") {
+    return (
+      <p className="notice" style={{ margin: 0 }}>
+        <strong>Your profile is live.</strong> <Link href={`/experts/${slug}`}>View your public profile</Link> ·{" "}
+        <Link href="/expert/availability">Manage availability</Link>
+      </p>
+    );
+  }
+  if (applicationStatus === "approved") {
+    return (
+      <p className="notice" style={{ margin: 0 }}>
+        <strong>Approved.</strong> Our team is finishing your public profile and will publish it soon. Set your hours
+        now so clients can book you from day one: <Link href="/expert/availability">Set availability</Link>
+      </p>
+    );
+  }
+  return null;
 }

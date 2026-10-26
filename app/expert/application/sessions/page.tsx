@@ -49,14 +49,12 @@ export default async function ExpertApplicationSessionsPage() {
   return (
     <div>
       <ExpertApplicationNav current="/expert/application/sessions" />
-      <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">
-            Session Pricing
-          </h1>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            Set your 60-minute rate and choose which session lengths you want to offer.
-            Pivotroom will automatically calculate prices for shorter and longer sessions.
+      <div className="stack" style={{ gap: 24 }}>
+        <div className="stack" style={{ gap: 6 }}>
+          <h1 className="ws-h1">Sessions and hours</h1>
+          <p className="muted" style={{ margin: 0, maxWidth: "62ch" }}>
+            Step 3 of 3, about 2 minutes. You can change your price and session lengths later. After approval
+            you&apos;ll set the hours clients can book.
           </p>
         </div>
 
@@ -65,6 +63,7 @@ export default async function ExpertApplicationSessionsPage() {
           initialDurations={initialDurations}
           initialOnlineEnabled={initialOnlineEnabled}
           initialInPersonEnabled={initialInPersonEnabled}
+          initialResponseTime={expertProfile?.response_time ?? null}
           pricing={pricing}
         />
       </div>

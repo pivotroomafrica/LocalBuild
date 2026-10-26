@@ -659,6 +659,7 @@ export type Database = {
           experience: Json
           expertise_summary: string | null
           headline: string | null
+          hidden_fields: string[]
           id: string
           in_person_enabled: boolean
           languages: string[]
@@ -676,6 +677,7 @@ export type Database = {
           short_bio: string | null
           slug: string
           submitted_at: string | null
+          terms_accepted_at: string | null
           updated_at: string
           user_id: string
           who_i_help: string | null
@@ -695,6 +697,7 @@ export type Database = {
           experience?: Json
           expertise_summary?: string | null
           headline?: string | null
+          hidden_fields?: string[]
           id?: string
           in_person_enabled?: boolean
           languages?: string[]
@@ -712,6 +715,7 @@ export type Database = {
           short_bio?: string | null
           slug: string
           submitted_at?: string | null
+          terms_accepted_at?: string | null
           updated_at?: string
           user_id: string
           who_i_help?: string | null
@@ -731,6 +735,7 @@ export type Database = {
           experience?: Json
           expertise_summary?: string | null
           headline?: string | null
+          hidden_fields?: string[]
           id?: string
           in_person_enabled?: boolean
           languages?: string[]
@@ -748,6 +753,7 @@ export type Database = {
           short_bio?: string | null
           slug?: string
           submitted_at?: string | null
+          terms_accepted_at?: string | null
           updated_at?: string
           user_id?: string
           who_i_help?: string | null

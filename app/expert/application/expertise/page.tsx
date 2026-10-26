@@ -2,34 +2,37 @@ import { createClient } from "@/lib/supabase/server";
 import { ensureExpertProfileDraft } from "@/lib/expert/actions";
 import { getActiveExpertCategories, getExpertApplicationData } from "@/lib/expert/data";
 import { ExpertApplicationNav } from "@/components/layout/ExpertApplicationNav";
-import { CategoryPicker } from "@/components/expert/CategoryPicker";
+import { ExpertiseStepForm } from "@/components/expert/OnboardingStepForms";
 
-export default async function ExpertApplicationExpertisePage() {
-  await ensureExpertProfileDraft();
+export default async function ExpertApplicationExpertisePage({
+  searchParams,
+}: PageProps<"/expert/application/expertise">) {
+  const expertProfile = await ensureExpertProfileDraft();
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const [categories, data] = await Promise.all([
+  const [categories, data, { saved }] = await Promise.all([
     getActiveExpertCategories(supabase),
-    getExpertApplicationData(supabase, user!.id),
+    getExpertApplicationData(supabase, expertProfile.user_id),
+    searchParams,
   ]);
 
   return (
     <div>
       <ExpertApplicationNav current="/expert/application/expertise" />
-      <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">
-            Expertise Categories
-          </h1>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            Choose the categories that best describe what you can advise on.
+      <div className="stack" style={{ gap: 24 }}>
+        <div className="stack" style={{ gap: 6 }}>
+          <h1 className="ws-h1">What you&apos;ve solved</h1>
+          <p className="muted" style={{ margin: 0, maxWidth: "62ch" }}>
+            Step 2 of 3, about 5 minutes. Write the way a client would describe their problem: this is what we use to
+            match clients to you.
           </p>
         </div>
-        <CategoryPicker categories={categories} selectedIds={data?.categoryIds ?? []} />
+        <ExpertiseStepForm
+          profile={data?.expertProfile ?? expertProfile}
+          categories={categories}
+          selectedCategoryIds={data?.categoryIds ?? []}
+          saved={saved === "1"}
+        />
       </div>
     </div>
   );

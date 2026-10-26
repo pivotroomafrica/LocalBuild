@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAdminForAction } from "@/lib/admin/data";
 import { getExpertApplicationDataById, getMissingRequiredFields } from "@/lib/expert/data";
 import { validateReviewMessage } from "@/lib/validation/expert";
+import { HIDEABLE_FIELDS, parseExpertiseFields, parseIdentityFields, parseResponseTime } from "@/lib/expert/profileFields";
+import { syncExpertCategories } from "@/lib/expert/categorySync";
 
 export type AdminActionState = {
   error?: string;
@@ -484,5 +486,82 @@ export async function adminCancelBookingAction(
 
   revalidatePath(`/admin/bookings/${bookingReference}`);
   revalidatePath("/admin/bookings");
+  return { success: true };
+}
+
+/**
+ * Admin edit of an expert's public details: the same onboarding questions
+ * the expert answers (parseIdentityFields / parseExpertiseFields), so an
+ * admin can tidy wording, fix a typo or change areas before approving or
+ * publishing. Works in any status; a published profile updates at once.
+ */
+export async function adminSaveExpertProfileAction(
+  _prevState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const supabase = await createClient();
+  const auth = await requireAdminForAction(supabase);
+  if (!auth.ok) return { error: auth.error };
+
+  const expertProfileId = String(formData.get("expert_profile_id") ?? "");
+  if (!expertProfileId) return { error: GENERIC_ERROR };
+
+  const identity = parseIdentityFields(formData);
+  if (!identity.ok) return { error: identity.error };
+  const expertise = parseExpertiseFields(formData);
+  if (!expertise.ok) return { error: expertise.error };
+  const responseTime = parseResponseTime(formData);
+  if (!responseTime.ok) return { error: responseTime.error };
+
+  const categoryError = await syncExpertCategories(
+    supabase,
+    expertProfileId,
+    formData.getAll("category_ids").map(String),
+  );
+  if (categoryError) return { error: categoryError };
+
+  const { data, error } = await supabase
+    .from("expert_profiles")
+    .update({ ...identity.update, ...expertise.update, ...responseTime.update })
+    .eq("id", expertProfileId)
+    .select("slug");
+  if (error) return { error: GENERIC_ERROR };
+  if (!data || data.length === 0) return { error: "Expert not found." };
+
+  revalidateExpertPages(expertProfileId);
+  revalidatePath(`/experts/${data[0].slug}`);
+  return { success: true };
+}
+
+/**
+ * Chooses which details the public profile, directory, reviews and
+ * matching show. Ticked = shown; everything unticked is stored in
+ * hidden_fields, which only admins can change (050) and every public read
+ * function masks (050b).
+ */
+export async function adminSetExpertVisibilityAction(
+  _prevState: AdminActionState,
+  formData: FormData,
+): Promise<AdminActionState> {
+  const supabase = await createClient();
+  const auth = await requireAdminForAction(supabase);
+  if (!auth.ok) return { error: auth.error };
+
+  const expertProfileId = String(formData.get("expert_profile_id") ?? "");
+  if (!expertProfileId) return { error: GENERIC_ERROR };
+
+  const shown = new Set(formData.getAll("shown").map(String));
+  const hidden = HIDEABLE_FIELDS.map((field) => field.key).filter((key) => !shown.has(key));
+
+  const { data, error } = await supabase
+    .from("expert_profiles")
+    .update({ hidden_fields: hidden })
+    .eq("id", expertProfileId)
+    .select("slug");
+  if (error) return { error: GENERIC_ERROR };
+  if (!data || data.length === 0) return { error: "Expert not found." };
+
+  revalidateExpertPages(expertProfileId);
+  revalidatePath(`/experts/${data[0].slug}`);
   return { success: true };
 }

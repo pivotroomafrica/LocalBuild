@@ -3821,3 +3821,137 @@
     scroll-behavior: auto;
   }
 }
+
+/* ---------- Expert onboarding questions ---------- */
+.pr .oq-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-block-end: 32px;
+}
+.pr .oq-step {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--pr-slate);
+  font-size: 14px;
+}
+.pr .oq-step::before {
+  content: "";
+  height: 4px;
+  border-radius: 2px;
+  background: var(--pr-line);
+}
+.pr .oq-step.done::before,
+.pr .oq-step.on::before {
+  background: var(--pr-blue);
+}
+.pr .oq-step.on {
+  color: var(--pr-ink);
+  font-weight: 600;
+}
+.pr .oq-step:hover {
+  color: var(--pr-blue);
+}
+.pr .oq-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.pr .oq {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: clamp(20px, 2.4vw, 28px);
+  border: 1px solid var(--pr-line);
+  border-radius: 20px;
+  background: #ffffff;
+}
+.pr .oq-head {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+}
+.pr .oq-n {
+  flex: none;
+  color: var(--pr-blue);
+  font-size: 14px;
+  font-weight: 600;
+}
+.pr .oq-label {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.pr .oq-req {
+  color: var(--pr-slate);
+  font-size: 14px;
+  font-weight: 400;
+}
+.pr .oq-hint {
+  margin: 0;
+  color: var(--pr-slate);
+  font-size: 14px;
+}
+.pr .oq-count {
+  align-self: flex-end;
+  color: var(--pr-slate);
+  font-size: 13px;
+}
+.pr .oq-two {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: 10px;
+}
+.pr .oq-ticks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pr .oq-tick {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-inline: 14px;
+  border: 1px solid var(--pr-line);
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 15px;
+  cursor: pointer;
+  transition: border-color 160ms var(--pr-ease);
+}
+.pr .oq-tick:hover {
+  border-color: var(--pr-slate-light);
+}
+.pr .oq-tick:has(input:checked) {
+  border-color: var(--pr-blue);
+  background: var(--pr-blue-tint);
+  color: var(--pr-blue);
+  font-weight: 500;
+}
+.pr .oq-tick.off {
+  color: var(--pr-slate-light);
+  cursor: not-allowed;
+}
+.pr .oq-tick input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--pr-blue);
+}
+.pr .oq-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+.pr .vis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
+  gap: 8px;
+}
+@media (max-width: 560px) {
+  .pr .oq-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getExpertApplicationDataById, getExpertPhotoUrl } from "@/lib/expert/data";
+import {
+  getActiveExpertCategories,
+  getExpertApplicationDataById,
+  getExpertPhotoUrl,
+  getMissingRequiredFields,
+} from "@/lib/expert/data";
 import { getApplicantIdentity } from "@/lib/admin/data";
 import {
   approveApplicationAction,
@@ -13,29 +18,29 @@ import {
 } from "@/lib/admin/actions";
 import { AdminActionButton } from "@/components/admin/AdminActionButton";
 import { AdminMessageForm } from "@/components/admin/AdminMessageForm";
-import {
-  APPLICATION_STATUS_LABELS,
-  PROFILE_STATUS_LABELS,
-  EXPERT_EXPERIENCE_RANGE_LABELS,
-  type ExpertExperienceRange,
-} from "@/types/expert";
+import { AdminExpertProfileEditor, AdminExpertVisibilityForm } from "@/components/admin/AdminExpertEditor";
+import { APPLICATION_STATUS_LABELS, PROFILE_STATUS_LABELS } from "@/types/expert";
 import { setReviewHiddenAction } from "@/lib/reviews/actions";
 
-export default async function AdminExpertDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AdminExpertDetailPage({ params }: PageProps<"/admin/experts/[id]">) {
   const { id } = await params;
   const supabase = await createClient();
 
   const data = await getExpertApplicationDataById(supabase, id);
   if (!data) {
-    return <p className="text-sm text-[var(--color-danger)]">Application not found.</p>;
+    return (
+      <p className="notice err" role="alert">
+        Application not found.
+      </p>
+    );
   }
 
   const { expertProfile, categoryIds, sessionOfferings } = data;
 
-  const [identity, photoUrl, { data: categories }, { data: reviews }] = await Promise.all([
+  const [identity, photoUrl, allCategories, { data: reviews }] = await Promise.all([
     getApplicantIdentity(supabase, expertProfile.user_id),
     getExpertPhotoUrl(supabase, expertProfile.profile_image_path),
-    supabase.from("expert_categories").select("id, name").in("id", categoryIds.length > 0 ? categoryIds : [""]),
+    getActiveExpertCategories(supabase),
     supabase
       .from("expert_reviews")
       .select("id, rating, body, is_hidden, created_at")
@@ -43,153 +48,167 @@ export default async function AdminExpertDetailPage({ params }: { params: Promis
       .order("created_at", { ascending: false }),
   ]);
 
-  const categoryNames = (categories ?? []).map((c) => c.name);
   const activeOfferings = sessionOfferings.filter((o) => o.is_active).sort((a, b) => a.duration_minutes - b.duration_minutes);
+  const missing = getMissingRequiredFields(data);
+  const hiddenCount = expertProfile.hidden_fields.length;
+  const isPublished = expertProfile.application_status === "approved" && expertProfile.profile_status === "published";
+  // Editing is most useful while reviewing; keep it folded once live.
+  const openEditor = expertProfile.application_status === "submitted" || expertProfile.profile_status === "ready";
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <Link href="/admin/experts" className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
+    <div className="stack" style={{ gap: 24 }}>
+      <div className="stack" style={{ gap: 6 }}>
+        <Link href="/admin/experts" className="muted">
           &larr; Back to applications
         </Link>
-        <h1 className="mt-2 text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">
-          {identity?.full_name ?? "Unknown applicant"}
-        </h1>
-        <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-          Application: <span className="font-medium">{APPLICATION_STATUS_LABELS[expertProfile.application_status as keyof typeof APPLICATION_STATUS_LABELS] ?? expertProfile.application_status}</span>
-          {" · "}
-          Profile: <span className="font-medium">{PROFILE_STATUS_LABELS[expertProfile.profile_status as keyof typeof PROFILE_STATUS_LABELS] ?? expertProfile.profile_status}</span>
+        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+          {photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- private, signed, short-lived URL
+            <img src={photoUrl} alt="" width={64} height={64} style={{ borderRadius: 12, objectFit: "cover" }} />
+          ) : null}
+          <h1 className="ws-h1">{identity?.full_name ?? "Unknown applicant"}</h1>
+        </div>
+        <p className="muted" style={{ margin: 0 }}>
+          Application:{" "}
+          <strong>
+            {APPLICATION_STATUS_LABELS[expertProfile.application_status as keyof typeof APPLICATION_STATUS_LABELS] ??
+              expertProfile.application_status}
+          </strong>
+          {" · "}Profile:{" "}
+          <strong>
+            {PROFILE_STATUS_LABELS[expertProfile.profile_status as keyof typeof PROFILE_STATUS_LABELS] ??
+              expertProfile.profile_status}
+          </strong>
           {expertProfile.submitted_at ? ` · Submitted ${new Date(expertProfile.submitted_at).toLocaleDateString()}` : ""}
+          {" · "}
+          {expertProfile.terms_accepted_at
+            ? `Accepted expert terms ${new Date(expertProfile.terms_accepted_at).toLocaleDateString()}`
+            : "Expert terms not accepted yet"}
         </p>
       </div>
 
-      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
-        <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Professional Profile</h2>
-        <div className="flex flex-col gap-3 sm:flex-row sm:gap-6">
-          {photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={photoUrl} alt="" className="h-24 w-24 rounded-full object-cover" />
-          ) : (
-            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[var(--color-bg)] text-xs text-[var(--color-text-muted)]">
-              No photo
-            </div>
-          )}
-          <dl className="grid flex-1 grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-            <Field label="Headline" value={expertProfile.headline} />
-            <Field label="Current position" value={expertProfile.current_position} />
-            <Field label="Current company" value={expertProfile.current_company} />
-            <Field
-              label="Years of experience"
-              value={
-                expertProfile.years_experience_range
-                  ? EXPERT_EXPERIENCE_RANGE_LABELS[expertProfile.years_experience_range as ExpertExperienceRange]
-                  : null
-              }
-            />
-            <Field label="Country / City" value={[expertProfile.country, expertProfile.city].filter(Boolean).join(", ") || null} />
-            <Field label="LinkedIn" value={expertProfile.linkedin_url} />
-          </dl>
-        </div>
-        <div className="mt-4 flex flex-col gap-3">
-          <Field label="Short bio" value={expertProfile.short_bio} block />
-          <Field label="Expertise summary" value={expertProfile.expertise_summary} block />
-          <Field label="Problems you help with" value={expertProfile.problems_help_with} block />
-          <Field label="Who you help" value={expertProfile.who_i_help} block />
-          <Field label="Career highlights" value={expertProfile.career_highlights} block />
-        </div>
+      <section className="panel stack" style={{ gap: 10 }}>
+        <h2 className="ws-h2">Before this profile goes live</h2>
+        <ol className="stack" style={{ gap: 6, margin: 0, paddingInlineStart: 20 }}>
+          <li>
+            Check and tidy the details below. {missing.length > 0 ? <span>Still missing: {missing.join(", ")}.</span> : "Everything required is filled in."}
+          </li>
+          <li>
+            Choose what clients can see ({hiddenCount === 0 ? "everything is shown" : `${hiddenCount} hidden`}), then{" "}
+            <Link href={`/admin/experts/${expertProfile.id}/preview`}>preview the profile</Link>.
+          </li>
+          <li>Approve the application.</li>
+          <li>
+            Publish. The profile then appears on{" "}
+            {isPublished ? <Link href={`/experts/${expertProfile.slug}`}>/experts/{expertProfile.slug}</Link> : <span>/experts/{expertProfile.slug}</span>}
+            , in the directory and in matching.
+          </li>
+        </ol>
       </section>
 
-      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
-        <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Expertise Categories</h2>
-        {categoryNames.length > 0 ? (
-          <ul className="flex flex-wrap gap-2">
-            {categoryNames.map((name) => (
-              <li key={name} className="rounded-full bg-[var(--color-bg)] px-3 py-1 text-xs text-[var(--color-text)]">
-                {name}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-[var(--color-text-muted)]">No categories selected.</p>
-        )}
+      <section className="panel stack" style={{ gap: 16 }}>
+        <h2 className="ws-h2">Decision</h2>
+        <ReviewActions
+          expertProfileId={expertProfile.id}
+          applicationStatus={expertProfile.application_status}
+          profileStatus={expertProfile.profile_status}
+        />
+        {expertProfile.review_message &&
+        (expertProfile.application_status === "changes_requested" || expertProfile.application_status === "rejected") ? (
+          <p className="notice" style={{ margin: 0 }}>
+            <strong>
+              {expertProfile.application_status === "rejected" ? "Reason sent to applicant: " : "Changes requested: "}
+            </strong>
+            {expertProfile.review_message}
+          </p>
+        ) : null}
       </section>
 
-      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
-        <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Session Pricing</h2>
+      <section className="panel stack" style={{ gap: 16 }}>
+        <div className="stack" style={{ gap: 4 }}>
+          <h2 className="ws-h2">What clients can see</h2>
+          <p className="muted" style={{ margin: 0 }}>
+            Untick anything that shouldn&apos;t appear on the public profile, the directory or in matching.
+          </p>
+        </div>
+        <AdminExpertVisibilityForm expertProfileId={expertProfile.id} hiddenFields={expertProfile.hidden_fields} />
+      </section>
+
+      <details className="panel" open={openEditor}>
+        <summary className="ws-h2" style={{ cursor: "pointer" }}>
+          Profile details
+        </summary>
+        <p className="muted" style={{ margin: "8px 0 16px" }}>
+          The expert&apos;s onboarding answers. Fix wording or typos here; the expert sees the same changes in their
+          application.
+        </p>
+        <AdminExpertProfileEditor profile={expertProfile} categories={allCategories} selectedCategoryIds={categoryIds} />
+      </details>
+
+      <section className="panel stack" style={{ gap: 8 }}>
+        <h2 className="ws-h2">Sessions</h2>
         {activeOfferings.length > 0 ? (
           <>
-            <ul className="flex flex-col gap-1.5 text-sm">
+            <div className="rows">
               {activeOfferings.map((o) => (
-                <li key={o.id} className="flex justify-between">
-                  <span>{o.duration_minutes} min</span>
-                  <span className="font-medium">
+                <div key={o.id} style={{ gridTemplateColumns: "110px minmax(0, 1fr)" }}>
+                  <span className="num">{o.duration_minutes} min</span>
+                  <span className="num" style={{ textAlign: "right", fontWeight: 600 }}>
                     {Number(o.base_price).toLocaleString()} {o.currency}
                   </span>
-                </li>
+                </div>
               ))}
-            </ul>
-            <p className="mt-2 text-xs text-[var(--color-text-muted)]">
-              Format: {[expertProfile.online_enabled ? "Online" : null, expertProfile.in_person_enabled ? "In Person" : null].filter(Boolean).join(" + ") || "Not set"}
-            </p>
-            <p className="mt-2 text-xs text-[var(--color-text-muted)]">
-              Displayed prices are the expert&apos;s prices before VAT. Customers pay them plus VAT;
-              Pivotroom&apos;s commission is included.
+            </div>
+            <p className="muted" style={{ margin: 0, fontSize: 14 }}>
+              Format:{" "}
+              {[expertProfile.online_enabled ? "Online" : null, expertProfile.in_person_enabled ? "In person" : null]
+                .filter(Boolean)
+                .join(" + ") || "Not set"}
+              . Prices are before VAT; Pivotroom&apos;s commission is included.
             </p>
           </>
         ) : (
-          <p className="text-sm text-[var(--color-text-muted)]">No session pricing configured.</p>
+          <p className="muted" style={{ margin: 0 }}>
+            No session pricing yet.
+          </p>
         )}
+        {expertProfile.linkedin_url ? (
+          <p style={{ margin: 0 }}>
+            <a href={expertProfile.linkedin_url} target="_blank" rel="noreferrer">
+              Open LinkedIn
+            </a>
+          </p>
+        ) : null}
       </section>
 
-      {expertProfile.review_message && (expertProfile.application_status === "changes_requested" || expertProfile.application_status === "rejected") ? (
-        <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
-          <h2 className="mb-2 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">
-            {expertProfile.application_status === "rejected" ? "Rejection reason sent to applicant" : "Changes requested from applicant"}
-          </h2>
-          <p className="text-sm text-[var(--color-text)]">{expertProfile.review_message}</p>
-        </section>
-      ) : null}
-
       {reviews && reviews.length > 0 ? (
-        <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
-          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Client reviews</h2>
-          <ul className="flex flex-col divide-y divide-[var(--color-border)]">
+        <section className="panel stack" style={{ gap: 8 }}>
+          <h2 className="ws-h2">Client reviews</h2>
+          <div className="rows">
             {reviews.map((review) => (
-              <li key={review.id} className="flex flex-wrap items-start justify-between gap-3 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-[var(--color-text)]">
+              <div key={review.id} style={{ gridTemplateColumns: "minmax(0, 1fr) auto" }}>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ margin: 0, fontWeight: 500 }}>
                     {review.rating} out of 5 · {new Date(review.created_at).toLocaleDateString()}
                     {review.is_hidden ? " · Hidden" : ""}
                   </p>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--color-text-muted)]">{review.body}</p>
+                  <p className="muted" style={{ margin: "4px 0 0", whiteSpace: "pre-wrap" }}>
+                    {review.body}
+                  </p>
                 </div>
                 <form action={setReviewHiddenAction}>
                   <input type="hidden" name="review_id" value={review.id} />
                   <input type="hidden" name="expert_profile_id" value={expertProfile.id} />
                   <input type="hidden" name="hidden" value={review.is_hidden ? "false" : "true"} />
-                  <button type="submit" className="text-sm font-medium text-[var(--color-accent)] hover:underline">
+                  <button type="submit" className="btn btn-line md">
                     {review.is_hidden ? "Show on profile" : "Hide from profile"}
                   </button>
                 </form>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         </section>
       ) : null}
-
-      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
-        <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Review Decision</h2>
-        <ReviewActions expertProfileId={expertProfile.id} applicationStatus={expertProfile.application_status} profileStatus={expertProfile.profile_status} />
-      </section>
-    </div>
-  );
-}
-
-function Field({ label, value, block = false }: { label: string; value: string | null; block?: boolean }) {
-  return (
-    <div className={block ? "flex flex-col gap-1" : undefined}>
-      <dt className="text-xs font-medium text-[var(--color-text-muted)]">{label}</dt>
-      <dd className={`text-sm text-[var(--color-text)] ${block ? "whitespace-pre-wrap" : ""}`}>{value || "—"}</dd>
     </div>
   );
 }
@@ -205,7 +224,7 @@ function ReviewActions({
 }) {
   if (applicationStatus === "submitted") {
     return (
-      <div className="flex flex-col gap-6">
+      <div className="stack" style={{ gap: 24 }}>
         <AdminActionButton
           expertProfileId={expertProfileId}
           action={approveApplicationAction}
@@ -231,7 +250,7 @@ function ReviewActions({
   }
 
   if (applicationStatus === "changes_requested") {
-    return <p className="text-sm text-[var(--color-text-muted)]">Waiting for the applicant to resubmit.</p>;
+    return <p className="muted" style={{ margin: 0 }}>Waiting for the applicant to resubmit.</p>;
   }
 
   if (applicationStatus === "approved" && profileStatus === "ready") {
@@ -247,7 +266,7 @@ function ReviewActions({
 
   if (applicationStatus === "approved" && profileStatus === "published") {
     return (
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="oq-actions">
         <AdminActionButton
           expertProfileId={expertProfileId}
           action={unpublishExpertAction}
@@ -280,8 +299,8 @@ function ReviewActions({
   }
 
   if (applicationStatus === "rejected") {
-    return <p className="text-sm text-[var(--color-text-muted)]">This application was rejected. Rejection is terminal.</p>;
+    return <p className="muted" style={{ margin: 0 }}>This application was rejected. Rejection is terminal.</p>;
   }
 
-  return <p className="text-sm text-[var(--color-text-muted)]">No actions available for this status.</p>;
+  return <p className="muted" style={{ margin: 0 }}>No actions available for this status.</p>;
 }

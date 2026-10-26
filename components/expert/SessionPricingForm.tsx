@@ -3,8 +3,7 @@
 import { useActionState, useState } from "react";
 import { saveSessionPricingAction, type ExpertActionState } from "@/lib/expert/actions";
 import { calculateAllDurationPrices } from "@/lib/expert/pricing";
-import { Button } from "@/components/ui/Button";
-import { FormMessage } from "@/components/ui/FormMessage";
+import { RESPONSE_TIME_OPTIONS } from "@/lib/expert/profileDetails";
 import { SESSION_DURATIONS, type SessionDuration } from "@/types/expert";
 import { customerPrice, expertPayout, formatVatRate, type PlatformPricing } from "@/lib/pricing/platform";
 
@@ -15,24 +14,21 @@ type Props = {
   initialDurations: SessionDuration[];
   initialOnlineEnabled: boolean;
   initialInPersonEnabled: boolean;
+  initialResponseTime: string | null;
   pricing: PlatformPricing;
 };
 
+/** Onboarding step 3, "Sessions and hours" (questions 15-17). */
 export function SessionPricingForm({
   initialBasePrice,
   initialDurations,
   initialOnlineEnabled,
   initialInPersonEnabled,
+  initialResponseTime,
   pricing,
 }: Props) {
-  const [basePriceInput, setBasePriceInput] = useState(
-    initialBasePrice != null ? String(initialBasePrice) : "",
-  );
-  const [enabledDurations, setEnabledDurations] = useState<Set<SessionDuration>>(
-    new Set(initialDurations),
-  );
-  const [onlineEnabled, setOnlineEnabled] = useState(initialOnlineEnabled);
-  const [inPersonEnabled, setInPersonEnabled] = useState(initialInPersonEnabled);
+  const [basePriceInput, setBasePriceInput] = useState(initialBasePrice != null ? String(initialBasePrice) : "");
+  const [enabledDurations, setEnabledDurations] = useState<Set<SessionDuration>>(new Set(initialDurations));
 
   const [state, formAction, isPending] = useActionState(saveSessionPricingAction, initialState);
 
@@ -43,140 +39,128 @@ export function SessionPricingForm({
   function toggleDuration(duration: SessionDuration) {
     setEnabledDurations((prev) => {
       const next = new Set(prev);
-      if (next.has(duration)) {
-        next.delete(duration);
-      } else {
-        next.add(duration);
-      }
+      if (next.has(duration)) next.delete(duration);
+      else next.add(duration);
       return next;
     });
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-8">
-      {state.error ? <FormMessage variant="error">{state.error}</FormMessage> : null}
+    <form action={formAction} className="oq-form">
+      {state.error ? <p className="notice err" role="alert">{state.error}</p> : null}
 
-      <section className="flex flex-col gap-2">
-        <label htmlFor="base_hourly_price" className="text-sm font-medium text-[var(--color-text)]">
-          60-minute session price
-        </label>
-        <div className="flex items-center gap-2">
+      <div className="oq">
+        <div className="oq-head">
+          <span className="oq-n num" aria-hidden="true">
+            15
+          </span>
+          <label htmlFor="base_hourly_price" className="oq-label">
+            What do you charge for 60 minutes?<span className="oq-req"> · required</span>
+          </label>
+        </div>
+        <p className="oq-hint">
+          In ETB, before VAT. Clients pay this plus {formatVatRate(pricing.vatRate)} VAT. Pivotroom&apos;s{" "}
+          {formatVatRate(pricing.commissionRate)} is included in it, so you receive the rest.
+        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <input
             id="base_hourly_price"
             name="base_hourly_price"
             type="number"
             min="0.01"
             step="0.01"
-            placeholder="50000"
+            placeholder="2500"
             value={basePriceInput}
             onChange={(event) => setBasePriceInput(event.target.value)}
             required
-            className="w-full rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-base text-[var(--color-text)]"
+            className="input num"
           />
-          <span className="text-sm font-medium text-[var(--color-text-muted)]">ETB</span>
+          <span className="muted">ETB</span>
         </div>
-        <p className="text-sm text-[var(--color-text-muted)]">
-          Pivotroom uses this rate to automatically calculate your other session prices.
-        </p>
-        <p className="text-sm text-[var(--color-text-muted)]">
-          This is your price before VAT. Customers pay it plus {formatVatRate(pricing.vatRate)} VAT, and
-          Pivotroom&apos;s {formatVatRate(pricing.commissionRate)} commission is included in it.
-        </p>
-      </section>
+      </div>
 
-      <section className="flex flex-col gap-3">
-        <div>
-          <h2 className="text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Available session lengths</h2>
-          <p className="text-sm text-[var(--color-text-muted)]">
-            Choose the session lengths customers can book with you.
-          </p>
+      <div className="oq">
+        <div className="oq-head">
+          <span className="oq-n num" aria-hidden="true">
+            16
+          </span>
+          <span className="oq-label">
+            Which session lengths and formats do you offer?<span className="oq-req"> · required</span>
+          </span>
         </div>
-        <div className="flex flex-col gap-2">
+        <p className="oq-hint">Other lengths are priced from your 60-minute rate automatically.</p>
+        <div className="oq-ticks" role="group" aria-label="Session lengths">
           {SESSION_DURATIONS.map((duration) => (
-            <label
-              key={duration}
-              className="flex items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-sm cursor-pointer"
-            >
+            <label key={duration} className="oq-tick">
               <input
                 type="checkbox"
                 name="durations"
                 value={duration}
                 checked={enabledDurations.has(duration)}
                 onChange={() => toggleDuration(duration)}
-                className="h-4 w-4"
               />
               {duration} minutes
             </label>
           ))}
         </div>
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">
-          How can customers meet with you?
-        </h2>
-        <div className="flex gap-4 text-sm">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              name="online_enabled"
-              checked={onlineEnabled}
-              onChange={(event) => setOnlineEnabled(event.target.checked)}
-              className="h-4 w-4"
-            />
-            Online
+        <div className="oq-ticks" role="group" aria-label="Session formats">
+          <label className="oq-tick">
+            <input type="checkbox" name="online_enabled" defaultChecked={initialOnlineEnabled} />
+            Online (Google Meet)
           </label>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              name="in_person_enabled"
-              checked={inPersonEnabled}
-              onChange={(event) => setInPersonEnabled(event.target.checked)}
-              className="h-4 w-4"
-            />
-            In Person
+          <label className="oq-tick">
+            <input type="checkbox" name="in_person_enabled" defaultChecked={initialInPersonEnabled} />
+            In person
           </label>
         </div>
-      </section>
 
-      <section className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
-        <h2 className="text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Your session prices</h2>
-        <ul className="flex flex-col gap-1.5">
-          {SESSION_DURATIONS.map((duration) => {
-            const isEnabled = enabledDurations.has(duration);
-            return (
-              <li
-                key={duration}
-                className={`flex items-center justify-between text-sm ${
-                  isEnabled ? "text-[var(--color-text)]" : "text-[var(--color-text-muted)]"
-                }`}
-              >
-                <span>{duration} min</span>
-                <span className={`text-right ${isEnabled ? "font-medium" : ""}`}>
-                  {hasValidBasePrice ? previewPrices[duration].toLocaleString() : "—"} ETB
-                  {hasValidBasePrice ? (
-                    <span className="block text-xs font-normal text-[var(--color-text-muted)]">
-                      Customer pays {customerPrice(previewPrices[duration], pricing.vatRate).toLocaleString()} · you
+        <div className="rows" style={{ marginBlockStart: 8 }}>
+          {SESSION_DURATIONS.filter((duration) => enabledDurations.has(duration)).map((duration) => (
+            <div key={duration} style={{ gridTemplateColumns: "110px minmax(0, 1fr)" }}>
+              <span className="num">{duration} min</span>
+              <span className="num" style={{ textAlign: "right" }}>
+                {hasValidBasePrice ? (
+                  <>
+                    <strong>{previewPrices[duration].toLocaleString()} ETB</strong>
+                    <span className="muted" style={{ display: "block", fontSize: 13 }}>
+                      Client pays {customerPrice(previewPrices[duration], pricing.vatRate).toLocaleString()} · you
                       receive {expertPayout(previewPrices[duration], pricing.commissionRate).toLocaleString()}
                     </span>
-                  ) : null}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-        <p className="text-xs text-[var(--color-text-muted)]">
-          Prices are automatically calculated from your 60-minute rate.
-        </p>
-        <p className="text-xs text-[var(--color-text-muted)]">
-          Customers pay your price plus {formatVatRate(pricing.vatRate)} VAT. Pivotroom&apos;s{" "}
-          {formatVatRate(pricing.commissionRate)} commission is included in your price, so you receive the rest.
-        </p>
-      </section>
+                  </>
+                ) : (
+                  "—"
+                )}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
 
-      <Button type="submit" isLoading={isPending} loadingText="Saving...">
-        Save &amp; Review
-      </Button>
+      <div className="oq">
+        <div className="oq-head">
+          <span className="oq-n num" aria-hidden="true">
+            17
+          </span>
+          <label htmlFor="response_time" className="oq-label">
+            How quickly do you usually reply to clients?
+          </label>
+        </div>
+        <p className="oq-hint">Shown on your profile, so pick what you can keep to.</p>
+        <select id="response_time" name="response_time" className="input" defaultValue={initialResponseTime ?? ""}>
+          <option value="">Prefer not to say</option>
+          {RESPONSE_TIME_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="oq-actions">
+        <button type="submit" className="btn btn-ink md" disabled={isPending}>
+          {isPending ? "Saving…" : "Save and review"}
+        </button>
+      </div>
     </form>
   );
 }

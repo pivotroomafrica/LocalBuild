@@ -6,26 +6,14 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { slugify } from "@/lib/expert/slug";
 import { getExpertApplicationData, getMissingRequiredFields } from "@/lib/expert/data";
-import { validateExperience, validateLanguages, validateResponseTime } from "@/lib/expert/profileDetails";
+import { parseExpertiseFields, parseIdentityFields, parseResponseTime } from "@/lib/expert/profileFields";
+import { syncExpertCategories } from "@/lib/expert/categorySync";
 import {
-  validateCareerHighlights,
-  validateCurrentCompany,
-  validateCurrentPosition,
-  validateExpertCity,
-  validateExpertCountry,
-  validateExpertExperienceRange,
-  validateExpertLinkedinUrl,
-  validateExpertiseSummary,
-  validateHeadline,
-  validateProblemsHelpWith,
-  validateShortBio,
-  validateWhoIHelp,
   validateBasePrice,
   validateDurations,
   validateSessionFormat,
 } from "@/lib/validation/expert";
 import { calculateDurationPrice } from "@/lib/expert/pricing";
-import { MAX_EXPERT_CATEGORIES } from "@/types/expert";
 import type { ExpertProfile } from "@/types/expert";
 
 const GENERIC_ERROR = "We couldn't save your changes. Please try again.";
@@ -109,7 +97,9 @@ export type ExpertActionState = {
   missingFields?: string[];
 };
 
-export async function updateExpertProfileAction(
+/** Onboarding step 1, "Who you are". Partial answers are saved, so an
+ * expert can stop and come back; completeness is checked at submit. */
+export async function saveOnboardingIdentityAction(
   _prevState: ExpertActionState,
   formData: FormData,
 ): Promise<ExpertActionState> {
@@ -119,83 +109,48 @@ export async function updateExpertProfileAction(
   } = await supabase.auth.getUser();
   if (!user) return { error: "You must be logged in to do that." };
 
-  const headline = validateHeadline(String(formData.get("headline") ?? ""));
-  if (!headline.valid) return { error: headline.error };
+  const parsed = parseIdentityFields(formData);
+  if (!parsed.ok) return { error: parsed.error };
 
-  const currentPosition = validateCurrentPosition(String(formData.get("current_position") ?? ""));
-  if (!currentPosition.valid) return { error: currentPosition.error };
-
-  const currentCompany = validateCurrentCompany(String(formData.get("current_company") ?? ""));
-  if (!currentCompany.valid) return { error: currentCompany.error };
-
-  const experienceRange = validateExpertExperienceRange(
-    String(formData.get("years_experience_range") ?? ""),
-  );
-  if (!experienceRange.valid) return { error: experienceRange.error };
-
-  const linkedinUrl = validateExpertLinkedinUrl(String(formData.get("linkedin_url") ?? ""));
-  if (!linkedinUrl.valid) return { error: linkedinUrl.error };
-
-  const country = validateExpertCountry(String(formData.get("country") ?? ""));
-  if (!country.valid) return { error: country.error };
-
-  const city = validateExpertCity(String(formData.get("city") ?? ""));
-  if (!city.valid) return { error: city.error };
-
-  const shortBio = validateShortBio(String(formData.get("short_bio") ?? ""));
-  if (!shortBio.valid) return { error: shortBio.error };
-
-  const expertiseSummary = validateExpertiseSummary(String(formData.get("expertise_summary") ?? ""));
-  if (!expertiseSummary.valid) return { error: expertiseSummary.error };
-
-  const problemsHelpWith = validateProblemsHelpWith(String(formData.get("problems_help_with") ?? ""));
-  if (!problemsHelpWith.valid) return { error: problemsHelpWith.error };
-
-  const whoIHelp = validateWhoIHelp(String(formData.get("who_i_help") ?? ""));
-  if (!whoIHelp.valid) return { error: whoIHelp.error };
-
-  const careerHighlights = validateCareerHighlights(String(formData.get("career_highlights") ?? ""));
-  if (!careerHighlights.valid) return { error: careerHighlights.error };
-
-  const languages = validateLanguages(String(formData.get("languages") ?? ""));
-  if (!languages.valid) return { error: languages.error };
-
-  const responseTime = validateResponseTime(String(formData.get("response_time") ?? ""));
-  if (!responseTime.valid) return { error: responseTime.error };
-
-  const experience = validateExperience(String(formData.get("experience") ?? "[]"));
-  if (!experience.valid) return { error: experience.error };
-
-  const { error } = await supabase
-    .from("expert_profiles")
-    .update({
-      headline: headline.value,
-      current_position: currentPosition.value,
-      current_company: currentCompany.value,
-      years_experience_range: experienceRange.value,
-      linkedin_url: linkedinUrl.value,
-      country: country.value,
-      city: city.value,
-      short_bio: shortBio.value,
-      expertise_summary: expertiseSummary.value,
-      problems_help_with: problemsHelpWith.value,
-      who_i_help: whoIHelp.value,
-      career_highlights: careerHighlights.value,
-      languages: languages.value,
-      response_time: responseTime.value,
-      experience: experience.value,
-    })
-    .eq("user_id", user.id);
-
+  const { error } = await supabase.from("expert_profiles").update(parsed.update).eq("user_id", user.id);
   if (error) return { error: GENERIC_ERROR };
 
-  revalidatePath("/expert/application");
+  revalidatePath("/expert/application", "layout");
   invalidatePublicExperts();
-  revalidatePath("/expert/application/profile");
-  // Save & Continue: only reached once the update above has actually
-  // succeeded -- redirect() never runs on a validation or save failure,
-  // both of which return an error above instead.
-  redirect("/expert/application/expertise");
+  redirect(formData.get("intent") === "stay" ? "/expert/application/profile?saved=1" : "/expert/application/expertise");
+}
+
+/** Onboarding step 2, "What you've solved": areas plus the texts that
+ * matching reads. */
+export async function saveOnboardingExpertiseAction(
+  _prevState: ExpertActionState,
+  formData: FormData,
+): Promise<ExpertActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be logged in to do that." };
+
+  const parsed = parseExpertiseFields(formData);
+  if (!parsed.ok) return { error: parsed.error };
+
+  const { data: expertProfile } = await supabase.from("expert_profiles").select("id").eq("user_id", user.id).single();
+  if (!expertProfile) return { error: GENERIC_ERROR };
+
+  const categoryError = await syncExpertCategories(
+    supabase,
+    expertProfile.id,
+    formData.getAll("category_ids").map(String),
+  );
+  if (categoryError) return { error: categoryError };
+
+  const { error } = await supabase.from("expert_profiles").update(parsed.update).eq("id", expertProfile.id);
+  if (error) return { error: GENERIC_ERROR };
+
+  revalidatePath("/expert/application", "layout");
+  invalidatePublicExperts();
+  redirect(formData.get("intent") === "stay" ? "/expert/application/expertise?saved=1" : "/expert/application/sessions");
 }
 
 const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -242,77 +197,6 @@ export async function uploadExpertPhotoAction(
   return { success: true };
 }
 
-export async function setExpertCategoriesAction(
-  _prevState: ExpertActionState,
-  formData: FormData,
-): Promise<ExpertActionState> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "You must be logged in to do that." };
-
-  const selectedIds = formData.getAll("category_ids").map(String).filter(Boolean);
-  const uniqueSelectedIds = Array.from(new Set(selectedIds));
-
-  if (uniqueSelectedIds.length > MAX_EXPERT_CATEGORIES) {
-    return { error: `Select at most ${MAX_EXPERT_CATEGORIES} expertise categories.` };
-  }
-
-  const { data: expertProfile } = await supabase
-    .from("expert_profiles")
-    .select("id")
-    .eq("user_id", user.id)
-    .single();
-  if (!expertProfile) return { error: GENERIC_ERROR };
-
-  const { data: existingLinks } = await supabase
-    .from("expert_profile_categories")
-    .select("id, category_id")
-    .eq("expert_profile_id", expertProfile.id);
-
-  const existingIds = new Set((existingLinks ?? []).map((row) => row.category_id));
-  const toAdd = uniqueSelectedIds.filter((id) => !existingIds.has(id));
-  const toRemove = (existingLinks ?? []).filter((row) => !uniqueSelectedIds.includes(row.category_id));
-
-  if (toRemove.length > 0) {
-    const { error: deleteError } = await supabase
-      .from("expert_profile_categories")
-      .delete()
-      .in("id", toRemove.map((row) => row.id));
-    if (deleteError) return { error: GENERIC_ERROR };
-  }
-
-  if (toAdd.length > 0) {
-    const { error: insertError } = await supabase.from("expert_profile_categories").insert(
-      toAdd.map((categoryId) => ({
-        expert_profile_id: expertProfile.id,
-        category_id: categoryId,
-      })),
-    );
-    if (insertError) {
-      return {
-        error:
-          insertError.message.includes("at most 3")
-            ? `Select at most ${MAX_EXPERT_CATEGORIES} expertise categories.`
-            : GENERIC_ERROR,
-      };
-    }
-  }
-
-  revalidatePath("/expert/application");
-  invalidatePublicExperts();
-  revalidatePath("/expert/application/expertise");
-  // Save & Continue: only reached once the save above has actually
-  // succeeded. Category count rules are unchanged -- max 3 is still
-  // enforced above (and by enforce_expert_category_limit() at the
-  // database level); a minimum of 1 is still enforced only at
-  // submission time (getMissingRequiredFields), not here, same as
-  // before -- non-linear navigation (spec section 7) means this page is
-  // allowed to be left incomplete.
-  redirect("/expert/application/sessions");
-}
-
 /**
  * Replaces the old one-row-at-a-time Add/Edit/Remove session actions.
  * The applicant sets a single 60-minute base rate, which durations are
@@ -344,6 +228,9 @@ export async function saveSessionPricingAction(
   const price = validateBasePrice(String(formData.get("base_hourly_price") ?? ""));
   if (!price.valid) return { error: price.error };
 
+  const responseTime = parseResponseTime(formData);
+  if (!responseTime.ok) return { error: responseTime.error };
+
   const selectedDurations = formData.getAll("durations").map(Number);
   const durations = validateDurations(selectedDurations);
   if (!durations.valid) return { error: durations.error };
@@ -367,6 +254,7 @@ export async function saveSessionPricingAction(
       base_hourly_price: price.value,
       online_enabled: onlineEnabled,
       in_person_enabled: inPersonEnabled,
+      ...responseTime.update,
     })
     .eq("user_id", user.id);
   if (profileError) return { error: GENERIC_ERROR };
@@ -423,13 +311,11 @@ export async function saveSessionPricingAction(
   redirect("/expert/application");
 }
 
-// Signature is fixed by useActionState (prevState, formData) even though
-// this action needs neither -- submission reads the applicant's own
-// already-saved data server-side rather than trusting any form payload.
-/* eslint-disable @typescript-eslint/no-unused-vars */
+// Submission reads the applicant's own saved data server-side rather than
+// trusting the form; the form only carries the terms checkbox.
 export async function submitApplicationAction(
   _prevState: ExpertActionState,
-  _formData: FormData,
+  formData: FormData,
 ): Promise<ExpertActionState> {
   const supabase = await createClient();
   const {
@@ -439,6 +325,11 @@ export async function submitApplicationAction(
 
   const data = await getExpertApplicationData(supabase, user.id);
   if (!data) return { error: GENERIC_ERROR };
+
+  // The expert terms must be accepted once; the database stamps the time
+  // (protect_expert_profile_visibility, 050) and keeps the first one.
+  const acceptedTerms = formData.get("accept_terms") === "on" || data.expertProfile.terms_accepted_at != null;
+  if (!acceptedTerms) return { error: "Please confirm you agree to the expert terms." };
 
   const missingFields = getMissingRequiredFields(data);
   if (missingFields.length > 0) {
@@ -456,7 +347,11 @@ export async function submitApplicationAction(
   // this application-layer check alone.
   const { error } = await supabase
     .from("expert_profiles")
-    .update({ application_status: "submitted", profile_status: "ready" })
+    .update({
+      application_status: "submitted",
+      profile_status: "ready",
+      terms_accepted_at: data.expertProfile.terms_accepted_at ?? new Date().toISOString(),
+    })
     .eq("user_id", user.id);
 
   if (error) return { error: GENERIC_ERROR };

@@ -320,3 +320,38 @@ export async function toPreviewProfileData(
     reviews: [],
   };
 }
+
+/**
+ * Applies an admin's hidden_fields (050) to profile data built outside the
+ * public read functions (the expert's and admin's previews), the same way
+ * get_expert_profile_public_v2 masks them for visitors.
+ */
+export function maskHiddenFields(profile: PublicProfileData, hiddenFields: string[]): PublicProfileData {
+  const hidden = new Set(hiddenFields);
+  const hideStats = hidden.has("stats");
+  const hideReviews = hideStats || hidden.has("reviews");
+  return {
+    ...profile,
+    photoUrl: hidden.has("photo") ? null : profile.photoUrl,
+    currentPosition: hidden.has("current_position") ? null : profile.currentPosition,
+    currentCompany: hidden.has("current_company") ? null : profile.currentCompany,
+    yearsExperienceLabel: hidden.has("years_experience") ? null : profile.yearsExperienceLabel,
+    country: hidden.has("location") ? null : profile.country,
+    city: hidden.has("location") ? null : profile.city,
+    linkedinUrl: hidden.has("linkedin") ? null : profile.linkedinUrl,
+    languages: hidden.has("languages") ? [] : profile.languages,
+    responseTime: hidden.has("response_time") ? null : profile.responseTime,
+    shortBio: hidden.has("short_bio") ? null : profile.shortBio,
+    expertiseSummary: hidden.has("expertise_summary") ? null : profile.expertiseSummary,
+    problemsHelpWith: hidden.has("problems_help_with") ? null : profile.problemsHelpWith,
+    whoIHelp: hidden.has("who_i_help") ? null : profile.whoIHelp,
+    careerHighlights: hidden.has("career_highlights") ? null : profile.careerHighlights,
+    experience: hidden.has("experience") ? [] : profile.experience,
+    stats: hideStats
+      ? EMPTY_STATS
+      : hideReviews
+        ? { ...profile.stats, reviewCount: 0, ratingAvg: null }
+        : profile.stats,
+    reviews: hideReviews ? [] : profile.reviews,
+  };
+}

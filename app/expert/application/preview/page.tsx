@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getExpertApplicationData } from "@/lib/expert/data";
-import { toPreviewProfileData } from "@/lib/public/data";
+import { maskHiddenFields, toPreviewProfileData } from "@/lib/public/data";
 import { ExpertDetailView } from "@/components/site/ExpertDetailView";
 import { ExpertApplicationNav } from "@/components/layout/ExpertApplicationNav";
 
@@ -36,11 +36,16 @@ export default async function ExpertApplicationPreviewPage() {
     .select("id, name")
     .in("id", data.categoryIds.length > 0 ? data.categoryIds : [""]);
 
-  const profile = await toPreviewProfileData(
-    supabase,
-    data,
-    profileRow?.full_name ?? "",
-    (categories ?? []).map((c) => c.name),
+  // Shown exactly as clients will see it, including anything our team
+  // chose not to show.
+  const profile = maskHiddenFields(
+    await toPreviewProfileData(
+      supabase,
+      data,
+      profileRow?.full_name ?? "",
+      (categories ?? []).map((c) => c.name),
+    ),
+    data.expertProfile.hidden_fields,
   );
 
   return (
