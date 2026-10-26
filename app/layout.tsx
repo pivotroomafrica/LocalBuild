@@ -3,6 +3,7 @@ import { Inter, Noto_Sans_Ethiopic } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import "./site.css";
+import { isProductionSite, siteUrl } from "@/lib/site";
 
 /** Inter carries all UI text (weights 400/500/600); Satoshi Bold is the
  * display face for headings and the wordmark (website design). */
@@ -41,7 +42,12 @@ const materialSymbols = localFont({
   display: "swap",
 });
 
+const appUrl = siteUrl();
+
 export const metadata: Metadata = {
+  ...(appUrl ? { metadataBase: new URL(appUrl) } : {}),
+  // Staging and local copies stay out of search results.
+  ...(isProductionSite() ? {} : { robots: { index: false, follow: false } }),
   title: "Pivotroom",
   description: "One hour with someone who has done it. Book a paid one-to-one session with a vetted Ethiopian founder, executive or professional.",
 };

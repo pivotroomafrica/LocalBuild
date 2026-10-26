@@ -75,7 +75,12 @@ Click **Restart**.
 2. Supabase dashboard → Authentication → URL Configuration:
    - add `https://<staging-domain>/auth/callback` to **Redirect URLs**.
 3. Chapa dashboard → webhook URL: `https://<staging-domain>/api/payments/chapa/webhook`.
-4. Schedule the email/calendar worker: run `supabase/ops/schedule-integration-jobs.sql` with this deployment's URL and `INTEGRATION_WORKER_SECRET`.
+4. Emails, Meet invites and reminders: the app runs its own job queue every
+   minute on the **production domain** (`lib/jobs/inProcess.ts`). Staging
+   doesn't, so it never emails real users links to staging; set
+   `JOBS_IN_PROCESS=true` on staging only while production isn't live yet.
+   Optional backup on production: a cPanel cron every 5 minutes,
+   `curl -s -X POST -H "x-worker-secret: <INTEGRATION_WORKER_SECRET>" https://pivotroom.africa/api/jobs/process > /dev/null`.
 
 ## 6. Restart, logs, rollback
 
@@ -97,9 +102,42 @@ Click **Restart**.
 - [ ] Cancel and reschedule from the dashboard.
 - [ ] Memory stays within the plan limit under the load tests (`docs/v2/AUDIT.md` §6).
 
-## 8. Production cut-over (only after staging passes)
+## 8. Production on pivotroom.africa
+
+Production is a **second Node.js app** next to staging, built separately,
+because `NEXT_PUBLIC_APP_URL` is baked into each build.
 
 1. Back up the database (`docs/v2/BACKUP.md`).
-2. Repeat steps 1–6 for the production domain with **live** Chapa keys.
-3. Smoke-test the production URL before switching DNS.
-4. Switch DNS, monitor logs, and keep the previous deployment available for rollback.
+2. Build for production on your PC (Windows `cmd`):
+   ```
+   set NEXT_PUBLIC_APP_URL=https://pivotroom.africa
+   npm run build:standalone
+   ```
+   Zip the contents of `.next\standalone` (include the hidden `.next`).
+   Keep it apart from the staging zip.
+3. cPanel → File Manager: create `~/pivotroom-prod` and extract the zip there.
+4. cPanel → Setup Node.js App → Create Application:
+   root `pivotroom-prod`, URL `pivotroom.africa`, startup file `server.js`,
+   same Node version as the build. If an old website is in `public_html`,
+   back it up first; the Node app takes over the domain.
+5. Environment variables: same list as section 4, except
+   - `NEXT_PUBLIC_APP_URL` = `https://pivotroom.africa`
+   - `CHAPA_SECRET_KEY` / `CHAPA_WEBHOOK_SECRET` = **live** keys
+   - leave `CHAPA_MODE` and `INTEGRATIONS_MODE` empty, `EMAIL_DELIVERY_ENABLED` empty or `true`
+   - don't set `JOBS_IN_PROCESS` (production runs the queue by default).
+   Restart.
+6. SSL: cPanel → SSL/TLS Status → Run AutoSSL for `pivotroom.africa` and `www.pivotroom.africa`.
+   Redirect `www` to the bare domain (cPanel → Domains → Redirects, permanent).
+7. Supabase → Authentication → URL Configuration: Site URL
+   `https://pivotroom.africa`; Redirect URLs keep the staging entry and add
+   `https://pivotroom.africa/**`.
+8. Chapa dashboard (live mode): webhook `https://pivotroom.africa/api/payments/chapa/webhook`.
+9. Staging: once production is live, remove `JOBS_IN_PROCESS` there (or set
+   it to `false`), and switch staging to Chapa **test** keys. Staging stays
+   hidden from search engines automatically.
+10. Smoke test on production: home, sign up + confirmation email, an expert
+    profile, one real low-value Chapa payment, confirmation email + Meet
+    link, then refund it from the Chapa dashboard.
+
+Staging and production share one Supabase database: anything done on
+staging (bookings, approvals) is real. Test with test accounts only.
