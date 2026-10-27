@@ -66,7 +66,14 @@ async function getAccessToken(): Promise<string> {
     | null;
 
   if (!response.ok || !json?.access_token) {
-    throw new Error(json?.error_description ?? json?.error ?? `Google token refresh failed (HTTP ${response.status}).`);
+    // invalid_grant = the stored refresh token expired or was revoked (in
+    // a Google Cloud app still in "Testing", tokens expire after 7 days).
+    if (json?.error === "invalid_grant") {
+      throw new Error("Google sign-in expired (invalid_grant): renew GOOGLE_REFRESH_TOKEN.");
+    }
+    throw new Error(
+      [json?.error, json?.error_description].filter(Boolean).join(": ") || `Google token refresh failed (HTTP ${response.status}).`,
+    );
   }
 
   cachedAccessToken = { token: json.access_token, expiresAt: Date.now() + (json.expires_in ?? 3000) * 1000 };

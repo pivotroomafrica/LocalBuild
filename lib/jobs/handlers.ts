@@ -153,11 +153,19 @@ async function handleCalendarCreate(job: IntegrationJobRow): Promise<JobHandlerR
   const wantsMeet = ctx.session_format === "online";
   const summary = `Pivotroom Session — ${truncate(ctx.expert_full_name, 40)} / ${truncate(ctx.customer_full_name, 40)}`;
   const description = [
-    `Pivotroom booking reference: ${ctx.booking_reference}`,
+    `Pivotroom session: ${ctx.customer_full_name} with ${ctx.expert_full_name}`,
+    `Booking reference: ${ctx.booking_reference}`,
     `Duration: ${ctx.duration_minutes} minutes`,
-    `Format: ${ctx.session_format === "online" ? "Online" : "In person"}`,
-    `Session link: ${getAppUrl()}/dashboard/sessions/${encodeURIComponent(ctx.booking_reference)}`,
-  ].join("\n");
+    wantsMeet
+      ? "Format: online. Join with the Google Meet link in this invite, signed in with the email it was sent to."
+      : "Format: in person. Agree the place with each other before the session.",
+    ctx.discussion_topic ? `\nWhat the client wants to discuss:\n${truncate(ctx.discussion_topic, 600)}` : "",
+    `\nClient's session page: ${getAppUrl()}/dashboard/sessions/${encodeURIComponent(ctx.booking_reference)}`,
+    `Expert's session page: ${getAppUrl()}/expert/sessions/${encodeURIComponent(ctx.booking_reference)}`,
+    "\nNeed to move or cancel? Use the session page. Questions: hello@pivotroom.africa",
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const result = await getCalendarProvider().createEvent({
     bookingReference: ctx.booking_reference,
