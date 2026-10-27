@@ -20,7 +20,9 @@ export function getResendApiKey(): string {
 export function getEmailFrom(): string {
   const from = process.env.PIVOTROOM_EMAIL_FROM?.trim();
   if (!from) throw new Error("PIVOTROOM_EMAIL_FROM is not configured.");
-  return from;
+  // A bare address (hosting panels can mangle "Name <address>") gets the
+  // brand name, so inboxes show "Pivotroom" as the sender.
+  return from.includes("<") ? from : `Pivotroom <${from}>`;
 }
 
 /** Optional -- omitted from the Resend payload entirely when unset,
