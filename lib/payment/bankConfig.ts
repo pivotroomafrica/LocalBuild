@@ -9,9 +9,8 @@
  * None of these are secrets -- a bank account number meant to receive
  * customer transfers is, by definition, shown to every customer on the
  * payment page -- but they still belong in environment configuration
- * (not source) so this demo project's placeholder values are never
- * mistaken for Pivotroom's real account, and so a real deployment can
- * set the real values without a code change.
+ * (not source) so a deployment can change them without a code change.
+ * The defaults below are Pivotroom's real account.
  *
  * PIVOTROOM_BANK_* are intentionally NOT prefixed with NEXT_PUBLIC_:
  * they are read only in Server Components/Server Actions and rendered
@@ -28,10 +27,13 @@ const DEFAULT_INSTRUCTIONS =
   "Include your booking reference in the transfer description where possible.";
 
 export function getBankConfig(): BankConfig {
+  // Pivotroom's real receiving account (2026-10-27). The env vars can
+  // override it per deployment; the account name stays hidden until one
+  // is set, rather than showing a made-up holder.
   return {
-    bankName: process.env.PIVOTROOM_BANK_NAME || "Commercial Bank of Ethiopia (demo)",
-    accountName: process.env.PIVOTROOM_BANK_ACCOUNT_NAME || "Pivotroom Africa PLC (demo)",
-    accountNumber: process.env.PIVOTROOM_BANK_ACCOUNT_NUMBER || "1000 0000 0000 (demo)",
+    bankName: process.env.PIVOTROOM_BANK_NAME || "Commercial Bank of Ethiopia",
+    accountName: process.env.PIVOTROOM_BANK_ACCOUNT_NAME || "",
+    accountNumber: process.env.PIVOTROOM_BANK_ACCOUNT_NUMBER || "1000578665424",
     instructions: process.env.PIVOTROOM_BANK_INSTRUCTIONS || DEFAULT_INSTRUCTIONS,
   };
 }

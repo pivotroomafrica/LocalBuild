@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { checkChapaPaymentAction } from "@/lib/chapa/checkAction";
 import { Button } from "@/components/ui/Button";
 import { FormMessage } from "@/components/ui/FormMessage";
 import { HoldCountdown } from "@/components/booking/HoldCountdown";
@@ -48,8 +50,6 @@ export function RailPayment({
   manualVerificationRequired,
   bankConfig,
 }: Props) {
-  const router = useRouter();
-
   if (needsReview) {
     return (
       <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
@@ -99,21 +99,7 @@ export function RailPayment({
   }
 
   if (activeChapaAttempt) {
-    return (
-      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 text-center">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-xl font-extrabold tracking-[-0.02em] text-[var(--color-text)]">Payment processing</h2>
-          <ReleaseTimeButton bookingId={booking.id} bookingReference={booking.booking_reference} />
-        </div>
-        <p className="mb-3 text-sm text-[var(--color-text-muted)]">
-          We&apos;re waiting for Chapa to confirm your payment.
-        </p>
-        {booking.hold_expires_at ? <HoldCountdown holdExpiresAt={booking.hold_expires_at} /> : null}
-        <Button type="button" className="mt-3" onClick={() => router.refresh()}>
-          Check payment status
-        </Button>
-      </section>
-    );
+    return <ChapaProcessing booking={booking} />;
   }
 
   const rejected = latestPayment?.payment_status === "rejected" ? latestPayment : null;
@@ -193,10 +179,12 @@ export function RailPayment({
             <dt className="text-[var(--color-text-muted)]">Bank</dt>
             <dd className="font-medium">{bankConfig.bankName}</dd>
           </div>
-          <div className="flex justify-between">
-            <dt className="text-[var(--color-text-muted)]">Account name</dt>
-            <dd className="font-medium">{bankConfig.accountName}</dd>
-          </div>
+          {bankConfig.accountName ? (
+            <div className="flex justify-between">
+              <dt className="text-[var(--color-text-muted)]">Account name</dt>
+              <dd className="font-medium">{bankConfig.accountName}</dd>
+            </div>
+          ) : null}
           <div className="flex justify-between">
             <dt className="text-[var(--color-text-muted)]">Account number</dt>
             <dd className="font-medium">{bankConfig.accountNumber}</dd>
@@ -226,6 +214,52 @@ export function RailPayment({
         This is a development preview. No automatic bank verification occurs -- an admin reviews
         every submission manually.
       </FormMessage>
+    </section>
+  );
+}
+
+/** Asks Chapa about the payment every few seconds (for about two
+ * minutes), and on demand, until it's confirmed or failed. */
+function ChapaProcessing({ booking }: { booking: Booking }) {
+  const router = useRouter();
+  const [isChecking, startCheck] = useTransition();
+  const [checks, setChecks] = useState(0);
+  const [lastStatus, setLastStatus] = useState<string | null>(null);
+
+  function check() {
+    startCheck(async () => {
+      const { status } = await checkChapaPaymentAction(booking.booking_reference);
+      setLastStatus(status);
+      setChecks((n) => n + 1);
+      if (status !== "initiated") router.refresh();
+    });
+  }
+
+  useEffect(() => {
+    if (checks >= 24) return;
+    const timer = setTimeout(check, checks === 0 ? 1500 : 5000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-arm only after each finished check
+  }, [checks]);
+
+  return (
+    <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 text-center">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="text-xl font-extrabold tracking-[-0.02em] text-[var(--color-text)]">Payment processing</h2>
+        <ReleaseTimeButton bookingId={booking.id} bookingReference={booking.booking_reference} />
+      </div>
+      <p className="mb-3 text-sm text-[var(--color-text-muted)]">
+        We&apos;re confirming your payment with Chapa. This page updates by itself.
+      </p>
+      {booking.hold_expires_at ? <HoldCountdown holdExpiresAt={booking.hold_expires_at} /> : null}
+      {checks >= 24 && lastStatus === "initiated" ? (
+        <p className="mt-3 text-sm text-[var(--color-text-muted)]">
+          Chapa hasn&apos;t confirmed this payment yet. If you completed it, check again in a minute.
+        </p>
+      ) : null}
+      <Button type="button" className="mt-3" isLoading={isChecking} loadingText="Checking..." onClick={check}>
+        Check payment status
+      </Button>
     </section>
   );
 }

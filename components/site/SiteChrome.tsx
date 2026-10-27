@@ -101,13 +101,15 @@ export function SiteChrome({ isLoggedIn, isApprovedExpert, isAdmin }: Props) {
     { href: "/about", label: "About" },
   ];
 
+  // Where "My dashboard" goes for this person.
+  const homeHref = isAdmin ? "/admin" : isApprovedExpert ? "/expert/dashboard" : "/dashboard";
   const tabs = [
     { href: "/", icon: "home", label: "Home" },
     { href: "/experts", icon: "search", label: "Find" },
     ...(isLoggedIn
       ? [
           {
-            href: isAdmin ? "/admin" : isApprovedExpert ? "/expert/dashboard" : "/dashboard",
+            href: homeHref,
             icon: "space_dashboard",
             label: "Dashboard",
           },
@@ -144,8 +146,8 @@ export function SiteChrome({ isLoggedIn, isApprovedExpert, isAdmin }: Props) {
                 Sign in
               </Link>
             )}
-            <Link href="/experts" className="btn btn-ink hide-sm">
-              Book an expert{" "}
+            <Link href={isLoggedIn ? homeHref : "/experts"} className="btn btn-ink hide-sm">
+              {isLoggedIn ? "My dashboard" : "Book an expert"}{" "}
               <span className="ms af" aria-hidden="true">
                 arrow_forward
               </span>

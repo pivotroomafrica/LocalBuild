@@ -10,13 +10,19 @@ import {
   validatePhone,
 } from "@/lib/validation/profile";
 import { homePathFor, safeNext } from "@/lib/auth/home";
+import { siteUrl } from "@/lib/site";
 
 export type AuthActionState = {
   error?: string;
   status?: "check-email" | "reset-email-sent";
 };
 
+/** The address email links point back to: the deployment's own URL
+ * (e.g. https://pivotroom.africa), then the browser's origin, and
+ * localhost only in local development. */
 async function siteOrigin() {
+  const configured = siteUrl();
+  if (configured) return configured;
   const originHeader = (await headers()).get("origin");
   return originHeader ?? "http://localhost:3000";
 }
@@ -85,6 +91,11 @@ export async function signInAction(
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) return { error: friendlyAuthError(error.message) };
+
+  if (!data.user.email_confirmed_at) {
+    await supabase.auth.signOut();
+    return { error: "Please confirm your email first. Open the link we sent you, then sign in." };
+  }
 
   // A page they were sent from wins; otherwise their own dashboard.
   redirect(next ?? (await homePathFor(supabase, data.user.id)));

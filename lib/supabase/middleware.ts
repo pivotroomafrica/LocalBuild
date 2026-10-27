@@ -40,8 +40,11 @@ export async function updateSession(request: NextRequest) {
   // IMPORTANT: do not run any logic between createServerClient and
   // supabase.auth.getUser() — it must run to refresh the session.
   const {
-    data: { user },
+    data: { user: sessionUser },
   } = await supabase.auth.getUser();
+  // An account counts as signed in only once its email is confirmed, even
+  // if the auth project ever stops requiring confirmation.
+  const user = sessionUser?.email_confirmed_at ? sessionUser : null;
 
   const { pathname } = request.nextUrl;
   // Public address, not request.url (which is the internal one behind a proxy).
