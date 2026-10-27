@@ -1,8 +1,18 @@
-import { type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
+/** www.<domain> -> <domain>, keeping the path and query, so there is one
+ * address (sign-in cookies only live on one host). Done here because the
+ * hosting panel's redirect doesn't reach paths served by the Node app. */
+function wwwRedirect(request: NextRequest): NextResponse | null {
+  const host = (request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "").split(",")[0].trim();
+  if (!host.toLowerCase().startsWith("www.")) return null;
+  const { pathname, search } = request.nextUrl;
+  return NextResponse.redirect(`https://${host.slice(4)}${pathname}${search}`, 308);
+}
+
 export function proxy(request: NextRequest) {
-  return updateSession(request);
+  return wwwRedirect(request) ?? updateSession(request);
 }
 
 export const config = {
