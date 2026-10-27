@@ -533,7 +533,7 @@ function CancelForm({
           <span className="num">{paidLabel}</span>
         </div>
         <span className="muted" style={{ fontSize: 14, marginBlockStart: 6 }}>
-          Our team settles the refund to the account you paid with, normally within [X] working days.
+          Our team sends the refund to the account you paid with and emails you when it has been sent.
         </span>
       </div>
       {error ? (

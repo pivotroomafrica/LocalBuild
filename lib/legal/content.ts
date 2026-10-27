@@ -4,13 +4,14 @@
  * DRAFT, NOT LEGAL ADVICE. Adapted from the website design's draft text to
  * match how Pivotroom actually works today (email sign-in, VAT added to
  * the expert's price, 20% commission, 24-hour self-service cutoff, bank
- * transfer for large payments). Bracketed values like [NUMBER] still need
- * the company's answer. Have a lawyer review all three documents before
- * launch, then set LEGAL_REVIEWED to true and fill in the dates.
+ * transfer for large payments). Specific timings (refund and payout days)
+ * and the company registration number are left out until confirmed; add
+ * them here when decided. Have a lawyer review all three documents, then
+ * set LEGAL_REVIEWED to true.
  */
 export const LEGAL_REVIEWED = false;
-export const LEGAL_LAST_UPDATED = "[DATE]";
-export const LEGAL_EFFECTIVE = "[DATE]";
+export const LEGAL_LAST_UPDATED = "27 October 2026";
+export const LEGAL_EFFECTIVE = "27 October 2026";
 
 export type LegalDocKey = "terms" | "privacy" | "expert";
 
@@ -43,7 +44,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
       {
         title: "Who we are",
         paras: [
-          "Pivotroom is a service operated by Modern Ethiopia Marketing PLC, a company registered in Ethiopia under registration number [NUMBER], with its office in Addis Ababa (we, us, Pivotroom).",
+          "Pivotroom is a service operated by Modern Ethiopia Marketing PLC, a company registered in Ethiopia, with its office in Addis Ababa (we, us, Pivotroom).",
           "These terms apply when you use pivotroom.africa to find, book and meet experts. If you offer sessions as an expert, the Expert terms apply to you as well.",
         ],
       },
@@ -75,9 +76,9 @@ export const LEGAL_DOCS: LegalDoc[] = [
         title: "Rescheduling, cancellations and refunds",
         paras: [
           "You can reschedule or cancel a confirmed booking yourself from your account up to 24 hours before it starts.",
-          "If you cancel at least 24 hours before, you are refunded the amount you paid, less [REFUND TERMS]. Within 24 hours of the start time, or if you do not attend, the session is not refunded, because the expert has kept that time for you.",
+          "If you cancel at least 24 hours before, you are refunded the amount you paid. Within 24 hours of the start time, or if you do not attend, the session is not refunded, because the expert has kept that time for you.",
           "If the expert cancels, does not attend, or the session cannot take place because of a problem on our side, you receive a full refund or a free rebooking, your choice.",
-          "Refunds are returned to the payment method you used, normally within [X] working days.",
+          "Refunds are returned to the payment method you used. We tell you by email when your refund has been sent.",
         ],
       },
       {
@@ -195,7 +196,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
       {
         title: "How long we keep it",
         paras: [
-          "We keep your account data while your account is open. If you close it, we delete or anonymise your personal data within [X] days, except payment and tax records, which we keep for as long as the law requires.",
+          "We keep your account data while your account is open. If you close it, we delete or anonymise your personal data without undue delay, except payment and tax records, which we keep for as long as the law requires.",
         ],
       },
       {
@@ -288,7 +289,7 @@ export const LEGAL_DOCS: LegalDoc[] = [
         title: "Getting paid",
         paras: [
           "The client pays in full before the booking is confirmed. We hold the payment until the session has taken place.",
-          "After the session, your 80%, less any tax we are required to deduct, is paid to the bank or mobile money account registered in your name, normally within [X] working days.",
+          "After the session, your 80%, less any tax we are required to deduct, is paid to the bank or mobile money account registered in your name. We tell you by email when each payout has been sent.",
         ],
       },
       {

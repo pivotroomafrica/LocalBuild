@@ -18,11 +18,14 @@
 select vault.create_secret('<WORKER_SECRET>', 'integration_worker_secret');
 select vault.create_secret('<APP_URL>', 'pivotroom_app_url');
 
--- 2. Every 2 minutes, ask the app to process due jobs. The route itself
---    claims jobs atomically, so overlapping runs are safe.
+-- 2. Every 5 minutes, ask the app to process due jobs (this also wakes a
+--    cPanel app that went idle). The route claims jobs atomically, so
+--    overlapping runs with the app's own in-process runner are safe.
+--    Applied to the production project (csvnnhcanchmkmfbiqpn) on
+--    2026-10-27.
 select cron.schedule(
   'pivotroom-process-integration-jobs',
-  '*/2 * * * *',
+  '*/5 * * * *',
   $job$
     select net.http_post(
       url := (select decrypted_secret from vault.decrypted_secrets where name = 'pivotroom_app_url')

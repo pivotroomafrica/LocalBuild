@@ -22,10 +22,12 @@ function Result({ state, saved }: { state: AdminActionState; saved: string }) {
 /** Admin edit of every detail the expert gave during onboarding. */
 export function AdminExpertProfileEditor({
   profile,
+  fullName,
   categories,
   selectedCategoryIds,
 }: {
   profile: ExpertProfile;
+  fullName: string;
   categories: ExpertCategory[];
   selectedCategoryIds: string[];
 }) {
@@ -33,12 +35,12 @@ export function AdminExpertProfileEditor({
   return (
     <form action={formAction} className="oq-form">
       <input type="hidden" name="expert_profile_id" value={profile.id} />
-      <IdentityQuestions profile={profile} startAt={1} />
-      <ExpertiseQuestions profile={profile} categories={categories} selectedCategoryIds={selectedCategoryIds} startAt={7} />
+      <IdentityQuestions profile={profile} fullName={fullName} startAt={1} />
+      <ExpertiseQuestions profile={profile} categories={categories} selectedCategoryIds={selectedCategoryIds} startAt={8} />
       <div className="oq">
         <div className="oq-head">
           <span className="oq-n num" aria-hidden="true">
-            14
+            15
           </span>
           <label htmlFor="q-response" className="oq-label">
             Reply time

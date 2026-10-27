@@ -5,8 +5,8 @@ import { CONTACT_EMAIL } from "@/lib/legal/content";
 
 type Faq = { cat: string; q: string; a: string };
 
-/** Answers describe what the product does today. Refund timing is still a
- * company decision, marked [X] like the legal drafts. */
+/** Answers describe what the product does today. Refund and payout
+ * timings are left out until the company confirms them. */
 const FAQS: Faq[] = [
   ["Booking", "How do I find the right expert?", "Go to Find an expert, search or filter by topic, format and price, and open any profile to see what they have done, their prices, session lengths and open times."],
   ["Booking", "How far ahead can I book?", "From 24 hours ahead up to 90 days ahead. Experts open their own times, and every open time is shown on their profile."],
@@ -14,7 +14,7 @@ const FAQS: Faq[] = [
   ["Payments", "How do I pay?", "Through Chapa, with telebirr, CBE Birr or a bank card, or by bank transfer, which our team verifies. You pay when you book, and your booking is confirmed once the payment is verified."],
   ["Payments", "Are there any extra fees?", "No. The price you see already includes 15% VAT. There is nothing else to pay."],
   ["Payments", "What about very large payments?", "Payments above ETB 300,000 are made by bank transfer and checked by our team before the booking is confirmed."],
-  ["Payments", "How do refunds work?", "Cancel at least 24 hours before a session to get a refund. If the expert cancels or does not attend, you get a full refund, or a free rebooking if you prefer. Refunds go back to the payment method you used within [X] working days."],
+  ["Payments", "How do refunds work?", "Cancel at least 24 hours before a session to get a refund. If the expert cancels or does not attend, you get a full refund, or a free rebooking if you prefer. Refunds go back to the payment method you used, and we email you when yours has been sent."],
   ["Sessions", "Where is my Google Meet link?", "In your confirmation email and on the booking in your account."],
   ["Sessions", "Where do in-person sessions take place?", "In a public or business location agreed for the booking. If anything about the location makes you uncomfortable, tell us before the session."],
   ["Sessions", "What if the expert is late or does not show up?", "Wait ten minutes, then write to us. You will get a full refund or a free rebooking, your choice."],
@@ -26,7 +26,7 @@ const FAQS: Faq[] = [
   ["Account", "How do I delete my account?", `Write to ${CONTACT_EMAIL} from the email address on your account. Upcoming sessions are cancelled and refunded first.`],
   ["Experts", "How do I become an expert?", "Start on the Become an expert page. You fill in an application, our team reviews it, and your profile goes live once it is approved."],
   ["Experts", "How much does Pivotroom take?", "20% of the expert's price for each completed session. No listing fee and no subscription. VAT is added to the client's price, not taken from the expert's share."],
-  ["Experts", "When do experts get paid?", "After the session has taken place, normally within [X] working days, to a bank or mobile money account in the expert's name."],
+  ["Experts", "When do experts get paid?", "After the session has taken place, to a bank or mobile money account in the expert's name. We email you when each payout has been sent."],
 ].map(([cat, q, a]) => ({ cat, q, a }));
 
 const CATEGORIES = ["All", "Booking", "Payments", "Sessions", "Account", "Experts"];

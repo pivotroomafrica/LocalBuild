@@ -142,7 +142,12 @@ export default async function AdminExpertDetailPage({ params }: PageProps<"/admi
           The expert&apos;s onboarding answers. Fix wording or typos here; the expert sees the same changes in their
           application.
         </p>
-        <AdminExpertProfileEditor profile={expertProfile} categories={allCategories} selectedCategoryIds={categoryIds} />
+        <AdminExpertProfileEditor
+          profile={expertProfile}
+          fullName={identity?.full_name ?? ""}
+          categories={allCategories}
+          selectedCategoryIds={categoryIds}
+        />
       </details>
 
       <section className="panel stack" style={{ gap: 8 }}>

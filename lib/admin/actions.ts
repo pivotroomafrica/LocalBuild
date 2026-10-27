@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAdminForAction } from "@/lib/admin/data";
 import { getExpertApplicationDataById, getMissingRequiredFields } from "@/lib/expert/data";
 import { validateReviewMessage } from "@/lib/validation/expert";
+import { validateFullName } from "@/lib/validation/profile";
 import { HIDEABLE_FIELDS, parseExpertiseFields, parseIdentityFields, parseResponseTime } from "@/lib/expert/profileFields";
 import { syncExpertCategories } from "@/lib/expert/categorySync";
 import { notifyExpertOutcome } from "@/lib/notify/account";
@@ -552,9 +553,17 @@ export async function adminSaveExpertProfileAction(
     .from("expert_profiles")
     .update({ ...identity.update, ...expertise.update, ...responseTime.update })
     .eq("id", expertProfileId)
-    .select("slug");
+    .select("slug, user_id");
   if (error) return { error: GENERIC_ERROR };
   if (!data || data.length === 0) return { error: "Expert not found." };
+
+  // The name lives on the expert's account profile (admin policy, 053).
+  if (formData.has("full_name")) {
+    const fullName = validateFullName(String(formData.get("full_name") ?? ""));
+    if (!fullName.valid) return { error: fullName.error };
+    const { error: nameError } = await supabase.from("profiles").update({ full_name: fullName.value }).eq("id", data[0].user_id);
+    if (nameError) return { error: GENERIC_ERROR };
+  }
 
   revalidateExpertPages(expertProfileId);
   revalidatePath(`/experts/${data[0].slug}`);
