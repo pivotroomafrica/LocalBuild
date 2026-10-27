@@ -28,11 +28,10 @@ const DEFAULT_INSTRUCTIONS =
 
 export function getBankConfig(): BankConfig {
   // Pivotroom's real receiving account (2026-10-27). The env vars can
-  // override it per deployment; the account name stays hidden until one
-  // is set, rather than showing a made-up holder.
+  // override it per deployment.
   return {
     bankName: process.env.PIVOTROOM_BANK_NAME || "Commercial Bank of Ethiopia",
-    accountName: process.env.PIVOTROOM_BANK_ACCOUNT_NAME || "",
+    accountName: process.env.PIVOTROOM_BANK_ACCOUNT_NAME || "Modern Ethiopia Marketing PLC",
     accountNumber: process.env.PIVOTROOM_BANK_ACCOUNT_NUMBER || "1000578665424",
     instructions: process.env.PIVOTROOM_BANK_INSTRUCTIONS || DEFAULT_INSTRUCTIONS,
   };
