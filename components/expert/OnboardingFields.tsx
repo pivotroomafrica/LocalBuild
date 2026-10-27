@@ -79,14 +79,39 @@ function Counted({
   );
 }
 
-/** Step 1, "Who you are" (questions 1-7; the photo is uploaded separately). */
-export function IdentityQuestions({ profile, startAt = 1 }: { profile: ExpertProfile; startAt?: number }) {
+/** Step 1, "Who you are" (the photo is uploaded separately). The name
+ * question shows only when `fullName` is given (the expert's own form). */
+export function IdentityQuestions({
+  profile,
+  fullName,
+  startAt = 1,
+}: {
+  profile: ExpertProfile;
+  fullName?: string;
+  startAt?: number;
+}) {
   const known = (profile.languages ?? []).filter((l) => COMMON_LANGUAGES.includes(l));
   const other = (profile.languages ?? []).filter((l) => !COMMON_LANGUAGES.includes(l)).join(", ");
+  const first = fullName === undefined ? startAt : startAt + 1;
 
   return (
     <>
-      <Question n={startAt} label="What's your current role, and where?" required htmlFor="q-position">
+      {fullName !== undefined ? (
+        <Question n={startAt} label="Your full name, as clients should see it" required htmlFor="q-name">
+          <input
+            id="q-name"
+            name="full_name"
+            className="input"
+            maxLength={100}
+            required
+            defaultValue={fullName}
+            autoComplete="name"
+            placeholder="e.g. Hailemichael Adugna"
+          />
+        </Question>
+      ) : null}
+
+      <Question n={first} label="What's your current role, and where?" required htmlFor="q-position">
         <div className="oq-two">
           <input
             id="q-position"
@@ -108,7 +133,7 @@ export function IdentityQuestions({ profile, startAt = 1 }: { profile: ExpertPro
       </Question>
 
       <Question
-        n={startAt + 1}
+        n={first + 1}
         label="Describe yourself in one line a client would recognise."
         hint="For example: Took a coffee exporter from 1 to 20 containers a year."
         required
@@ -117,7 +142,7 @@ export function IdentityQuestions({ profile, startAt = 1 }: { profile: ExpertPro
         <Counted id="q-headline" name="headline" defaultValue={profile.headline ?? ""} max={160} rows={2} />
       </Question>
 
-      <Question n={startAt + 2} label="How many years have you worked in this field?" required htmlFor="q-years">
+      <Question n={first + 2} label="How many years have you worked in this field?" required htmlFor="q-years">
         <select id="q-years" name="years_experience_range" className="input" defaultValue={profile.years_experience_range ?? ""}>
           <option value="">Choose one</option>
           {EXPERT_EXPERIENCE_RANGES.map((value) => (
@@ -128,7 +153,7 @@ export function IdentityQuestions({ profile, startAt = 1 }: { profile: ExpertPro
         </select>
       </Question>
 
-      <Question n={startAt + 3} label="Where are you based?" required htmlFor="q-city">
+      <Question n={first + 3} label="Where are you based?" required htmlFor="q-city">
         <div className="oq-two">
           <input id="q-city" name="city" className="input" maxLength={100} defaultValue={profile.city ?? ""} placeholder="City, e.g. Addis Ababa" />
           <input
@@ -142,7 +167,7 @@ export function IdentityQuestions({ profile, startAt = 1 }: { profile: ExpertPro
         </div>
       </Question>
 
-      <Question n={startAt + 4} label="Which languages can you hold a session in?">
+      <Question n={first + 4} label="Which languages can you hold a session in?">
         <div className="oq-ticks" role="group" aria-label="Session languages">
           {COMMON_LANGUAGES.map((language) => (
             <label key={language} className="oq-tick">
@@ -161,7 +186,7 @@ export function IdentityQuestions({ profile, startAt = 1 }: { profile: ExpertPro
         />
       </Question>
 
-      <Question n={startAt + 5} label="Your LinkedIn" hint="Optional, but it helps our review." htmlFor="q-linkedin">
+      <Question n={first + 5} label="Your LinkedIn" hint="Optional, but it helps our review." htmlFor="q-linkedin">
         <input
           id="q-linkedin"
           name="linkedin_url"

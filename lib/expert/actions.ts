@@ -8,6 +8,7 @@ import { slugify } from "@/lib/expert/slug";
 import { getExpertApplicationData, getMissingRequiredFields } from "@/lib/expert/data";
 import { parseExpertiseFields, parseIdentityFields, parseResponseTime } from "@/lib/expert/profileFields";
 import { syncExpertCategories } from "@/lib/expert/categorySync";
+import { validateFullName } from "@/lib/validation/profile";
 import {
   validateBasePrice,
   validateDurations,
@@ -114,10 +115,18 @@ export async function saveOnboardingIdentityAction(
   const parsed = parseIdentityFields(formData);
   if (!parsed.ok) return { error: parsed.error };
 
+  // The name lives on the shared account profile, not the expert row.
+  if (formData.has("full_name")) {
+    const fullName = validateFullName(String(formData.get("full_name") ?? ""));
+    if (!fullName.valid) return { error: fullName.error };
+    const { error: nameError } = await supabase.from("profiles").update({ full_name: fullName.value }).eq("id", user.id);
+    if (nameError) return { error: GENERIC_ERROR };
+  }
+
   const { error } = await supabase.from("expert_profiles").update(parsed.update).eq("user_id", user.id);
   if (error) return { error: GENERIC_ERROR };
 
-  revalidatePath("/expert/application", "layout");
+  revalidatePath("/", "layout");
   invalidatePublicExperts();
   redirect(formData.get("intent") === "stay" ? "/expert/application/profile?saved=1" : "/expert/application/expertise");
 }

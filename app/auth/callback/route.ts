@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { publicOrigin } from "@/lib/utils/publicOrigin";
+import { homePathFor, safeNext } from "@/lib/auth/home";
 
 /**
  * Supabase email links (signup confirmation, password recovery) redirect
@@ -12,13 +13,13 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const origin = publicOrigin(request);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/dashboard/profile";
+  const next = safeNext(searchParams.get("next"));
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      return NextResponse.redirect(`${origin}${next ?? (await homePathFor(supabase, data.user.id))}`);
     }
   }
 

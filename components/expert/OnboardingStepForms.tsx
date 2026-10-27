@@ -25,13 +25,21 @@ function StepButtons({ isPending, next }: { isPending: boolean; next: string }) 
 }
 
 /** Onboarding step 1, "Who you are". */
-export function IdentityStepForm({ profile, saved }: { profile: ExpertProfile; saved: boolean }) {
+export function IdentityStepForm({
+  profile,
+  fullName,
+  saved,
+}: {
+  profile: ExpertProfile;
+  fullName: string;
+  saved: boolean;
+}) {
   const [state, formAction, isPending] = useActionState(saveOnboardingIdentityAction, initialState);
   return (
     <form action={formAction} className="oq-form">
       {state.error ? <p className="notice err" role="alert">{state.error}</p> : null}
       {saved && !state.error ? <p className="notice" role="status">Saved. You can come back to this any time.</p> : null}
-      <IdentityQuestions profile={profile} startAt={2} />
+      <IdentityQuestions profile={profile} fullName={fullName} startAt={2} />
       <StepButtons isPending={isPending} next="step 2" />
     </form>
   );
@@ -54,7 +62,7 @@ export function ExpertiseStepForm({
     <form action={formAction} className="oq-form">
       {state.error ? <p className="notice err" role="alert">{state.error}</p> : null}
       {saved && !state.error ? <p className="notice" role="status">Saved. You can come back to this any time.</p> : null}
-      <ExpertiseQuestions profile={profile} categories={categories} selectedCategoryIds={selectedCategoryIds} startAt={8} />
+      <ExpertiseQuestions profile={profile} categories={categories} selectedCategoryIds={selectedCategoryIds} startAt={9} />
       <StepButtons isPending={isPending} next="step 3" />
     </form>
   );

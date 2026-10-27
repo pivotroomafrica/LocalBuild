@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { publicOrigin } from "@/lib/utils/publicOrigin";
+import { homePathFor, safeNext } from "@/lib/auth/home";
 
 const PROTECTED_PREFIXES = ["/dashboard", "/auth/reset-password", "/dev", "/expert", "/admin"];
 const AUTH_PREFIXES = ["/auth/login", "/auth/signup"];
@@ -88,8 +89,7 @@ export async function updateSession(request: NextRequest) {
     // Preserve an intended destination (e.g. /become-an-expert -> Apply
     // sends an already-logged-in visitor here with ?next=/expert/application)
     // instead of always bouncing to /dashboard/profile.
-    const rawNext = request.nextUrl.searchParams.get("next");
-    const next = rawNext && rawNext.startsWith("/") ? rawNext : "/dashboard/profile";
+    const next = safeNext(request.nextUrl.searchParams.get("next")) ?? (await homePathFor(supabase, user.id));
     return NextResponse.redirect(new URL(next, origin));
   }
 

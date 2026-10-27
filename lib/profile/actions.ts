@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { invalidatePublicExperts } from "@/lib/public/cached";
 import { createClient } from "@/lib/supabase/server";
 import {
   validateCity,
@@ -121,6 +122,8 @@ export async function updateProfileAction(
     }
   }
 
-  revalidatePath("/dashboard/profile");
+  // The name also shows in headers and on a published expert profile.
+  revalidatePath("/", "layout");
+  invalidatePublicExperts();
   return { success: true };
 }

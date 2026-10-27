@@ -8,6 +8,7 @@ import { signOutAction } from "@/lib/auth/actions";
 type Props = {
   isLoggedIn: boolean;
   isApprovedExpert: boolean;
+  isAdmin: boolean;
 };
 
 /** The wordmark lockup from the website design (fixed brand asset). */
@@ -24,7 +25,7 @@ export function SiteLogo({ tone = "ink" }: { tone?: "ink" | "white" }) {
   );
 }
 
-function AccountMenu({ isApprovedExpert }: { isApprovedExpert: boolean }) {
+function AccountMenu({ isApprovedExpert, isAdmin }: { isApprovedExpert: boolean; isAdmin: boolean }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -59,14 +60,22 @@ function AccountMenu({ isApprovedExpert }: { isApprovedExpert: boolean }) {
       </button>
       {open ? (
         <div className="menu-panel">
-          <Link href="/dashboard" onClick={() => setOpen(false)}>
-            Your sessions
-          </Link>
+          {isAdmin ? (
+            <Link href="/admin" onClick={() => setOpen(false)}>
+              Admin dashboard
+            </Link>
+          ) : null}
           {isApprovedExpert ? (
             <Link href="/expert/dashboard" onClick={() => setOpen(false)}>
               Expert dashboard
             </Link>
           ) : null}
+          <Link href="/dashboard" onClick={() => setOpen(false)}>
+            My dashboard
+          </Link>
+          <Link href="/dashboard/profile" onClick={() => setOpen(false)}>
+            Profile and name
+          </Link>
           <form action={signOutAction}>
             <button type="submit">Sign out</button>
           </form>
@@ -81,7 +90,7 @@ function AccountMenu({ isApprovedExpert }: { isApprovedExpert: boolean }) {
  * current visitor's real auth state; the expert profile page hides the tab
  * bar because its booking bar sits in the same place.
  */
-export function SiteChrome({ isLoggedIn, isApprovedExpert }: Props) {
+export function SiteChrome({ isLoggedIn, isApprovedExpert, isAdmin }: Props) {
   const pathname = usePathname();
 
   const nav = [
@@ -95,7 +104,15 @@ export function SiteChrome({ isLoggedIn, isApprovedExpert }: Props) {
   const tabs = [
     { href: "/", icon: "home", label: "Home" },
     { href: "/experts", icon: "search", label: "Find" },
-    ...(isLoggedIn ? [{ href: "/dashboard", icon: "event", label: "Sessions" }] : []),
+    ...(isLoggedIn
+      ? [
+          {
+            href: isAdmin ? "/admin" : isApprovedExpert ? "/expert/dashboard" : "/dashboard",
+            icon: "space_dashboard",
+            label: "Dashboard",
+          },
+        ]
+      : []),
     { href: "/become-an-expert", icon: "work", label: "For experts" },
   ];
 
@@ -121,7 +138,7 @@ export function SiteChrome({ isLoggedIn, isApprovedExpert }: Props) {
           </nav>
           <div className="acts">
             {isLoggedIn ? (
-              <AccountMenu isApprovedExpert={isApprovedExpert} />
+              <AccountMenu isApprovedExpert={isApprovedExpert} isAdmin={isAdmin} />
             ) : (
               <Link href="/auth/login" className="signin">
                 Sign in

@@ -15,18 +15,19 @@ export default async function PublicLayout({ children }: { children: React.React
   } = await supabase.auth.getUser();
 
   let isApprovedExpert = false;
+  let isAdmin = false;
   if (user) {
-    const { data: expertProfile } = await supabase
-      .from("expert_profiles")
-      .select("application_status")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    const [{ data: expertProfile }, { data: profile }] = await Promise.all([
+      supabase.from("expert_profiles").select("application_status").eq("user_id", user.id).maybeSingle(),
+      supabase.from("profiles").select("role").eq("id", user.id).maybeSingle(),
+    ]);
     isApprovedExpert = expertProfile?.application_status === "approved";
+    isAdmin = profile?.role === "admin";
   }
 
   return (
     <div className="pr has-tabbar flex min-h-screen flex-col">
-      <SiteChrome isLoggedIn={Boolean(user)} isApprovedExpert={isApprovedExpert} />
+      <SiteChrome isLoggedIn={Boolean(user)} isApprovedExpert={isApprovedExpert} isAdmin={isAdmin} />
       <main className="flex-1">{children}</main>
       <SiteFooter />
     </div>

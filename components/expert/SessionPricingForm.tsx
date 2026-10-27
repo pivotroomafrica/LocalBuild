@@ -52,7 +52,7 @@ export function SessionPricingForm({
       <div className="oq">
         <div className="oq-head">
           <span className="oq-n num" aria-hidden="true">
-            15
+            16
           </span>
           <label htmlFor="base_hourly_price" className="oq-label">
             What do you charge for 60 minutes?<span className="oq-req"> · required</span>
@@ -82,7 +82,7 @@ export function SessionPricingForm({
       <div className="oq">
         <div className="oq-head">
           <span className="oq-n num" aria-hidden="true">
-            16
+            17
           </span>
           <span className="oq-label">
             Which session lengths and formats do you offer?<span className="oq-req"> · required</span>
@@ -139,7 +139,7 @@ export function SessionPricingForm({
       <div className="oq">
         <div className="oq-head">
           <span className="oq-n num" aria-hidden="true">
-            17
+            18
           </span>
           <label htmlFor="response_time" className="oq-label">
             How quickly do you usually reply to clients?

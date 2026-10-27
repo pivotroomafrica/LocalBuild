@@ -9,6 +9,7 @@ import {
   validatePassword,
   validatePhone,
 } from "@/lib/validation/profile";
+import { homePathFor, safeNext } from "@/lib/auth/home";
 
 export type AuthActionState = {
   error?: string;
@@ -37,8 +38,7 @@ export async function signUpAction(
   const passwordResult = validatePassword(password);
   if (!passwordResult.valid) return { error: passwordResult.error };
 
-  const rawNext = String(formData.get("next") ?? "/dashboard/profile");
-  const next = rawNext.startsWith("/") ? rawNext : "/dashboard/profile";
+  const next = safeNext(formData.get("next")) ?? "/dashboard";
 
   const supabase = await createClient();
   const origin = await siteOrigin();
@@ -75,18 +75,19 @@ export async function signInAction(
 ): Promise<AuthActionState> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const next = String(formData.get("next") ?? "/dashboard/profile");
+  const next = safeNext(formData.get("next"));
 
   if (!email || !password) {
     return { error: "Enter your email and password." };
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) return { error: friendlyAuthError(error.message) };
 
-  redirect(next.startsWith("/") ? next : "/dashboard/profile");
+  // A page they were sent from wins; otherwise their own dashboard.
+  redirect(next ?? (await homePathFor(supabase, data.user.id)));
 }
 
 /**
@@ -149,8 +150,7 @@ export async function signUpForRailAction(
   // selection itself cannot survive that particular round trip (the same
   // accepted limitation the standalone auth pages already have for their
   // own `next` targets).
-  const rawNext = String(formData.get("next") ?? "/dashboard/profile");
-  const next = rawNext.startsWith("/") ? rawNext : "/dashboard/profile";
+  const next = safeNext(formData.get("next")) ?? "/dashboard";
 
   const supabase = await createClient();
   const origin = await siteOrigin();

@@ -12,13 +12,14 @@ const initialState: AuthActionState = {};
 
 export function LoginForm() {
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/dashboard/profile";
+  // Empty = go to the person's own dashboard after signing in.
+  const next = searchParams.get("next") ?? "";
   const justReset = searchParams.get("reset") === "success";
 
   const [state, formAction, isPending] = useActionState(signInAction, initialState);
 
   const signupHref =
-    next !== "/dashboard/profile" ? `/auth/signup?next=${encodeURIComponent(next)}` : "/auth/signup";
+    next ? `/auth/signup?next=${encodeURIComponent(next)}` : "/auth/signup";
 
   return (
     <form action={formAction} className="flex flex-col gap-4">

@@ -8,9 +8,10 @@ import { PhotoUpload } from "@/components/expert/PhotoUpload";
 export default async function ExpertApplicationProfilePage({ searchParams }: PageProps<"/expert/application/profile">) {
   const expertProfile = await ensureExpertProfileDraft();
   const supabase = await createClient();
-  const [photoUrl, { saved }] = await Promise.all([
+  const [photoUrl, { saved }, { data: account }] = await Promise.all([
     getExpertPhotoUrl(supabase, expertProfile.profile_image_path),
     searchParams,
+    supabase.from("profiles").select("full_name").eq("id", expertProfile.user_id).maybeSingle(),
   ]);
 
   return (
@@ -38,7 +39,7 @@ export default async function ExpertApplicationProfilePage({ searchParams }: Pag
           <PhotoUpload currentPhotoUrl={photoUrl} />
         </div>
 
-        <IdentityStepForm profile={expertProfile} saved={saved === "1"} />
+        <IdentityStepForm profile={expertProfile} fullName={account?.full_name ?? ""} saved={saved === "1"} />
       </div>
     </div>
   );
