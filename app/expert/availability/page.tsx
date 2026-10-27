@@ -30,11 +30,11 @@ export default async function ExpertAvailabilityPage() {
     <div>
       <RouterRefreshOnMount />
 
-      <div className="flex flex-col gap-8">
-        <div>
-          <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">Availability</h1>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-            Make 1–5 hours available each month. You control exactly when those hours are offered.
+      <div className="stack" style={{ gap: 24 }}>
+        <div className="stack" style={{ gap: 6 }}>
+          <h1 className="ws-h1">Your available hours</h1>
+          <p className="muted" style={{ margin: 0, maxWidth: "62ch" }}>
+            Clients can only book the times you add here. Add specific dates, a time that repeats every month, or both.
           </p>
         </div>
 

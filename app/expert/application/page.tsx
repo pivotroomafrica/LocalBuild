@@ -16,7 +16,7 @@ export default async function ExpertApplicationPage() {
   const ensured = await ensureExpertProfileDraft();
 
   const supabase = await createClient();
-  const data = await getExpertApplicationData(supabase, ensured.user_id);
+  const data = await getExpertApplicationData(supabase, ensured.user_id, ensured);
   if (!data) {
     return (
       <p className="notice err" role="alert">
@@ -102,7 +102,7 @@ export default async function ExpertApplicationPage() {
         })}
 
         <p style={{ margin: 0 }}>
-          <Link href="/expert/application/preview">Preview how your profile will look</Link>
+          <Link href="/preview/my-profile">Preview how your profile will look</Link>
         </p>
 
         {applicationStatus === "draft" ? (

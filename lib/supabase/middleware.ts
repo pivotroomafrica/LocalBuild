@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { publicOrigin } from "@/lib/utils/publicOrigin";
 import { homePathFor, safeNext } from "@/lib/auth/home";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/auth/reset-password", "/dev", "/expert", "/admin"];
+const PROTECTED_PREFIXES = ["/dashboard", "/auth/reset-password", "/dev", "/expert", "/admin", "/preview"];
 const AUTH_PREFIXES = ["/auth/login", "/auth/signup"];
 const ADMIN_PREFIX = "/admin";
 

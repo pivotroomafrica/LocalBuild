@@ -95,7 +95,7 @@ export default async function AdminExpertDetailPage({ params }: PageProps<"/admi
           </li>
           <li>
             Choose what clients can see ({hiddenCount === 0 ? "everything is shown" : `${hiddenCount} hidden`}), then{" "}
-            <Link href={`/admin/experts/${expertProfile.id}/preview`}>preview the profile</Link>.
+            <Link href={`/preview/expert/${expertProfile.id}`}>preview the profile</Link>.
           </li>
           <li>Approve the application.</li>
           <li>

@@ -19,15 +19,23 @@ export type ExpertApplicationData = {
 export async function getExpertApplicationData(
   supabase: TypedClient,
   userId: string,
+  /** The row ensureExpertProfileDraft() just returned. Pass it on the same
+   * request: an identical lookup there (made before the draft existed) is
+   * memoized for the rest of the render, so re-reading it here would return
+   * "no application" on an expert's very first visit. */
+  knownProfile?: ExpertProfile,
 ): Promise<ExpertApplicationData | null> {
-  const { data: expertProfile, error: expertProfileError } = await supabase
-    .from("expert_profiles")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (expertProfileError) {
-    console.error("getExpertApplicationData: failed to load expert_profiles", expertProfileError);
+  let expertProfile = knownProfile ?? null;
+  if (!expertProfile) {
+    const { data, error: expertProfileError } = await supabase
+      .from("expert_profiles")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (expertProfileError) {
+      console.error("getExpertApplicationData: failed to load expert_profiles", expertProfileError);
+    }
+    expertProfile = data;
   }
 
   if (!expertProfile) return null;

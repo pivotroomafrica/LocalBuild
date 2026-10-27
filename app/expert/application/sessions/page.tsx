@@ -7,7 +7,7 @@ import { fetchPlatformPricing } from "@/lib/pricing/platform";
 import type { SessionDuration } from "@/types/expert";
 
 export default async function ExpertApplicationSessionsPage() {
-  await ensureExpertProfileDraft();
+  const ensured = await ensureExpertProfileDraft();
 
   const supabase = await createClient();
   const pricing = await fetchPlatformPricing(supabase);
@@ -15,7 +15,7 @@ export default async function ExpertApplicationSessionsPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const data = await getExpertApplicationData(supabase, user!.id);
+  const data = await getExpertApplicationData(supabase, user!.id, ensured);
   const expertProfile = data?.expertProfile;
   const offerings = data?.sessionOfferings ?? [];
 

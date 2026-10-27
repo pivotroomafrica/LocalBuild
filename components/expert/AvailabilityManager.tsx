@@ -89,6 +89,31 @@ function toOneOffInput(o: { available_date: string; start_time: string; end_time
   return { available_date: o.available_date, start_time: o.start_time.slice(0, 5), end_time: o.end_time.slice(0, 5) };
 }
 
+/** "2026-10-31" -> "Sat 31 Oct 2026" (read as a calendar date, no timezone shift). */
+function formatDateLabel(isoDate: string): string {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+/** 150 -> "2h 30m", for the small summary tiles. */
+function compactDuration(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m}m`;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
+/** "15:00:00" -> "15:00". */
+function hhmm(time: string): string {
+  return time.slice(0, 5);
+}
+
 function todayLocalDateString(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -504,98 +529,151 @@ export function AvailabilityManager({
           ? "You've reached Pivotroom's current 5-hour monthly availability limit."
           : null;
 
+  const btnText = "av-link";
   return (
-    <div className="flex flex-col gap-8">
-      <section className="flex flex-col gap-2">
-        <h2 className="text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Timezone</h2>
-        <select
-          value={timezone}
-          onChange={(event) => handleTimezoneChange(event.target.value)}
-          className="w-full max-w-sm rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2.5 text-sm text-[var(--color-text)]"
-        >
-          {!tzOptions.includes(timezone) ? <option value={timezone}>{timezone}</option> : null}
-          {tzOptions.map((tz) => (
-            <option key={tz} value={tz}>
-              {tz}
-            </option>
-          ))}
-        </select>
-        {tzError ? <FormMessage variant="error">{tzError}</FormMessage> : null}
-        {tzSaved && !isTzPending ? <p className="text-xs text-[var(--color-success)]">Timezone saved.</p> : null}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <div>
-          <h2 className="text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Regular Monthly Availability</h2>
-          <p className="text-xs text-[var(--color-text-muted)]">
-            Time that repeats every month, on the same day of the month. You can edit, skip, or add extra time for any
-            single month below without changing this regular plan.
-          </p>
+    <div className="stack" style={{ gap: 24 }}>
+      <section className="stats">
+        <div className="stat">
+          <span className="k">Open this month</span>
+          <span className="v num">{compactDuration(thisMonthMinutes)}</span>
+          <span className="s">Aim for 1–5 hours a month</span>
+          <div className="meter" aria-hidden="true">
+            <span style={{ width: `${Math.min(100, (thisMonthMinutes / MAX_RECURRING_MONTHLY_MINUTES) * 100)}%` }} />
+          </div>
         </div>
+        <div className="stat">
+          <span className="k">Repeats every month</span>
+          <span className="v num">{compactDuration(recurringMinutes)}</span>
+          <span className="s">{rules.length === 0 ? "No monthly plan" : `${rules.length} regular ${rules.length === 1 ? "slot" : "slots"}`}</span>
+        </div>
+        <div className="stat">
+          <span className="k">Specific dates</span>
+          <span className="v num">{oneOffs.filter((o) => o.available_date >= todayLocalDateString()).length}</span>
+          <span className="s">Upcoming one-off dates</span>
+        </div>
+      </section>
+      {recurringMessage ? <p className="notice" style={{ margin: 0 }}>{recurringMessage}</p> : null}
 
-        {rules.length === 0 && !showRuleForm ? (
-          <div className="rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] p-5 text-center">
-            <p className="text-sm text-[var(--color-text)]">No regular availability added yet.</p>
-            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-              Make 1–5 hours available each month. You can use a recurring day of the month or add a specific date below.
+      <div className="av-grid">
+        <section className="panel stack" style={{ gap: 14 }}>
+          <div className="stack" style={{ gap: 4 }}>
+            <h2 className="ws-h2">On specific dates</h2>
+            <p className="muted" style={{ margin: 0 }}>
+              Best if your schedule changes month to month. Each date is offered once.
             </p>
           </div>
-        ) : null}
 
-        {rules.map((rule) => (
-          <div
-            key={rule.id}
-            className="flex items-center justify-between rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]"
-          >
-            <div>
-              <p className="text-sm font-medium text-[var(--color-text)]">{formatMonthlyRuleLabel(rule)}</p>
-              <p className="text-xs text-[var(--color-text-muted)]">
-                {rule.start_time}–{rule.end_time} · {formatDuration(durationMinutes(rule.start_time, rule.end_time))}
-              </p>
+          {oneOffs.length === 0 ? (
+            <p className="av-empty">No dates added yet.</p>
+          ) : (
+            <div className="av-list">
+              {[...oneOffs]
+                .sort((a, b) => (a.available_date + a.start_time).localeCompare(b.available_date + b.start_time))
+                .map((oneOff) => (
+                  <div key={oneOff.id} className="av-item">
+                    <div>
+                      <p className="av-when">{formatDateLabel(oneOff.available_date)}</p>
+                      <p className="muted av-time">
+                        {hhmm(oneOff.start_time)}–{hhmm(oneOff.end_time)} · {formatDuration(durationMinutes(oneOff.start_time, oneOff.end_time))}
+                      </p>
+                    </div>
+                    <div className="av-actions">
+                      <button type="button" className={btnText} onClick={() => openEditOneOff(oneOff)}>
+                        Edit
+                      </button>
+                      <button type="button" className={`${btnText} quiet`} onClick={() => handleRemoveOneOff(oneOff.id)}>
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
             </div>
-            <div className="flex gap-3 text-xs font-medium">
-              <button type="button" onClick={() => openEditRule(rule)} className="text-[var(--color-accent)] hover:underline">
-                Edit
-              </button>
-              <button
-                type="button"
-                onClick={() => handleRemoveRule(rule.id)}
-                className="text-[var(--color-text-muted)] hover:text-[var(--color-danger)]"
-              >
-                Remove
-              </button>
-            </div>
-          </div>
-        ))}
+          )}
 
-        {!showRuleForm ? (
-          <button
-            type="button"
-            onClick={openAddRule}
-            className="self-start text-sm font-medium text-[var(--color-accent)] hover:underline"
-          >
-            + Add Regular Availability
-          </button>
-        ) : (
-          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
-            <h3 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">
-              {editingRuleId ? "Edit Regular Availability" : "Add Regular Availability"}
-            </h3>
-
-            {ruleFormError ? (
-              <div className="mb-3">
-                <FormMessage variant="error">{ruleFormError}</FormMessage>
+          {!showOneOffForm ? (
+            <button type="button" className="btn btn-line md" style={{ alignSelf: "flex-start" }} onClick={() => openAddOneOff()}>
+              + Add a date
+            </button>
+          ) : (
+            <div className="av-form stack" style={{ gap: 12 }}>
+              <h3 className="av-form-h">{editingOneOffId ? "Change this date" : "Add a date"}</h3>
+              {oneOffFormError ? <p className="notice err" style={{ margin: 0 }}>{oneOffFormError}</p> : null}
+              <label className="field">
+                <span className="label">Date</span>
+                <input
+                  type="date"
+                  className="input"
+                  min={todayLocalDateString()}
+                  value={oneOffDate}
+                  onChange={(event) => setOneOffDate(event.target.value)}
+                />
+              </label>
+              <div className="av-times">
+                <label className="field">
+                  <span className="label">From</span>
+                  <input type="time" step={900} className="input" value={oneOffStartTime} onChange={(event) => setOneOffStartTime(event.target.value)} />
+                </label>
+                <label className="field">
+                  <span className="label">To</span>
+                  <input type="time" step={900} className="input" value={oneOffEndTime} onChange={(event) => setOneOffEndTime(event.target.value)} />
+                </label>
               </div>
-            ) : null}
+              <div className="oq-actions">
+                <button type="button" className="btn btn-ink md" onClick={handleSubmitOneOff} disabled={isSavingOneOff}>
+                  {isSavingOneOff ? "Saving…" : editingOneOffId ? "Save changes" : "Add date"}
+                </button>
+                <button type="button" className="btn btn-line md" onClick={closeOneOffForm}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
 
-            <div className="flex flex-col gap-3">
-              <label className="flex flex-col gap-1 text-xs text-[var(--color-text-muted)]">
-                Day of the month
-                <select
-                  value={dayOfMonth}
-                  onChange={(event) => setDayOfMonth(Number(event.target.value))}
-                  className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-text)]"
-                >
+        <section className="panel stack" style={{ gap: 14 }}>
+          <div className="stack" style={{ gap: 4 }}>
+            <h2 className="ws-h2">Same day every month</h2>
+            <p className="muted" style={{ margin: 0 }}>
+              For example, every 25th from 15:00 to 17:00. It repeats until you change or remove it.
+            </p>
+          </div>
+
+          {rules.length === 0 ? (
+            <p className="av-empty">No monthly plan yet.</p>
+          ) : (
+            <div className="av-list">
+              {rules.map((rule) => (
+                <div key={rule.id} className="av-item">
+                  <div>
+                    <p className="av-when">{formatMonthlyRuleLabel(rule)}</p>
+                    <p className="muted av-time">
+                      {hhmm(rule.start_time)}–{hhmm(rule.end_time)} · {formatDuration(durationMinutes(rule.start_time, rule.end_time))}
+                    </p>
+                  </div>
+                  <div className="av-actions">
+                    <button type="button" className={btnText} onClick={() => openEditRule(rule)}>
+                      Edit
+                    </button>
+                    <button type="button" className={`${btnText} quiet`} onClick={() => handleRemoveRule(rule.id)}>
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!showRuleForm ? (
+            <button type="button" className="btn btn-line md" style={{ alignSelf: "flex-start" }} onClick={openAddRule}>
+              + Add a monthly time
+            </button>
+          ) : (
+            <div className="av-form stack" style={{ gap: 12 }}>
+              <h3 className="av-form-h">{editingRuleId ? "Change monthly time" : "Add a monthly time"}</h3>
+              {ruleFormError ? <p className="notice err" style={{ margin: 0 }}>{ruleFormError}</p> : null}
+              <label className="field">
+                <span className="label">Day of the month</span>
+                <select className="input" value={dayOfMonth} onChange={(event) => setDayOfMonth(Number(event.target.value))}>
                   {DAY_OF_MONTH_VALUES.map((d) => (
                     <option key={d} value={d}>
                       {d}
@@ -603,62 +681,41 @@ export function AvailabilityManager({
                   ))}
                 </select>
               </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="time"
-                  step={900}
-                  value={ruleStartTime}
-                  onChange={(event) => setRuleStartTime(event.target.value)}
-                  className="rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm"
-                />
-                <span className="text-xs text-[var(--color-text-muted)]">to</span>
-                <input
-                  type="time"
-                  step={900}
-                  value={ruleEndTime}
-                  onChange={(event) => setRuleEndTime(event.target.value)}
-                  className="rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm"
-                />
+              <div className="av-times">
+                <label className="field">
+                  <span className="label">From</span>
+                  <input type="time" step={900} className="input" value={ruleStartTime} onChange={(event) => setRuleStartTime(event.target.value)} />
+                </label>
+                <label className="field">
+                  <span className="label">To</span>
+                  <input type="time" step={900} className="input" value={ruleEndTime} onChange={(event) => setRuleEndTime(event.target.value)} />
+                </label>
               </div>
-              <p className="text-xs text-[var(--color-text-muted)]">
+              <p className="muted" style={{ margin: 0, fontSize: 14 }}>
                 {formatMonthlyRuleLabel({ day_of_month: dayOfMonth })}, {ruleStartTime}–{ruleEndTime}
               </p>
+              <div className="oq-actions">
+                <button type="button" className="btn btn-ink md" onClick={handleSubmitRule} disabled={isSavingRule}>
+                  {isSavingRule ? "Saving…" : editingRuleId ? "Save changes" : "Add monthly time"}
+                </button>
+                <button type="button" className="btn btn-line md" onClick={closeRuleForm}>
+                  Cancel
+                </button>
+              </div>
             </div>
+          )}
+        </section>
+      </div>
 
-            <div className="mt-4 flex gap-3">
-              <button
-                type="button"
-                onClick={handleSubmitRule}
-                disabled={isSavingRule}
-                className="inline-flex items-center justify-center rounded-full bg-[var(--color-brand)] px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-[var(--color-brand-hover)] disabled:cursor-not-allowed disabled:opacity-60 shadow-[0_4px_14px_rgba(20,19,24,0.18)]"
-              >
-                {isSavingRule ? "Saving..." : editingRuleId ? "Save Changes" : "Add Availability"}
-              </button>
-              <button
-                type="button"
-                onClick={closeRuleForm}
-                className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Upcoming Months</h2>
-          <p className="text-xs text-[var(--color-text-muted)]">
-            What your regular schedule works out to for each of the next {UPCOMING_MONTHS_AHEAD} months. Edit, skip, or
-            restore any single month without changing your regular plan above.
+      {rules.length > 0 ? (
+        <details className="panel av-months">
+          <summary className="ws-h2">Change a single month</summary>
+          <p className="muted" style={{ margin: "8px 0 16px" }}>
+            Your monthly plan over the next {UPCOMING_MONTHS_AHEAD} months. Move, skip or add time to one month without
+            changing the plan.
           </p>
-        </div>
-
-        {rules.length === 0 ? (
-          <p className="text-xs text-[var(--color-text-muted)]">Add regular availability above to see upcoming months.</p>
-        ) : (
-          upcomingMonths.map((monthEntry) => {
+          <div className="stack" style={{ gap: 12 }}>
+          {upcomingMonths.map((monthEntry) => {
             const monthTotalMinutes = getMonthTotalMinutes(
               ruleRows,
               overrides,
@@ -820,134 +877,26 @@ export function AvailabilityManager({
               </div>
             </div>
             );
-          })
-        )}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <div>
-          <h2 className="text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Specific Dates</h2>
-          <p className="text-xs text-[var(--color-text-muted)]">
-            One-time availability that doesn&apos;t repeat -- for extra time in a given month, or if you have no regular
-            plan at all.
-          </p>
-        </div>
-
-        {oneOffs.length === 0 ? (
-          <p className="text-xs text-[var(--color-text-muted)]">No specific-date availability added.</p>
-        ) : (
-          oneOffs.map((oneOff) => (
-            <div
-              key={oneOff.id}
-              className="flex items-center justify-between rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]"
-            >
-              <div>
-                <p className="text-sm font-medium text-[var(--color-text)]">{oneOff.available_date}</p>
-                <p className="text-xs text-[var(--color-text-muted)]">
-                  {oneOff.start_time}–{oneOff.end_time} ·{" "}
-                  {formatDuration(durationMinutes(oneOff.start_time, oneOff.end_time))}
-                </p>
-              </div>
-              <div className="flex gap-3 text-xs font-medium">
-                <button
-                  type="button"
-                  onClick={() => openEditOneOff(oneOff)}
-                  className="text-[var(--color-accent)] hover:underline"
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveOneOff(oneOff.id)}
-                  className="text-[var(--color-text-muted)] hover:text-[var(--color-danger)]"
-                >
-                  Remove
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-
-        {!showOneOffForm ? (
-          <button
-            type="button"
-            onClick={() => openAddOneOff()}
-            className="self-start text-sm font-medium text-[var(--color-accent)] hover:underline"
-          >
-            + Add a specific date
-          </button>
-        ) : (
-          <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
-            <h3 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">
-              {editingOneOffId ? "Edit Specific-Date Availability" : "Add Specific-Date Availability"}
-            </h3>
-
-            {oneOffFormError ? (
-              <div className="mb-3">
-                <FormMessage variant="error">{oneOffFormError}</FormMessage>
-              </div>
-            ) : null}
-
-            <div className="flex flex-col gap-3">
-              <input
-                type="date"
-                min={todayLocalDateString()}
-                value={oneOffDate}
-                onChange={(event) => setOneOffDate(event.target.value)}
-                className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm"
-              />
-              <div className="flex items-center gap-2">
-                <input
-                  type="time"
-                  step={900}
-                  value={oneOffStartTime}
-                  onChange={(event) => setOneOffStartTime(event.target.value)}
-                  className="rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm"
-                />
-                <span className="text-xs text-[var(--color-text-muted)]">to</span>
-                <input
-                  type="time"
-                  step={900}
-                  value={oneOffEndTime}
-                  onChange={(event) => setOneOffEndTime(event.target.value)}
-                  className="rounded-[var(--radius-input)] border border-[var(--color-border)] bg-[var(--color-bg)] px-2 py-1.5 text-sm"
-                />
-              </div>
-            </div>
-
-            <div className="mt-4 flex gap-3">
-              <button
-                type="button"
-                onClick={handleSubmitOneOff}
-                disabled={isSavingOneOff}
-                className="inline-flex items-center justify-center rounded-full bg-[var(--color-brand)] px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-[var(--color-brand-hover)] disabled:cursor-not-allowed disabled:opacity-60 shadow-[0_4px_14px_rgba(20,19,24,0.18)]"
-              >
-                {isSavingOneOff ? "Saving..." : editingOneOffId ? "Save Changes" : "Add Availability"}
-              </button>
-              <button
-                type="button"
-                onClick={closeOneOffForm}
-                className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-              >
-                Cancel
-              </button>
-            </div>
+          })}
           </div>
-        )}
-      </section>
+        </details>
+      ) : null}
 
-      <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
-        <h2 className="mb-2 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Monthly Time</h2>
-        <p className="text-sm text-[var(--color-text)]">
-          Regular plan: <span className="font-medium">{formatDuration(recurringMinutes)}/month</span>
+      <section className="panel stack" style={{ gap: 10 }}>
+        <h2 className="ws-h2">Your timezone</h2>
+        <p className="muted" style={{ margin: 0 }}>
+          The times above are in this timezone. Clients see them converted to their own.
         </p>
-        {thisMonthMinutes !== recurringMinutes ? (
-          <p className="mt-1 text-sm text-[var(--color-text)]">
-            This month: <span className="font-medium">{formatDuration(thisMonthMinutes)} available</span>
-          </p>
-        ) : null}
-        {recurringMessage ? <p className="mt-2 text-xs text-[var(--color-text-muted)]">{recurringMessage}</p> : null}
-        <p className="mt-2 text-xs text-[var(--color-text-muted)]">Pivotroom recommends 1–5 hours per month.</p>
+        <select className="input" style={{ maxWidth: 360 }} value={timezone} onChange={(event) => handleTimezoneChange(event.target.value)}>
+          {!tzOptions.includes(timezone) ? <option value={timezone}>{timezone}</option> : null}
+          {tzOptions.map((tz) => (
+            <option key={tz} value={tz}>
+              {tz}
+            </option>
+          ))}
+        </select>
+        {tzError ? <p className="notice err" style={{ margin: 0 }}>{tzError}</p> : null}
+        {tzSaved && !isTzPending ? <p className="muted" style={{ margin: 0, fontSize: 14 }}>Timezone saved.</p> : null}
       </section>
 
       {addTimeMonth ? (

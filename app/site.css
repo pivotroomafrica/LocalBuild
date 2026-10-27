@@ -3630,3 +3630,119 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* ---------- Expert availability ---------- */
+.pr .av-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.pr .av-list {
+  display: flex;
+  flex-direction: column;
+}
+.pr .av-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block: 12px;
+  border-top: 1px solid var(--pr-line);
+}
+.pr .av-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.pr .av-when {
+  margin: 0;
+  font-weight: 600;
+}
+.pr .av-time {
+  margin: 2px 0 0;
+  font-size: 14px;
+}
+.pr .av-actions {
+  display: flex;
+  gap: 14px;
+  flex: none;
+}
+.pr .av-link {
+  border: 0;
+  background: none;
+  padding: 4px 0;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--pr-blue);
+  cursor: pointer;
+}
+.pr .av-link.quiet {
+  color: var(--pr-slate);
+}
+.pr .av-link:hover {
+  text-decoration: underline;
+}
+.pr .av-empty {
+  margin: 0;
+  padding: 16px;
+  border: 1px dashed var(--pr-line);
+  border-radius: 12px;
+  color: var(--pr-slate);
+  font-size: 15px;
+  text-align: center;
+}
+.pr .av-form {
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--pr-mist);
+}
+.pr .av-form .input {
+  background: #ffffff;
+}
+.pr .av-form-h {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.pr .av-times {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.pr .av-months summary {
+  cursor: pointer;
+}
+.pr .stat .meter {
+  margin-top: 4px;
+}
+
+/* ---------- Profile preview bar ---------- */
+.pr .pv-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--pr-ink);
+  color: #ffffff;
+}
+.pr .pv-row {
+  min-height: 64px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  padding-block: 10px;
+}
+.pr .pv-tag {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--pr-blue);
+  font-size: 13px;
+  font-weight: 600;
+}
+.pr .pv-note {
+  flex: 1;
+  min-width: 220px;
+  font-size: 15px;
+  color: #d5d8dd;
+}

@@ -12,7 +12,7 @@ export default async function ExpertApplicationExpertisePage({
   const supabase = await createClient();
   const [categories, data, { saved }] = await Promise.all([
     getActiveExpertCategories(supabase),
-    getExpertApplicationData(supabase, expertProfile.user_id),
+    getExpertApplicationData(supabase, expertProfile.user_id, expertProfile),
     searchParams,
   ]);
 
