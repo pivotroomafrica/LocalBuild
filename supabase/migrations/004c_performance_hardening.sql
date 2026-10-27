@@ -1,7 +1,7 @@
 -- 004c_performance_hardening.sql (applied to the demo project as
 -- 007_performance_hardening on 2026-09-06; recovered into the repo).
 
-create index customer_profiles_industry_id_idx on public.customer_profiles (industry_id);
+create index if not exists customer_profiles_industry_id_idx on public.customer_profiles (industry_id);
 
 drop policy "profiles_select_own" on public.profiles;
 create policy "profiles_select_own" on public.profiles for select to authenticated
