@@ -163,7 +163,7 @@ export default async function ExpertDashboardPage() {
               {completeness.pct}%
             </span>
           </div>
-          <div className="bar" aria-hidden="true">
+          <div className="meter" aria-hidden="true">
             <span style={{ width: `${completeness.pct}%` }} />
           </div>
           {completeness.next ? (

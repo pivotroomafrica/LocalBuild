@@ -191,7 +191,7 @@ export default async function AdminOverviewPage() {
                   {data.health.returningPct != null ? `${data.health.returningPct}%` : "—"}
                 </span>
               </div>
-              <div className="bar" aria-hidden="true">
+              <div className="meter" aria-hidden="true">
                 <span style={{ width: `${data.health.returningPct ?? 0}%` }} />
               </div>
               <span className="muted" style={{ fontSize: 14 }}>
