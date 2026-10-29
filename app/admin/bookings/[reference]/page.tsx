@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminBookingDetail } from "@/lib/booking/data";
+import { getAdminPerson } from "@/lib/admin/people";
+import { ContactCard } from "@/components/admin/ContactCard";
 import { BookingStatusPill, PaymentStatusPill } from "@/components/session/StatusPill";
 import { AdminReleaseButton } from "@/components/admin/AdminReleaseButton";
 import { AdminRetryJobButton } from "@/components/admin/AdminRetryJobButton";
@@ -26,6 +28,15 @@ export default async function AdminBookingDetailPage({
 
   const { booking, intake, customerName, expertName, expertSlug, payments, integrationJobs, rescheduleHistory, cancellation, pendingChangeRequest } =
     detail;
+  const { data: expertOwner } = await supabase
+    .from("expert_profiles")
+    .select("user_id")
+    .eq("id", booking.expert_profile_id)
+    .maybeSingle();
+  const [customer, expert] = await Promise.all([
+    getAdminPerson(supabase, booking.customer_id),
+    expertOwner ? getAdminPerson(supabase, expertOwner.user_id) : Promise.resolve(null),
+  ]);
   const formatMoney = (value: number | string) => `${Number(value).toLocaleString()} ${booking.currency}`;
   const calendarStatusLabel: Record<string, string> = {
     not_synced: "Not synced",
@@ -68,6 +79,11 @@ export default async function AdminBookingDetailPage({
           <p className="mt-1 text-sm text-[var(--color-text-muted)]">{pendingChangeRequest.reason}</p>
         </section>
       ) : null}
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <ContactCard title="Client" person={customer} />
+        <ContactCard title="Expert" person={expert} />
+      </div>
 
       <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
         <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Booking</h2>

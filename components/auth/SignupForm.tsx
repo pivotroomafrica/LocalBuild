@@ -7,6 +7,7 @@ import { signUpAction, type AuthActionState } from "@/lib/auth/actions";
 import { TextField } from "@/components/ui/TextField";
 import { Button } from "@/components/ui/Button";
 import { FormMessage } from "@/components/ui/FormMessage";
+import { CountryCityFields } from "@/components/ui/CountryCityFields";
 
 const initialState: AuthActionState = {};
 
@@ -56,6 +57,7 @@ export function SignupForm() {
         placeholder="0912345678"
         required
       />
+      <CountryCityFields required />
       <TextField
         label="Password"
         name="password"

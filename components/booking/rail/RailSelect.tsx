@@ -25,6 +25,7 @@ import {
   EXPERIENCE_RANGE_LABELS,
 } from "@/types/profile";
 import type { CustomerProfile, Industry } from "@/types/profile";
+import { CountryCityFields } from "@/components/ui/CountryCityFields";
 
 type SessionOffering = { durationMinutes: number; price: number; currency: string };
 
@@ -521,6 +522,7 @@ export function RailSelect({
                 <>
                   <TextField label="Full name" name="full_name" required />
                   <TextField label="Phone" name="phone" type="tel" required />
+                  <CountryCityFields required />
                   <TextField label="Email" name="email" type="email" required />
                   <TextField label="Password" name="password" type="password" required />
                   <Button type="submit" isLoading={signUpPending} loadingText="Creating account…">

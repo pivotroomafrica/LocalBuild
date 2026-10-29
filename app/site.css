@@ -1399,6 +1399,18 @@
   position: sticky;
   top: 24px;
 }
+/* Desktop: the booking card scrolls on its own, so the wheel scrolls the
+   profile when the pointer is over it and only the card when it is here. */
+@media (min-width: 1041px) {
+  .pr .bookaside {
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
+    border-radius: 20px;
+  }
+}
 .pr .bookcard {
   display: flex;
   flex-direction: column;
@@ -3745,4 +3757,187 @@
   min-width: 220px;
   font-size: 15px;
   color: #d5d8dd;
+}
+
+/* Country (flag list) + city (suggestions) picker. */
+.pr .cc {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+}
+.pr .cc-box {
+  position: relative;
+}
+.pr .cc-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+.pr .cc-button .ms {
+  margin-inline-start: auto;
+  color: var(--pr-slate);
+}
+.pr .cc-flag {
+  width: 24px;
+  height: 18px;
+  flex: none;
+  border-radius: 3px;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+.pr .cc-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pr .cc-pop {
+  position: absolute;
+  z-index: 40;
+  inset-inline: 0;
+  top: calc(100% + 6px);
+  min-width: 260px;
+  padding: 8px;
+  border: 1px solid var(--pr-line);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+}
+.pr .cc-search {
+  min-height: 42px;
+  padding-block: 8px;
+  margin-block-end: 6px;
+}
+.pr .cc-list {
+  max-height: 280px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+.pr .cc-opt {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  color: var(--pr-ink);
+  cursor: pointer;
+}
+.pr .cc-opt:hover,
+.pr .cc-opt:focus-visible {
+  background: var(--pr-mist);
+  outline: none;
+}
+.pr .cc-opt.on {
+  background: var(--pr-mist);
+  font-weight: 600;
+}
+.pr .cc-none {
+  padding: 10px;
+  font-size: 14px;
+  color: var(--pr-slate);
+}
+
+/* Expert photo cropper (components/expert/PhotoCropper.tsx). */
+.pr .crop-dialog {
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 20px;
+  background: #ffffff;
+  color: var(--pr-ink);
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.28);
+}
+.pr .crop-dialog::backdrop {
+  background: rgba(15, 18, 24, 0.6);
+}
+.pr .crop-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px;
+}
+.pr .crop-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+.pr .crop-hint {
+  margin: 0;
+  font-size: 14px;
+  color: var(--pr-slate);
+}
+.pr .crop-frame {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+  margin-inline: auto;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--pr-photo);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.pr .crop-frame:active {
+  cursor: grabbing;
+}
+.pr .crop-frame:focus-visible {
+  outline: 3px solid var(--pr-blue);
+  outline-offset: 3px;
+}
+.pr .crop-frame img {
+  position: absolute;
+  max-width: none;
+  height: auto;
+  pointer-events: none;
+}
+.pr .crop-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to right, transparent calc(33.33% - 0.5px), rgba(255, 255, 255, 0.45) calc(33.33% - 0.5px), rgba(255, 255, 255, 0.45) calc(33.33% + 0.5px), transparent calc(33.33% + 0.5px), transparent calc(66.66% - 0.5px), rgba(255, 255, 255, 0.45) calc(66.66% - 0.5px), rgba(255, 255, 255, 0.45) calc(66.66% + 0.5px), transparent calc(66.66% + 0.5px)),
+    linear-gradient(to bottom, transparent calc(33.33% - 0.5px), rgba(255, 255, 255, 0.45) calc(33.33% - 0.5px), rgba(255, 255, 255, 0.45) calc(33.33% + 0.5px), transparent calc(33.33% + 0.5px), transparent calc(66.66% - 0.5px), rgba(255, 255, 255, 0.45) calc(66.66% - 0.5px), rgba(255, 255, 255, 0.45) calc(66.66% + 0.5px), transparent calc(66.66% + 0.5px));
+}
+.pr .crop-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--pr-slate);
+}
+.pr .crop-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--pr-slate);
+}
+.pr .crop-tools input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--pr-blue);
+}
+.pr .crop-rotate {
+  min-height: 40px;
+  padding-inline: 14px;
+  gap: 6px;
+}
+.pr .crop-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }

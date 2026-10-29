@@ -1163,6 +1163,48 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_people: {
+        Args: { p_kind?: string }
+        Returns: {
+          account_status: string
+          application_status: string | null
+          bookings_as_client: number
+          bookings_as_expert: number
+          city: string | null
+          country: string | null
+          created_at: string
+          email: string
+          expert_profile_id: string | null
+          full_name: string
+          phone: string | null
+          profile_status: string | null
+          role: string
+          user_id: string
+        }[]
+      }
+      admin_person: {
+        Args: { p_user_id: string }
+        Returns: {
+          account_status: string
+          application_status: string | null
+          city: string | null
+          client_job_title: string | null
+          client_linkedin: string | null
+          company_name: string | null
+          country: string | null
+          created_at: string
+          email: string
+          expert_linkedin: string | null
+          expert_profile_id: string | null
+          expert_slug: string | null
+          full_name: string
+          last_sign_in_at: string | null
+          phone: string | null
+          profile_status: string | null
+          role: string
+          user_id: string
+        }[]
+      }
       add_expert_monthly_rule: {
         Args: {
           p_day_of_month: number

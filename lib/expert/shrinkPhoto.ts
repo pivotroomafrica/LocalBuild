@@ -6,6 +6,15 @@ function toBlob(canvas: HTMLCanvasElement, type: string, quality: number): Promi
   return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
 }
 
+/** Encodes a canvas as WebP (JPEG where the browser can't encode WebP). */
+export async function canvasToPhotoFile(canvas: HTMLCanvasElement, baseName: string): Promise<File | null> {
+  let blob = await toBlob(canvas, "image/webp", 0.82);
+  if (!blob || blob.type !== "image/webp") blob = await toBlob(canvas, "image/jpeg", 0.85);
+  if (!blob) return null;
+  const extension = blob.type === "image/webp" ? "webp" : "jpg";
+  return new File([blob], `${baseName || "photo"}.${extension}`, { type: blob.type });
+}
+
 /**
  * Shrinks a photo in the browser before upload (WebP, or JPEG where the
  * browser can't encode WebP). A phone photo of several MB becomes roughly

@@ -27,6 +27,15 @@ async function siteOrigin() {
   return originHeader ?? "http://localhost:3000";
 }
 
+/** Country and city from CountryCityFields; both required at sign-up. */
+function readPlace(formData: FormData): { country: string; city: string } | { error: string } {
+  const country = String(formData.get("country") ?? "").trim().slice(0, 100);
+  const city = String(formData.get("city") ?? "").trim().slice(0, 100);
+  if (!country) return { error: "Choose your country." };
+  if (!city) return { error: "Enter your city." };
+  return { country, city };
+}
+
 export async function signUpAction(
   _prevState: AuthActionState,
   formData: FormData,
@@ -44,6 +53,9 @@ export async function signUpAction(
   const passwordResult = validatePassword(password);
   if (!passwordResult.valid) return { error: passwordResult.error };
 
+  const placeResult = readPlace(formData);
+  if ("error" in placeResult) return { error: placeResult.error };
+
   const next = safeNext(formData.get("next")) ?? "/dashboard";
 
   const supabase = await createClient();
@@ -55,7 +67,7 @@ export async function signUpAction(
     options: {
       // Read by the handle_new_user() database trigger to populate the
       // new profiles row (see supabase/migrations/001_profiles.sql).
-      data: { full_name: fullNameResult.value, phone: phoneResult.value },
+      data: { full_name: fullNameResult.value, phone: phoneResult.value, ...placeResult },
       // Preserves the intended destination (e.g. /expert/application when
       // signup was reached via /become-an-expert) through the email
       // confirmation round-trip -- see app/auth/callback/route.ts.
@@ -154,6 +166,9 @@ export async function signUpForRailAction(
   const passwordResult = validatePassword(password);
   if (!passwordResult.valid) return { error: passwordResult.error };
 
+  const placeResult = readPlace(formData);
+  if ("error" in placeResult) return { error: placeResult.error };
+
   // Where Supabase's own confirmation-email link lands this customer back
   // (only relevant if email confirmation is required -- see the no-session
   // branch below); the profile route is the correct destination since
@@ -170,7 +185,7 @@ export async function signUpForRailAction(
     email,
     password,
     options: {
-      data: { full_name: fullNameResult.value, phone: phoneResult.value },
+      data: { full_name: fullNameResult.value, phone: phoneResult.value, ...placeResult },
       emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
     },
   });
@@ -185,6 +200,15 @@ export async function signOutAction() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/auth/login");
+}
+
+/** Sign out, then sign in again and return to `next` (e.g. a session link
+ * from an email that belongs to a different account). */
+export async function switchAccountAction(formData: FormData) {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  const next = safeNext(formData.get("next"));
+  redirect(next ? `/auth/login?next=${encodeURIComponent(next)}` : "/auth/login");
 }
 
 export async function requestPasswordResetAction(

@@ -5,6 +5,7 @@ import { ExperienceEditor } from "@/components/expert/ExperienceEditor";
 import { COMMON_LANGUAGES } from "@/lib/expert/profileFields";
 import { EXPERT_EXPERIENCE_RANGES, EXPERT_EXPERIENCE_RANGE_LABELS, MAX_EXPERT_CATEGORIES } from "@/types/expert";
 import type { ExpertProfile, ExpertCategory } from "@/types/expert";
+import { CountryCityFields } from "@/components/ui/CountryCityFields";
 
 /**
  * The onboarding questions (website onboarding, steps 1 and 2), shared by
@@ -153,18 +154,8 @@ export function IdentityQuestions({
         </select>
       </Question>
 
-      <Question n={first + 3} label="Where are you based?" required htmlFor="q-city">
-        <div className="oq-two">
-          <input id="q-city" name="city" className="input" maxLength={100} defaultValue={profile.city ?? ""} placeholder="City, e.g. Addis Ababa" />
-          <input
-            aria-label="Country"
-            name="country"
-            className="input"
-            maxLength={100}
-            defaultValue={profile.country ?? "Ethiopia"}
-            placeholder="Country"
-          />
-        </div>
+      <Question n={first + 3} label="Where are you based?" required>
+        <CountryCityFields defaultCountry={profile.country} defaultCity={profile.city} />
       </Question>
 
       <Question n={first + 4} label="Which languages can you hold a session in?">
@@ -186,11 +177,11 @@ export function IdentityQuestions({
         />
       </Question>
 
-      <Question n={first + 5} label="Your LinkedIn" hint="Optional, but it helps our review." htmlFor="q-linkedin">
+      <Question n={first + 5} label="Your LinkedIn (optional)" hint="Not required. If you have one, it helps our review." htmlFor="q-linkedin">
         <input
           id="q-linkedin"
           name="linkedin_url"
-          type="url"
+          type="text"
           className="input"
           maxLength={300}
           defaultValue={profile.linkedin_url ?? ""}

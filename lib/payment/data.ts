@@ -209,6 +209,7 @@ export type AdminPaymentDetail = {
   bookingExpertTimezone: string;
   customerName: string;
   expertName: string;
+  expertUserId: string | null;
   receiptSignedUrl: string | null;
   isDuplicateTransactionReference: boolean;
 };
@@ -229,7 +230,7 @@ export async function getAdminPaymentDetail(
       .from("bookings")
       .select(
         `booking_reference, duration_minutes, session_format, start_at, expert_timezone,
-         expert_profiles!bookings_expert_profile_id_fkey(profiles!expert_profiles_user_id_fkey(full_name))`,
+         expert_profiles!bookings_expert_profile_id_fkey(user_id, profiles!expert_profiles_user_id_fkey(full_name))`,
       )
       .eq("id", payment.booking_id)
       .maybeSingle(),
@@ -248,7 +249,10 @@ export async function getAdminPaymentDetail(
       : Promise.resolve({ data: [] as { id: string }[] }),
   ]);
 
-  const expertProfile = booking?.expert_profiles as unknown as { profiles: { full_name: string } | null } | null;
+  const expertProfile = booking?.expert_profiles as unknown as {
+    user_id: string;
+    profiles: { full_name: string } | null;
+  } | null;
 
   return {
     payment,
@@ -259,6 +263,7 @@ export async function getAdminPaymentDetail(
     bookingExpertTimezone: booking?.expert_timezone ?? "",
     customerName: customer?.full_name ?? "Unknown",
     expertName: expertProfile?.profiles?.full_name ?? "Unknown",
+    expertUserId: expertProfile?.user_id ?? null,
     receiptSignedUrl: await getReceiptSignedUrl(supabase, payment.receipt_path),
     isDuplicateTransactionReference: (duplicates ?? []).length > 0,
   };

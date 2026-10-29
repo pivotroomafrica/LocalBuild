@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireCustomerPage, getCustomerSessionDetail } from "@/lib/dashboard/data";
 import { formatSessionDateTime, pendingActionForSession } from "@/lib/dashboard/presentation";
@@ -9,6 +9,8 @@ import { hasNotStarted } from "@/lib/booking/data";
 import { SESSION_FORMAT_LABELS, type SessionFormat } from "@/types/booking";
 import type { PaymentStatus } from "@/types/payment";
 import { getOwnReviewForBooking, isReviewable } from "@/lib/reviews/data";
+import { resolveSessionRoute } from "@/lib/booking/sessionRoute";
+import { NotYourSession } from "@/components/session/NotYourSession";
 
 /**
  * Session detail (spec sections 12-14). Ownership is enforced both by RLS
@@ -33,7 +35,17 @@ export default async function DashboardSessionDetailPage({
 }) {
   const { reference } = await params;
   const supabase = await createClient();
-  const { userId } = await requireCustomerPage(supabase, `/dashboard/sessions/${reference}`);
+  const returnTo = `/dashboard/sessions/${reference}`;
+  const { userId } = await requireCustomerPage(supabase, returnTo);
+
+  const route = await resolveSessionRoute(userId, reference, "client");
+  if ("redirectTo" in route) redirect(route.redirectTo);
+  if ("notYours" in route) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    return <NotYourSession email={user?.email ?? null} returnTo={returnTo} />;
+  }
 
   const detail = await getCustomerSessionDetail(supabase, userId, reference);
   if (!detail) notFound();

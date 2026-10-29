@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireApprovedExpertPage } from "@/lib/expert/auth";
 import { getExpertSessionDetail } from "@/lib/expert/sessions";
@@ -8,6 +8,8 @@ import { BookingStatusPill } from "@/components/session/StatusPill";
 import { ExpertSessionActionsPanel } from "@/components/expert/ExpertSessionActionsPanel";
 import { SESSION_FORMAT_LABELS } from "@/types/booking";
 import { EXPERT_EXPERIENCE_RANGE_LABELS, type ExpertExperienceRange } from "@/types/expert";
+import { resolveSessionRoute } from "@/lib/booking/sessionRoute";
+import { NotYourSession } from "@/components/session/NotYourSession";
 
 /**
  * Expert-facing session detail (spec sections 24-31, 55). Ownership and
@@ -38,7 +40,16 @@ export default async function ExpertSessionDetailPage({
 }) {
   const { reference } = await params;
   const supabase = await createClient();
-  const { expertProfileId } = await requireApprovedExpertPage(supabase, `/expert/sessions/${reference}`);
+  const returnTo = `/expert/sessions/${reference}`;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    const route = await resolveSessionRoute(user.id, reference, "expert");
+    if ("redirectTo" in route) redirect(route.redirectTo);
+    if ("notYours" in route) return <NotYourSession email={user.email ?? null} returnTo={returnTo} />;
+  }
+  const { expertProfileId } = await requireApprovedExpertPage(supabase, returnTo);
 
   const detail = await getExpertSessionDetail(supabase, expertProfileId, reference);
   if (!detail) notFound();

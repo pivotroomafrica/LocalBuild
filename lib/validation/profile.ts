@@ -66,9 +66,14 @@ export function validateCompanyName(input: string): FieldResult<string | null> {
 
 const LINKEDIN_PATTERN = /^https?:\/\/([a-z]{2,3}\.)?linkedin\.com\/.+$/i;
 
+/** Optional everywhere. Accepts what people usually paste or type:
+ * "linkedin.com/in/name", "www.linkedin.com/in/name", "in/name" or a full
+ * URL, and stores the full https:// form the database expects. */
 export function validateLinkedinUrl(input: string): FieldResult<string | null> {
-  const value = input.trim();
+  let value = input.trim();
   if (!value) return ok(null);
+  if (/^in\//i.test(value)) value = `linkedin.com/${value}`;
+  if (!/^https?:\/\//i.test(value)) value = `https://${value}`;
   if (value.length > 300) return err("LinkedIn URL must be 300 characters or fewer.");
   if (!LINKEDIN_PATTERN.test(value)) {
     return err("Enter a valid LinkedIn profile URL, e.g. https://www.linkedin.com/in/yourname.");

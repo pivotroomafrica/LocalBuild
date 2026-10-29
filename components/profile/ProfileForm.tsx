@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { updateProfileAction, type ProfileActionState } from "@/lib/profile/actions";
 import { TextField } from "@/components/ui/TextField";
 import { SelectField } from "@/components/ui/SelectField";
 import { Button } from "@/components/ui/Button";
 import { FormMessage } from "@/components/ui/FormMessage";
+import { CountryCityFields } from "@/components/ui/CountryCityFields";
 import {
   EMPLOYMENT_TYPE_LABELS,
   EMPLOYMENT_TYPES,
@@ -25,20 +26,114 @@ type Props = {
   industries: Industry[];
 };
 
+function Heading() {
+  return (
+    <div className="flex flex-col gap-1">
+      <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">Profile</h1>
+      <p className="text-sm text-[var(--color-text-muted)]">
+        Manage your personal details and professional background.
+      </p>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string | null | undefined }) {
+  return (
+    <div className="grid gap-1 border-b border-[var(--color-border)] py-3 last:border-b-0 sm:grid-cols-[200px_minmax(0,1fr)] sm:gap-4">
+      <dt className="text-sm text-[var(--color-text-muted)]">{label}</dt>
+      <dd className="m-0 break-words text-base text-[var(--color-text)]">
+        {value ? value : <span className="text-[var(--color-text-muted)]">Not added</span>}
+      </dd>
+    </div>
+  );
+}
+
+/** Read-only view of the saved profile, shown after saving and on return visits. */
+function ProfileSummary({
+  email,
+  profile,
+  customerProfile,
+  industries,
+  justSaved,
+  onEdit,
+}: Props & { justSaved: boolean; onEdit: () => void }) {
+  const industry = industries.find((item) => item.id === customerProfile?.industry_id)?.name;
+  return (
+    <div className="flex flex-col gap-10">
+      <Heading />
+      {justSaved ? <FormMessage variant="success">Your changes are saved.</FormMessage> : null}
+
+      <section className="flex flex-col gap-2">
+        <h2 className="text-base font-semibold text-[var(--color-text)]">Personal Information</h2>
+        <dl className="m-0">
+          <Row label="Full name" value={profile.full_name} />
+          <Row label="Email" value={email} />
+          <Row label="Phone" value={profile.phone} />
+          <Row label="Country" value={profile.country} />
+          <Row label="City" value={profile.city} />
+        </dl>
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="text-base font-semibold text-[var(--color-text)]">Professional Information</h2>
+        <dl className="m-0">
+          <Row label="Current role" value={customerProfile?.current_role} />
+          <Row
+            label="Employment type"
+            value={customerProfile?.employment_type ? EMPLOYMENT_TYPE_LABELS[customerProfile.employment_type as keyof typeof EMPLOYMENT_TYPE_LABELS] : null}
+          />
+          <Row label="Company / organization" value={customerProfile?.company_name} />
+          <Row label="Industry" value={industry} />
+          <Row
+            label="Years of experience"
+            value={
+              customerProfile?.years_experience_range
+                ? EXPERIENCE_RANGE_LABELS[customerProfile.years_experience_range as keyof typeof EXPERIENCE_RANGE_LABELS]
+                : null
+            }
+          />
+          <Row label="LinkedIn" value={customerProfile?.linkedin_url} />
+        </dl>
+      </section>
+
+      <div>
+        <Button type="button" onClick={onEdit} className="sm:w-auto">
+          Edit profile
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function ProfileForm({ email, profile, customerProfile, industries }: Props) {
   const [state, formAction, isPending] = useActionState(updateProfileAction, initialState);
+  // A returning customer sees their details; someone who never filled in the
+  // professional part starts on the form.
+  const [editing, setEditing] = useState(!customerProfile);
+  const [handled, setHandled] = useState(state);
+  if (state !== handled) {
+    setHandled(state);
+    if (state.success) setEditing(false);
+  }
+
+  if (!editing) {
+    return (
+      <ProfileSummary
+        email={email}
+        profile={profile}
+        customerProfile={customerProfile}
+        industries={industries}
+        justSaved={Boolean(state.success)}
+        onEdit={() => setEditing(true)}
+      />
+    );
+  }
 
   return (
     <form action={formAction} className="flex flex-col gap-10">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">Profile</h1>
-        <p className="text-sm text-[var(--color-text-muted)]">
-          Manage your personal details and professional background.
-        </p>
-      </div>
+      <Heading />
 
       {state.error ? <FormMessage variant="error">{state.error}</FormMessage> : null}
-      {state.success ? <FormMessage variant="success">Profile updated successfully.</FormMessage> : null}
 
       <section className="flex flex-col gap-4">
         <h2 className="text-base font-semibold text-[var(--color-text)]">Personal Information</h2>
@@ -69,20 +164,7 @@ export function ProfileForm({ email, profile, customerProfile, industries }: Pro
           defaultValue={profile.phone ?? ""}
           placeholder="0912345678"
         />
-        <TextField
-          label="Country"
-          name="country"
-          type="text"
-          defaultValue={profile.country ?? "Ethiopia"}
-          maxLength={100}
-        />
-        <TextField
-          label="City"
-          name="city"
-          type="text"
-          defaultValue={profile.city ?? ""}
-          maxLength={100}
-        />
+        <CountryCityFields defaultCountry={profile.country} defaultCity={profile.city} />
       </section>
 
       <section className="flex flex-col gap-4">
@@ -144,18 +226,25 @@ export function ProfileForm({ email, profile, customerProfile, industries }: Pro
         />
 
         <TextField
-          label="LinkedIn"
+          label="LinkedIn (optional)"
           name="linkedin_url"
-          type="url"
+          type="text"
           defaultValue={customerProfile?.linkedin_url ?? ""}
           placeholder="https://www.linkedin.com/in/yourname"
           maxLength={300}
         />
       </section>
 
-      <Button type="submit" isLoading={isPending} loadingText="Saving...">
-        Save Changes
-      </Button>
+      <div className="flex flex-wrap gap-3">
+        <Button type="submit" isLoading={isPending} loadingText="Saving..." className="sm:w-auto">
+          Save Changes
+        </Button>
+        {customerProfile ? (
+          <Button type="button" variant="secondary" onClick={() => setEditing(false)} disabled={isPending} className="sm:w-auto">
+            Cancel
+          </Button>
+        ) : null}
+      </div>
     </form>
   );
 }

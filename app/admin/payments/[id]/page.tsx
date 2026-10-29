@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminPaymentDetail } from "@/lib/payment/data";
+import { getAdminPerson } from "@/lib/admin/people";
+import { ContactCard } from "@/components/admin/ContactCard";
 import { PaymentVerifyButton } from "@/components/admin/PaymentVerifyButton";
 import { PaymentRejectForm } from "@/components/admin/PaymentRejectForm";
 import { SESSION_FORMAT_LABELS } from "@/types/booking";
@@ -15,6 +17,10 @@ export default async function AdminPaymentDetailPage({ params }: { params: Promi
   if (!detail) notFound();
 
   const { payment } = detail;
+  const [customer, expert] = await Promise.all([
+    getAdminPerson(supabase, payment.customer_id),
+    detail.expertUserId ? getAdminPerson(supabase, detail.expertUserId) : Promise.resolve(null),
+  ]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -28,6 +34,11 @@ export default async function AdminPaymentDetailPage({ params }: { params: Promi
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">
           Status: <span className="font-medium">{PAYMENT_STATUS_LABELS[payment.payment_status as PaymentStatus]}</span>
         </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <ContactCard title="Client" person={customer} />
+        <ContactCard title="Expert" person={expert} />
       </div>
 
       <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
