@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdminPage } from "@/lib/admin/data";
-import { getAdminOverview } from "@/lib/admin/overview";
+import { getAdminOverview, OVERVIEW_RANGES, type OverviewRange, type OverviewSession } from "@/lib/admin/overview";
+import { AutoRefresh } from "@/components/admin/AutoRefresh";
+import { DayPicker } from "@/components/admin/DayPicker";
+import { DailyChart } from "@/components/admin/DailyChart";
 import { formatEtb } from "@/components/site/format";
 import { greeting } from "@/lib/utils/greeting";
 
@@ -13,10 +16,54 @@ function delta(current: number, previous: number): string | null {
 
 /** Admin overview (website design). Only real figures; panels with
  * nothing in them are left out rather than filled. */
-export default async function AdminOverviewPage() {
+const STATE_TAG: Record<OverviewSession["state"], { label: string; className: string }> = {
+  live: { label: "In session", className: "rtag dark" },
+  done: { label: "Finished", className: "rtag grey" },
+  upcoming: { label: "Confirmed", className: "rtag" },
+  unpaid: { label: "Awaiting payment", className: "rtag grey" },
+};
+
+function SessionRows({ sessions, showDate = false }: { sessions: OverviewSession[]; showDate?: boolean }) {
+  return (
+    <div className="rows">
+      {sessions.map((session) => (
+        <Link key={session.reference} href={`/admin/bookings/${session.reference}`}>
+          <span className="stack" style={{ gap: 0 }}>
+            <span className="d num" style={{ fontSize: 17 }}>
+              {session.time}
+            </span>
+            {showDate ? (
+              <span className="muted" style={{ fontSize: 12 }}>
+                {session.date}
+              </span>
+            ) : null}
+          </span>
+          <span className="stack" style={{ minWidth: 0 }}>
+            <span style={{ fontWeight: 500 }}>
+              {session.customer} → {session.expert}
+            </span>
+            <span className="muted" style={{ fontSize: 14 }}>
+              {session.format} · {session.reference}
+            </span>
+          </span>
+          <span className={STATE_TAG[session.state].className}>{STATE_TAG[session.state].label}</span>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+export default async function AdminOverviewPage({ searchParams }: PageProps<"/admin">) {
+  const params = await searchParams;
+  const rangeParam = Number(params.range);
+  const range: OverviewRange = (OVERVIEW_RANGES as readonly number[]).includes(rangeParam)
+    ? (rangeParam as OverviewRange)
+    : 30;
+  const dayParam = typeof params.day === "string" ? params.day : undefined;
+
   const supabase = await createClient();
   const admin = await requireAdminPage(supabase);
-  const data = await getAdminOverview(supabase);
+  const data = await getAdminOverview(supabase, range, dayParam);
 
   const firstName = (admin.full_name ?? "").split(/\s+/)[0];
   const today = new Date().toLocaleDateString("en-GB", {
@@ -25,15 +72,23 @@ export default async function AdminOverviewPage() {
     month: "long",
     timeZone: "Africa/Addis_Ababa",
   });
-  const maxWeek = Math.max(1, ...data.weekly.map((week) => week.count));
-  const change = delta(data.booked30, data.bookedPrev30);
+  const change = delta(data.booked, data.bookedPrev);
   const tookPlacePct =
-    data.tookPlace30 + data.cancelled30 > 0
-      ? `${Math.round((data.tookPlace30 / (data.tookPlace30 + data.cancelled30)) * 100)}%`
+    data.tookPlace + data.cancelled > 0
+      ? `${Math.round((data.tookPlace / (data.tookPlace + data.cancelled)) * 100)}%`
       : "—";
+  const selected = data.daily.find((d) => d.day === data.selectedDay);
+  const selectedLabel = new Date(`${data.selectedDay}T12:00:00+03:00`).toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "Africa/Addis_Ababa",
+  });
+  const isTodaySelected = selected?.isToday ?? false;
 
   return (
     <div className="stack" style={{ gap: 28 }}>
+      <AutoRefresh seconds={30} />
       <div className="stack" style={{ gap: 6 }}>
         <h1 className="ws-h1">
           {greeting()}
@@ -43,18 +98,33 @@ export default async function AdminOverviewPage() {
           {today} ·{" "}
           {data.decisions.length === 0
             ? "Nothing needs a decision"
-            : `${data.decisions.length} ${data.decisions.length === 1 ? "thing needs" : "things need"} a decision`}
+            : `${data.decisions.length} ${data.decisions.length === 1 ? "thing needs" : "things need"} a decision`}{" "}
+          · <span className="live-note">Live, updated {data.updatedAt}</span>
         </p>
       </div>
 
+      <nav className="range-tabs" aria-label="Period">
+        {OVERVIEW_RANGES.map((r) => (
+          <Link
+            key={r}
+            href={`/admin?range=${r}${dayParam ? `&day=${dayParam}` : ""}`}
+            className={r === range ? "on" : undefined}
+            aria-current={r === range ? "true" : undefined}
+            scroll={false}
+          >
+            {r} days
+          </Link>
+        ))}
+      </nav>
+
       <div className="stats">
         <div className="stat">
-          <span className="k">Sessions booked, 30 days</span>
-          <span className="v num">{data.booked30}</span>
+          <span className="k">Sessions booked, {range} days</span>
+          <span className="v num">{data.booked}</span>
           <span className="s">
             {change ? (
               <>
-                <span className="up">{change}</span> vs previous 30
+                <span className="up">{change}</span> vs previous {range}
               </>
             ) : (
               "Paid bookings"
@@ -62,20 +132,20 @@ export default async function AdminOverviewPage() {
           </span>
         </div>
         <div className="stat">
-          <span className="k">Clients paid, 30 days</span>
-          <span className="v num">{formatEtb(data.paid30)}</span>
+          <span className="k">Clients paid, {range} days</span>
+          <span className="v num">{formatEtb(data.paid)}</span>
           <span className="s">Verified payments, VAT included</span>
         </div>
         <div className="stat">
           <span className="k">Pivotroom commission</span>
-          <span className="v num">{formatEtb(data.commission30)}</span>
-          <span className="s">20% of sessions held in 30 days</span>
+          <span className="v num">{formatEtb(data.commission)}</span>
+          <span className="s">20% of sessions held in {range} days</span>
         </div>
         <div className="stat">
           <span className="k">Sessions that took place</span>
           <span className="v num">{tookPlacePct}</span>
           <span className="s">
-            {data.tookPlace30} held · {data.cancelled30} cancelled
+            {data.tookPlace} held · {data.cancelled} cancelled
           </span>
         </div>
       </div>
@@ -84,25 +154,63 @@ export default async function AdminOverviewPage() {
         <div className="stack" style={{ gap: 16 }}>
           <section className="panel stack" style={{ gap: 16 }}>
             <div className="stack" style={{ gap: 4 }}>
-              <h2 className="ws-h2">Sessions booked per week</h2>
+              <h2 className="ws-h2">Sessions day by day</h2>
               <span className="muted" style={{ fontSize: 14 }}>
-                Paid bookings, last 12 weeks
+                Paid sessions, last {range} days and the week ahead. Click a day to see its sessions.
               </span>
             </div>
-            <div className="chart" role="img" aria-label="Paid bookings per week for the last 12 weeks">
-              {data.weekly.map((week) => (
-                <div key={week.label} className="col" title={`Week of ${week.label}: ${week.count}`}>
-                  <span className="n num">{week.count || ""}</span>
-                  <span className="b" style={{ height: `${(week.count / maxWeek) * 100}%` }} />
-                  <span className="l">{week.label}</span>
-                </div>
-              ))}
+            <DailyChart daily={data.daily} range={range} selectedDay={data.selectedDay} />
+          </section>
+
+          <section id="day" className="panel stack" style={{ gap: 8 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                flexWrap: "wrap",
+                marginBlockEnd: 8,
+              }}
+            >
+              <div className="stack" style={{ gap: 2 }}>
+                <h2 className="ws-h2">{isTodaySelected ? "Today's sessions" : `Sessions on ${selectedLabel}`}</h2>
+                {selected ? (
+                  <span className="muted" style={{ fontSize: 14 }}>
+                    {selected.sessions} paid {selected.sessions === 1 ? "session" : "sessions"} · {selected.booked}{" "}
+                    {selected.booked === 1 ? "booking" : "bookings"} made this day
+                  </span>
+                ) : null}
+              </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                {!isTodaySelected ? (
+                  <Link href={`/admin?range=${range}#day`} scroll={false} className="link-arrow">
+                    Today
+                  </Link>
+                ) : null}
+                <DayPicker day={data.selectedDay} range={range} />
+              </div>
             </div>
+            {data.daySessions.length > 0 ? (
+              <SessionRows sessions={data.daySessions} />
+            ) : (
+              <p className="muted" style={{ margin: 0 }}>
+                No sessions {isTodaySelected ? "today" : "on this day"}.
+              </p>
+            )}
           </section>
 
           <section className="panel stack" style={{ gap: 8 }}>
-            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBlockEnd: 8 }}>
-              <h2 className="ws-h2">Today&apos;s sessions</h2>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                justifyContent: "space-between",
+                gap: 12,
+                marginBlockEnd: 8,
+              }}
+            >
+              <h2 className="ws-h2">Coming up next</h2>
               <Link href="/admin/bookings" className="link-arrow">
                 All bookings{" "}
                 <span className="ms af" aria-hidden="true">
@@ -110,30 +218,11 @@ export default async function AdminOverviewPage() {
                 </span>
               </Link>
             </div>
-            {data.today.length > 0 ? (
-              <div className="rows">
-                {data.today.map((session) => (
-                  <Link key={session.reference} href={`/admin/bookings/${session.reference}`}>
-                    <span className="d num" style={{ fontSize: 17 }}>
-                      {session.time}
-                    </span>
-                    <span className="stack" style={{ minWidth: 0 }}>
-                      <span style={{ fontWeight: 500 }}>
-                        {session.customer} → {session.expert}
-                      </span>
-                      <span className="muted" style={{ fontSize: 14 }}>
-                        {session.format} · {session.reference}
-                      </span>
-                    </span>
-                    <span className={session.state === "live" ? "rtag dark" : session.state === "done" ? "rtag grey" : "rtag"}>
-                      {session.state === "live" ? "In session" : session.state === "done" ? "Finished" : "Confirmed"}
-                    </span>
-                  </Link>
-                ))}
-              </div>
+            {data.upcoming.length > 0 ? (
+              <SessionRows sessions={data.upcoming} showDate />
             ) : (
               <p className="muted" style={{ margin: 0 }}>
-                No paid sessions today.
+                No paid sessions coming up.
               </p>
             )}
           </section>
