@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { PhotoCropper } from "@/components/expert/PhotoCropper";
+import { PHOTO_PREVIEW_EVENT } from "@/components/expert/LiveProfilePreview";
 import { uploadExpertPhotoAction, type ExpertActionState } from "@/lib/expert/actions";
 import { Button } from "@/components/ui/Button";
 import { FormMessage } from "@/components/ui/FormMessage";
@@ -37,7 +38,9 @@ export function PhotoUpload({ currentPhotoUrl }: { currentPhotoUrl: string | nul
     const transfer = new DataTransfer();
     transfer.items.add(cropped);
     input.files = transfer.files;
-    setPreview(URL.createObjectURL(cropped));
+    const url = URL.createObjectURL(cropped);
+    setPreview(url);
+    window.dispatchEvent(new CustomEvent(PHOTO_PREVIEW_EVENT, { detail: url }));
     formRef.current?.requestSubmit();
   }
 

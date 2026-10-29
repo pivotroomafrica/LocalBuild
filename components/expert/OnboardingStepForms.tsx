@@ -11,6 +11,9 @@ import type { ExpertCategory, ExpertProfile } from "@/types/expert";
 
 const initialState: ExpertActionState = {};
 
+/** LiveProfilePreview listens to the form with this id. */
+export const APPLICATION_FORM_ID = "application-form";
+
 function StepButtons({ isPending, next }: { isPending: boolean; next: string }) {
   return (
     <div className="oq-actions">
@@ -36,7 +39,7 @@ export function IdentityStepForm({
 }) {
   const [state, formAction, isPending] = useActionState(saveOnboardingIdentityAction, initialState);
   return (
-    <form action={formAction} className="oq-form">
+    <form id={APPLICATION_FORM_ID} action={formAction} className="oq-form">
       {state.error ? <p className="notice err" role="alert">{state.error}</p> : null}
       {saved && !state.error ? <p className="notice" role="status">Saved. You can come back to this any time.</p> : null}
       <IdentityQuestions profile={profile} fullName={fullName} startAt={2} />
@@ -59,7 +62,7 @@ export function ExpertiseStepForm({
 }) {
   const [state, formAction, isPending] = useActionState(saveOnboardingExpertiseAction, initialState);
   return (
-    <form action={formAction} className="oq-form">
+    <form id={APPLICATION_FORM_ID} action={formAction} className="oq-form">
       {state.error ? <p className="notice err" role="alert">{state.error}</p> : null}
       {saved && !state.error ? <p className="notice" role="status">Saved. You can come back to this any time.</p> : null}
       <ExpertiseQuestions profile={profile} categories={categories} selectedCategoryIds={selectedCategoryIds} startAt={9} />
