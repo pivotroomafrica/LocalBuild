@@ -349,6 +349,7 @@ export async function getAdminBookingList(
   supabase: TypedClient,
   tab: AdminBookingTab,
   search?: string,
+  limit: number = ADMIN_BOOKINGS_PAGE_LIMIT,
 ): Promise<AdminBookingListRow[]> {
   let query = supabase
     .from("bookings")
@@ -358,7 +359,7 @@ export async function getAdminBookingList(
        expert_profiles!bookings_expert_profile_id_fkey(profiles!expert_profiles_user_id_fkey(full_name))`,
     )
     .order("created_at", { ascending: false })
-    .limit(ADMIN_BOOKINGS_PAGE_LIMIT);
+    .limit(limit);
 
   const rawStatuses = rawStatusesToFetchForTab(tab);
   if (rawStatuses) query = query.in("booking_status", rawStatuses);

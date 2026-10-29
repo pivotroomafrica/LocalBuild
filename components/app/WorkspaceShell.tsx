@@ -69,6 +69,7 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
   if (area === "admin") {
     items = [
       { href: "/admin", label: "Overview", icon: "space_dashboard", exact: true },
+      { href: "/admin/board", label: "Board", icon: "view_kanban" },
       { href: "/admin/experts", label: "Applications", icon: "how_to_reg", badge: adminCounts.applications },
       { href: "/admin/bookings", label: "Bookings", icon: "event" },
       { href: "/admin/payments", label: "Payments", icon: "payments", badge: adminCounts.payments },
