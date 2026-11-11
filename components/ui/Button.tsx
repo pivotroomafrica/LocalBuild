@@ -24,11 +24,11 @@ export function Button({
   ...rest
 }: Props) {
   const base =
-    "inline-flex w-full items-center justify-center gap-2 rounded-full px-7 text-[15px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60";
+    "inline-flex w-full items-center justify-center gap-2 rounded-full px-7 text-[15px] font-medium transition-all disabled:cursor-not-allowed disabled:opacity-60";
   const heightClass = size === "hero" ? "h-[52px]" : "h-12";
   const styles =
     variant === "primary"
-      ? "bg-[var(--color-brand)] text-[var(--color-on-brand)] hover:bg-[var(--color-brand-hover)]"
+      ? "bg-[var(--color-brand)] text-[var(--color-on-brand)] hover:bg-[var(--color-brand-hover)] hover:-translate-y-px hover:shadow-[0_8px_20px_rgba(43,79,224,0.28)] active:translate-y-0 motion-reduce:hover:translate-y-0"
       : variant === "secondary"
         ? "border border-[var(--color-text)] bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-mist)]"
         : "bg-transparent text-[var(--color-text)] underline decoration-[var(--color-border)] underline-offset-4 hover:decoration-[var(--color-text)]";

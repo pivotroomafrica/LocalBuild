@@ -34,7 +34,8 @@
 
   /* Primary CTA: ink pill, white on dark grounds (.on-ink). */
   --color-brand: #0d0f12;
-  --color-brand-hover: #24272c;
+  /* Black buttons hover to the brand blue (same as --pr-blue). */
+  --color-brand-hover: #2b4fe0;
   --color-on-brand: #ffffff;
 
   /* Status */

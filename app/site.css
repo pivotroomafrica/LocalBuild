@@ -162,8 +162,10 @@
   white-space: nowrap;
   cursor: pointer;
   transition:
-    background-color 160ms var(--pr-ease),
-    border-color 160ms var(--pr-ease);
+    background-color 180ms var(--pr-ease),
+    border-color 180ms var(--pr-ease),
+    box-shadow 220ms var(--pr-ease),
+    transform 220ms var(--pr-ease);
 }
 .pr .btn.lg {
   height: 52px;
@@ -184,10 +186,29 @@
   background: var(--pr-ink);
   color: #ffffff;
 }
+/* Black buttons turn Pivotroom blue and lift slightly on hover. */
 .pr .btn-ink:hover,
 .pr a.btn-ink:hover {
-  background: var(--pr-ink-hover);
+  background: var(--pr-blue);
   color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(43, 79, 224, 0.28);
+}
+.pr .btn-ink:active,
+.pr a.btn-ink:active {
+  background: var(--pr-blue-hover);
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(43, 79, 224, 0.24);
+}
+.pr .btn-ink:focus-visible {
+  outline: 3px solid rgba(43, 79, 224, 0.35);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pr .btn,
+  .pr .btn:hover {
+    transform: none;
+  }
 }
 .pr .btn-white,
 .pr a.btn-white {
@@ -310,7 +331,7 @@
   color: #ffffff;
 }
 .pr .topic.on:hover {
-  background: var(--pr-ink-hover);
+  background: var(--pr-blue);
 }
 .pr .tag {
   min-height: 40px;
@@ -1946,7 +1967,8 @@
   color: #ffffff;
 }
 .pr .ctas2 a.dark:hover {
-  background: var(--pr-ink-hover);
+  background: var(--pr-blue);
+  color: #ffffff;
 }
 .pr .quick {
   display: grid;

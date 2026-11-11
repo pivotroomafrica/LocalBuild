@@ -3,54 +3,46 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Become an expert — Pivotroom" };
 
+/** The money and the hours: said once, here. */
 const TERMS = [
   {
     icon: "payments",
-    k: "You name your price",
-    v: "Choose the session lengths you offer and set your rate. Change it whenever you like.",
+    k: "You set the price",
+    v: "Pick your session lengths and your rate. Change either whenever you like.",
   },
   {
     icon: "receipt_long",
     k: "We keep 20%. Nothing else.",
-    v: "No listing fee and no monthly charge. VAT is added to the client's price, not taken from yours.",
-  },
-  {
-    icon: "schedule",
-    k: "You open the hours",
-    v: "Clients can only book slots you have opened. Close your calendar for a month and nobody will ask why.",
+    v: "No joining, listing or monthly fee. VAT is added to the client's price, not taken from yours.",
   },
   {
     icon: "check_circle",
-    k: "The client pays first",
-    v: "Every session is paid in full before it is confirmed. Your share is released once it has taken place.",
+    k: "Paid before you meet",
+    v: "Every session is paid in full before it is confirmed. Your 80% is released after it has taken place.",
+  },
+  {
+    icon: "schedule",
+    k: "Your hours, no minimum",
+    v: "Clients can only book the slots you open. Open many, a few, or none for a month.",
   },
 ];
 
+/** From application to first booking; review and privacy live here. */
 const STEPS = [
   {
     n: "01",
-    title: "Fill in your application",
-    body: "Your background, the problems you have solved, who you help and a photo. Save it and come back whenever you like.",
+    title: "Apply",
+    body: "Three short steps: who you are, the problems you have solved, and your sessions and price. Save and finish later if you need to.",
   },
   {
     n: "02",
     title: "We review it",
-    body: "Our team checks who you are and what you have done. This is why clients trust the names they see.",
+    body: "Our team checks who you are and what you have done. Nothing about you is public before we approve it, and your phone and email are never shown.",
   },
   {
     n: "03",
-    title: "Your profile goes live",
-    body: "Once approved, we publish your profile. Nothing about you appears on Pivotroom before that.",
-  },
-  {
-    n: "04",
-    title: "Set your price and hours",
-    body: "Choose your session lengths, your rate and the slots you want to open.",
-  },
-  {
-    n: "05",
-    title: "Take your first booking",
-    body: "Clients find you in the expert directory and by topic. You meet on Google Meet or in person.",
+    title: "Go live and get booked",
+    body: "Open your hours and clients find you by name or by topic. You meet on Google Meet or in person.",
   },
 ];
 
@@ -71,25 +63,14 @@ const LOOK_FOR = [
     body: "You can tell someone what to do next in one session, without jargon and without a slide deck.",
   },
   {
-    icon: "videocam",
-    title: "You keep your word",
-    body: "You arrive on time, on camera or in person, and you keep the slots you open.",
+    icon: "event_available",
+    title: "You show up",
+    body: "On time, prepared, on camera or in the room.",
   },
 ];
 
+/** Only what the sections above don't already answer. */
 const FAQS = [
-  {
-    q: "What does it cost me to join?",
-    a: "Nothing. We earn 20% of the price of each session you take. If you take no sessions, you pay nothing.",
-  },
-  {
-    q: "How and when am I paid?",
-    a: "Clients pay through Chapa or by bank transfer when they book. Your 80% is released to you after the session has taken place.",
-  },
-  {
-    q: "Who can see my profile?",
-    a: "Anyone visiting Pivotroom, once it is approved and published. Your phone number and email are never shown.",
-  },
   {
     q: "What if a client cancels late?",
     a: "Clients can cancel or reschedule themselves only until 24 hours before the session. Inside 24 hours the booking stands.",
@@ -99,8 +80,12 @@ const FAQS = [
     a: "Yes. Turn on in-person sessions and clients choose Google Meet or in person when they book.",
   },
   {
-    q: "Do I have to take a minimum number of sessions?",
-    a: "No. Open as many or as few slots as you like.",
+    q: "How do I get paid?",
+    a: "After each session, your share is paid to the bank or mobile money account in your name, and we email you when it has been sent.",
+  },
+  {
+    q: "Can I give part of my earnings to a cause?",
+    a: "Yes. Choose an Ethiopian NGO and the share of your earnings you want to give. Your profile shows it with a gold mark.",
   },
 ];
 
@@ -149,7 +134,7 @@ export default async function BecomeAnExpertPage({ searchParams }: { searchParam
               </span>
             </Link>
             <a href="#terms" className="link-arrow" style={{ minHeight: 44, color: "#0d0f12" }}>
-              Read the terms first{" "}
+              How it works{" "}
               <span className="ms af" aria-hidden="true">
                 arrow_forward
               </span>
@@ -161,9 +146,9 @@ export default async function BecomeAnExpertPage({ searchParams }: { searchParam
       <section id="terms" style={{ background: "#ffffff" }}>
         <div className="wrap section stack" style={{ gap: 40 }}>
           <div className="stack" style={{ gap: 12 }}>
-            <h2 className="h2">Four terms. Every one in writing.</h2>
+            <h2 className="h2">How the money and the hours work</h2>
             <p className="muted" style={{ margin: 0, maxWidth: "52ch" }}>
-              Here is exactly how the money works, before you give us a minute of your time.
+              Four terms, all in writing.
             </p>
           </div>
           <div className="terms4">
@@ -193,10 +178,9 @@ export default async function BecomeAnExpertPage({ searchParams }: { searchParam
       <section style={{ background: "#f4f5f7" }}>
         <div className="wrap section split">
           <div className="stack" style={{ gap: 16 }}>
-            <h2 className="h2">What happens after you apply</h2>
+            <h2 className="h2">From application to first booking</h2>
             <p className="muted" style={{ margin: 0, maxWidth: "44ch" }}>
-              Five steps. Every expert takes all of them, however senior. It protects your name, and it protects the
-              client&apos;s money.
+              Every expert goes through the same review, however senior. It is why clients trust the names they see.
             </p>
           </div>
           <ol className="steplist">
@@ -222,10 +206,9 @@ export default async function BecomeAnExpertPage({ searchParams }: { searchParam
       <section style={{ background: "#ffffff" }}>
         <div className="wrap section split">
           <div className="stack" style={{ gap: 16 }}>
-            <h2 className="h2">We don&apos;t list job titles. We list people who solved something.</h2>
+            <h2 className="h2">Who we are looking for</h2>
             <p className="muted" style={{ margin: 0, maxWidth: "44ch" }}>
-              Clients don&apos;t book a CV. They book the person who has already faced their problem. If that&apos;s
-              you, you belong here.
+              Clients don&apos;t book a CV. They book the person who has already faced their problem.
             </p>
           </div>
           <ul className="lookfor">
@@ -246,6 +229,23 @@ export default async function BecomeAnExpertPage({ searchParams }: { searchParam
         </div>
       </section>
 
+      <section style={{ background: "#f4f5f7" }}>
+        <div className="wrap section giveback-band">
+          <span className="ms gold-mark" aria-hidden="true">
+            verified
+          </span>
+          <div className="stack" style={{ gap: 8 }}>
+            <h2 className="h2" style={{ fontSize: "clamp(26px, 3vw, 36px)" }}>
+              Give part of your earnings to a cause
+            </h2>
+            <p className="muted" style={{ margin: 0, maxWidth: "60ch" }}>
+              Choose an Ethiopian NGO and the percentage you want to give. Your profile shows it to every client, and
+              your verified mark turns gold.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <section id="apply" className="ink" style={{ background: "#0d0f12", color: "#ffffff" }}>
         <div
           className="wrap stack"
@@ -255,11 +255,10 @@ export default async function BecomeAnExpertPage({ searchParams }: { searchParam
             edit_note
           </span>
           <h2 className="h2" style={{ fontSize: "clamp(32px, 4.4vw, 60px)" }}>
-            Apply in one sitting. Nothing goes live until we approve it.
+            Ready when you are.
           </h2>
           <p style={{ margin: 0, maxWidth: "52ch", color: "#9ba1aa", fontSize: 18 }}>
-            Tell us what you&apos;ve built, who you&apos;ve helped and what you want to charge. Save and come back
-            whenever you like.
+            Most experts finish their application in about ten minutes.
           </p>
           <Link href={applyHref} className="btn btn-white lg">
             Start your application{" "}
