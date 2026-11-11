@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import Link from "next/link";
 import { saveGivingAction, type ExpertActionState } from "@/lib/expert/actions";
 
@@ -28,7 +28,17 @@ export function GivingForm({
   const ngoName = ngos.find((ngo) => ngo.id === ngoId)?.name;
 
   return (
-    <form action={formAction} className="oq">
+    <form
+      className="oq"
+      // Submitted by hand: a plain form action resets the fields to their
+      // initial values afterwards, which left the select out of step with
+      // the choice shown in the preview.
+      onSubmit={(event) => {
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+        startTransition(() => formAction(data));
+      }}
+    >
       <div className="oq-head">
         <span className="oq-n ms gold-mark" aria-hidden="true" style={{ fontSize: 22 }}>
           verified
