@@ -4644,7 +4644,8 @@
 .pr .pv-photo {
   position: relative;
   width: 100%;
-  aspect-ratio: 5 / 4;
+  /* Same 4:5 shape the photo cropper saves, so nothing is cut off. */
+  aspect-ratio: 4 / 5;
   overflow: hidden;
   border-radius: 16px;
   background: var(--pr-photo);
@@ -4657,7 +4658,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 22%;
+  object-position: center;
 }
 .pr .pv-photo .initials {
   font-size: 96px;
