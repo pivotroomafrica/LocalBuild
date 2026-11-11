@@ -112,8 +112,8 @@ export function ExpertDetailView({ profile, railAuth, railSnapshot }: Props) {
 
       <div className="profile-cols">
         <div className="profile-main">
-          <div className="profile-top">
-            <div className="profile-photo">
+          <div className="pv-head">
+            <div className="pv-photo">
               {profile.photoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element -- signed storage URL, expires hourly.
                 <img src={profile.photoUrl} alt={profile.fullName} />
@@ -122,32 +122,30 @@ export function ExpertDetailView({ profile, railAuth, railSnapshot }: Props) {
                   {initialsOf(profile.fullName)}
                 </span>
               )}
+              {stats.isTopExpert ? <span className="pv-badge">Top expert</span> : null}
             </div>
-            <div className="profile-id">
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                <span className={profile.giving ? "pill-blue pill-gold" : "pill-blue"}>
-                  <span className="ms" aria-hidden="true">
-                    verified
-                  </span>
-                  {profile.giving ? "Vetted expert · Gives back" : "Vetted expert"}
+
+            <div className="pv-id">
+              <h1 className="pv-name">
+                {profile.fullName}{" "}
+                <span
+                  className={profile.giving ? "ms vt gold" : "ms vt"}
+                  role="img"
+                  aria-label={profile.giving ? "Vetted expert who gives back" : "Vetted expert"}
+                  title={profile.giving ? "Vetted expert · Gives back" : "Vetted expert"}
+                >
+                  verified
                 </span>
-                {stats.isTopExpert ? (
-                  <span className="pill-blue" style={{ background: "#0d0f12", color: "#ffffff" }}>
-                    <span className="ms" aria-hidden="true">
-                      workspace_premium
-                    </span>
-                    Top expert
-                  </span>
-                ) : null}
-              </div>
-              <h1 className="h1">{profile.fullName}</h1>
-              {role || profile.headline ? (
-                <p className="role">
-                  {role}
-                  {role && profile.headline ? <br /> : null}
-                  {profile.headline}
-                </p>
+              </h1>
+              {role ? <p className="pv-role">{role}</p> : null}
+              {stats.ratingAvg != null && stats.reviewCount > 0 ? (
+                <div className="pv-rating">
+                  <Stars rating={Math.round(stats.ratingAvg)} />
+                  <span className="num pv-avg">{stats.ratingAvg.toFixed(1)}</span>
+                  <span className="muted num">({stats.reviewCount})</span>
+                </div>
               ) : null}
+              {profile.headline ? <p className="pv-headline">{profile.headline}</p> : null}
               <div className="facts">
                 {format ? (
                   <span>
@@ -206,7 +204,7 @@ export function ExpertDetailView({ profile, railAuth, railSnapshot }: Props) {
 
           {profile.shortBio || profile.whoIHelp ? (
             <section className="psec">
-              <h2 className="h3">About</h2>
+              <h2 className="h3">About me</h2>
               {profile.shortBio ? <p>{profile.shortBio}</p> : null}
               {profile.whoIHelp ? <p>{profile.whoIHelp}</p> : null}
             </section>

@@ -16,8 +16,9 @@ type TypedClient = SupabaseClient<Database>;
  * /expert/application/preview) resolves the photo to a URL here, once,
  * server-side, before anything reaches a component.
  */
-/** An expert's pledge of part of their earnings to an NGO (056). */
-export type ExpertGiving = { ngoName: string; percent: number };
+/** The NGO an expert gives part of their earnings to (056). The
+ * percentage is private: only admins see it. */
+export type ExpertGiving = { ngoName: string };
 
 export type PublicProfileData = {
   slug: string;
@@ -83,8 +84,8 @@ export type PublicReview = {
 
 const EMPTY_STATS: ExpertPublicStats = { sessionsCompleted: 0, reviewCount: 0, ratingAvg: null, isTopExpert: false };
 
-function toGiving(row: { ngo_name: string | null; donation_percent: number | null }): ExpertGiving | null {
-  return row.ngo_name && row.donation_percent ? { ngoName: row.ngo_name, percent: row.donation_percent } : null;
+function toGiving(row: { ngo_name: string | null }): ExpertGiving | null {
+  return row.ngo_name ? { ngoName: row.ngo_name } : null;
 }
 
 function toResponseTime(value: string | null | undefined): ExpertResponseTime | null {
@@ -342,7 +343,7 @@ export async function toPreviewProfileData(
     reviews: [],
     giving:
       ngo && expertProfile.donation_percent
-        ? { ngoName: ngo.name, percent: expertProfile.donation_percent }
+        ? { ngoName: ngo.name }
         : null,
   };
 }

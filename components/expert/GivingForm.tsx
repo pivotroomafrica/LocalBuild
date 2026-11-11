@@ -48,8 +48,8 @@ export function GivingForm({
         </label>
       </div>
       <p className="oq-hint">
-        Choose an Ethiopian NGO and the share of your session earnings you will give. Your profile shows it to clients
-        and your verified mark turns gold.
+        Choose an Ethiopian NGO and the share of your session earnings you will give. Clients see the organisation
+        and a gold verified mark, never the percentage.
       </p>
 
       <select id="ngo_id" name="ngo_id" className="input" value={ngoId} onChange={(e) => setNgoId(e.target.value)}>
@@ -65,7 +65,7 @@ export function GivingForm({
         <>
           <div className="giving-pct">
             <label htmlFor="donation_percent" className="label">
-              Share of your earnings
+              Share of your earnings (only you and our team see this)
             </label>
             <div className="giving-pct-row">
               <input
@@ -99,8 +99,8 @@ export function GivingForm({
               <span className="ms">volunteer_activism</span>
             </span>
             <p>
-              <strong className="num">{percent}%</strong> of {firstName || "your"}&apos;s earnings from Pivotroom
-              sessions go to <strong>{ngoName}</strong>
+              Part of {firstName ? `${firstName}'s` : "your"} earnings from Pivotroom sessions go to{" "}
+              <strong>{ngoName}</strong>
             </p>
           </div>
         </>

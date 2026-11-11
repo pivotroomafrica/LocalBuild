@@ -1508,7 +1508,6 @@ export type Database = {
       get_expert_giving_public: {
         Args: { p_slug?: string }
         Returns: {
-          donation_percent: number
           ngo_name: string
           slug: string
         }[]

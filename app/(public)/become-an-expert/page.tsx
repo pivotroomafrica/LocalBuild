@@ -85,7 +85,7 @@ const FAQS = [
   },
   {
     q: "Can I give part of my earnings to a cause?",
-    a: "Yes. Choose an Ethiopian NGO and the share of your earnings you want to give. Your profile shows it with a gold mark.",
+    a: "Yes. Choose an Ethiopian NGO and the share of your earnings you want to give. Your profile shows the organisation with a gold mark; the percentage stays private.",
   },
 ];
 
@@ -239,8 +239,8 @@ export default async function BecomeAnExpertPage({ searchParams }: { searchParam
               Give part of your earnings to a cause
             </h2>
             <p className="muted" style={{ margin: 0, maxWidth: "60ch" }}>
-              Choose an Ethiopian NGO and the percentage you want to give. Your profile shows it to every client, and
-              your verified mark turns gold.
+              Choose an Ethiopian NGO and how much you want to give. Clients see the organisation on your profile and
+              your verified mark turns gold. The amount stays between you and us.
             </p>
           </div>
         </div>

@@ -4633,3 +4633,119 @@
   min-height: 44px;
   padding-block: 8px;
 }
+
+/* Expert page header: large photo, then name, role, rating (reference
+   layout). Desktop: two even columns split by a thin line. */
+.pr .pv-head {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.pr .pv-photo {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 5 / 4;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--pr-photo);
+  display: grid;
+  place-items: center;
+}
+.pr .pv-photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 22%;
+}
+.pr .pv-photo .initials {
+  font-size: 96px;
+}
+.pr .pv-badge {
+  position: absolute;
+  inset-inline-start: 12px;
+  inset-block-end: 12px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--pr-ink);
+  font-size: 17px;
+  font-weight: 500;
+}
+.pr .pv-id {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pr .pv-name {
+  margin: 0;
+  font-family: var(--pr-display);
+  font-size: clamp(28px, 3vw, 34px);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.pr .pv-name .vt {
+  font-size: 26px;
+  vertical-align: -3px;
+}
+.pr .pv-role {
+  margin: 0;
+  font-size: 18px;
+  color: var(--pr-slate);
+}
+.pr .pv-rating {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
+}
+.pr .pv-rating .stars {
+  color: #f5b301;
+}
+.pr .pv-rating .stars svg {
+  width: 22px;
+  height: 22px;
+}
+.pr .pv-avg {
+  font-weight: 500;
+  color: #c98a00;
+}
+.pr .pv-headline {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.5;
+}
+.pr .profile-main .giving-box {
+  justify-content: center;
+  text-align: center;
+  padding: 22px 24px;
+}
+.pr .profile-main .giving-box .giving-icon {
+  display: none;
+}
+@media (min-width: 1041px) {
+  .pr .profile-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0;
+    max-width: 1040px;
+    width: 100%;
+    margin-inline: auto;
+  }
+  .pr .profile-main {
+    padding-inline-end: 52px;
+    border-inline-end: 1px solid var(--pr-line);
+    gap: 40px;
+  }
+  .pr .profile-cols > .bookaside {
+    max-width: none;
+    margin-inline-start: 52px;
+  }
+}
+@media (min-width: 1041px) {
+  .pr .wrap.profile {
+    max-width: calc(1040px + 2 * var(--pr-gutter));
+  }
+}
