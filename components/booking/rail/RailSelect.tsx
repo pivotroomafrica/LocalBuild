@@ -68,16 +68,28 @@ function toDateKey(iso: string, timeZone: string | undefined) {
   return `${lookup.year}-${lookup.month}-${lookup.day}`;
 }
 
-function monthRange(cursor: Date) {
-  const year = cursor.getUTCFullYear();
-  const month = cursor.getUTCMonth();
-  const start = new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10);
-  const end = new Date(Date.UTC(year, month + 1, 0)).toISOString().slice(0, 10);
-  return { start, end };
+/** Experts can be booked up to 90 days ahead (booking_horizon_days()), and
+ * get_bookable_slots() serves at most ~31 days per call, so the whole
+ * window is loaded as three ranges at once. */
+const HORIZON_RANGES: [number, number][] = [
+  [0, 30],
+  [31, 61],
+  [62, 90],
+];
+
+function utcDayPlus(days: number) {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + days)).toISOString().slice(0, 10);
 }
 
-function monthLabel(cursor: Date) {
-  return cursor.toLocaleDateString(undefined, { month: "long", year: "numeric", timeZone: "UTC" });
+/** "2026-11" -> "November 2026". */
+function monthLabel(month: string) {
+  const [year, mon] = month.split("-").map(Number);
+  return new Date(Date.UTC(year, mon - 1, 1)).toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 }
 
 type SlotsResult = { key: string; slots: BookableSlot[] };
@@ -126,10 +138,9 @@ export function RailSelect({
     availableFormats.length === 1 ? availableFormats[0] : null,
   );
   const [customerTimezone] = useState(detectTimezone);
-  const [monthCursor, setMonthCursor] = useState(() => {
-    const now = new Date();
-    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  });
+  // The month the client chose with the arrows ("YYYY-MM"); null = the
+  // first month that has free times.
+  const [chosenMonth, setChosenMonth] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<BookableSlot | null>(null);
@@ -137,7 +148,7 @@ export function RailSelect({
   const [authTab, setAuthTab] = useState<"login" | "signup">("login");
 
   const loadKey =
-    duration && format ? `${duration}|${format}|${monthCursor.toISOString()}|${attempt}` : null;
+    duration && format ? `${duration}|${format}|${attempt}` : null;
 
   const [slotsResult, setSlotsResult] = useState<SlotsResult | null>(null);
   const [slotsFetchError, setSlotsFetchError] = useState<SlotsFetchError | null>(null);
@@ -145,17 +156,22 @@ export function RailSelect({
   useEffect(() => {
     if (!loadKey || !duration || !format) return;
     let cancelled = false;
-    const { start, end } = monthRange(monthCursor);
-    fetchBookableSlotsAction({
-      expertSlug,
-      durationMinutes: duration,
-      sessionFormat: format,
-      rangeStart: start,
-      rangeEnd: end,
-      customerTimezone: customerTimezone || undefined,
-    })
-      .then((result) => {
-        if (!cancelled) setSlotsResult({ key: loadKey, slots: result });
+    Promise.all(
+      HORIZON_RANGES.map(([from, to]) =>
+        fetchBookableSlotsAction({
+          expertSlug,
+          durationMinutes: duration,
+          sessionFormat: format,
+          rangeStart: utcDayPlus(from),
+          rangeEnd: utcDayPlus(to),
+          customerTimezone: customerTimezone || undefined,
+        }),
+      ),
+    )
+      .then((results) => {
+        const seen = new Set<string>();
+        const slots = results.flat().filter((slot) => !seen.has(slot.startAt) && seen.add(slot.startAt));
+        if (!cancelled) setSlotsResult({ key: loadKey, slots });
       })
       .catch(() => {
         if (!cancelled) {
@@ -183,7 +199,14 @@ export function RailSelect({
     return map;
   }, [loadKey, slotsResult, customerTimezone]);
 
-  const availableDates = useMemo(() => Array.from(slotsByDate.keys()).sort(), [slotsByDate]);
+  const allDates = useMemo(() => Array.from(slotsByDate.keys()).sort(), [slotsByDate]);
+  // Only months with free times can be shown, so the arrows skip empty
+  // months and never reach back before the first bookable day.
+  const availableMonths = useMemo(() => Array.from(new Set(allDates.map((date) => date.slice(0, 7)))), [allDates]);
+  const viewMonth =
+    chosenMonth && availableMonths.includes(chosenMonth) ? chosenMonth : (availableMonths[0] ?? null);
+  const monthIndex = viewMonth ? availableMonths.indexOf(viewMonth) : -1;
+  const availableDates = viewMonth ? allDates.filter((date) => date.startsWith(viewMonth)) : [];
   const timesForSelectedDate = selectedDate ? (slotsByDate.get(selectedDate) ?? []) : [];
 
   // --- Hold creation -------------------------------------------------
@@ -339,37 +362,37 @@ export function RailSelect({
           <legend style={{ width: "100%" }}>
             <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
               <span>Day</span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 400 }}>
-                <button
-                  type="button"
-                  className="rbtn"
-                  style={{ width: 32, height: 32 }}
-                  onClick={() =>
-                    setMonthCursor((c) => new Date(Date.UTC(c.getUTCFullYear(), c.getUTCMonth() - 1, 1)))
-                  }
-                  aria-label="Previous month"
-                >
-                  <span className="ms" aria-hidden="true">
-                    chevron_left
+              {viewMonth ? (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 400 }}>
+                  <button
+                    type="button"
+                    className="rbtn"
+                    style={{ width: 32, height: 32 }}
+                    disabled={monthIndex <= 0}
+                    onClick={() => setChosenMonth(availableMonths[monthIndex - 1])}
+                    aria-label="Previous month with free times"
+                  >
+                    <span className="ms" aria-hidden="true">
+                      chevron_left
+                    </span>
+                  </button>
+                  <span className="muted" style={{ fontSize: 14, minWidth: 110, textAlign: "center" }}>
+                    {monthLabel(viewMonth)}
                   </span>
-                </button>
-                <span className="muted" style={{ fontSize: 14, minWidth: 110, textAlign: "center" }}>
-                  {monthLabel(monthCursor)}
+                  <button
+                    type="button"
+                    className="rbtn"
+                    style={{ width: 32, height: 32 }}
+                    disabled={monthIndex >= availableMonths.length - 1}
+                    onClick={() => setChosenMonth(availableMonths[monthIndex + 1])}
+                    aria-label="Next month with free times"
+                  >
+                    <span className="ms" aria-hidden="true">
+                      chevron_right
+                    </span>
+                  </button>
                 </span>
-                <button
-                  type="button"
-                  className="rbtn"
-                  style={{ width: 32, height: 32 }}
-                  onClick={() =>
-                    setMonthCursor((c) => new Date(Date.UTC(c.getUTCFullYear(), c.getUTCMonth() + 1, 1)))
-                  }
-                  aria-label="Next month"
-                >
-                  <span className="ms" aria-hidden="true">
-                    chevron_right
-                  </span>
-                </button>
-              </span>
+              ) : null}
             </span>
           </legend>
 
@@ -383,7 +406,7 @@ export function RailSelect({
             </p>
           ) : availableDates.length === 0 ? (
             <p className="notice" style={{ margin: 0 }}>
-              No free times in {monthLabel(monthCursor)}. Try the next month or another session length.
+              No free times in the next 90 days for this session length. Try another length or format.
             </p>
           ) : (
             <div className="opt-grid c5">

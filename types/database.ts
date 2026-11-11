@@ -1505,6 +1505,15 @@ export type Database = {
           starting_price: number
         }[]
       }
+      get_platform_stats_public: {
+        Args: never
+        Returns: {
+          clients_served: number
+          live_experts: number
+          sessions_booked: number
+          topics: number
+        }[]
+      }
       get_expert_giving_public: {
         Args: { p_slug?: string }
         Returns: {

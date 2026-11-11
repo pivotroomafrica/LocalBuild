@@ -1,14 +1,28 @@
 import Link from "next/link";
-import { getCategoryNamesForRequest, getDirectoryForRequest } from "@/lib/public/cached";
+import { getDirectoryForRequest } from "@/lib/public/cached";
+import { createAnonClient } from "@/lib/supabase/anon";
+import { CountUp } from "@/components/site/CountUp";
 import { initialsOf } from "@/components/site/format";
 import { AboutRules } from "@/components/site/AboutRules";
 
 export const metadata = { title: "About — Pivotroom" };
 
 const VETTING = [
-  { n: "01", title: "They apply", body: "With a written application about what they have built, who they help and what they charge." },
-  { n: "02", title: "We check who they are", body: "Our team reviews every application and the track record behind it before anything goes live." },
-  { n: "03", title: "We test the fit", body: "Can they give a plain answer to a real problem in one session? If not, they are not listed." },
+  {
+    n: "01",
+    title: "They apply",
+    body: "With a written application about what they have built, who they help and what they charge.",
+  },
+  {
+    n: "02",
+    title: "We check who they are",
+    body: "Our team reviews every application and the track record behind it before anything goes live.",
+  },
+  {
+    n: "03",
+    title: "We test the fit",
+    body: "Can they give a plain answer to a real problem in one session? If not, they are not listed.",
+  },
   {
     n: "04",
     title: "Clients keep them honest",
@@ -16,27 +30,47 @@ const VETTING = [
   },
 ];
 
-/** People named in the website design. Add the fourth team member once
- * their role is confirmed. */
-const TEAM = [
-  { name: "Hailemichael Adugna", role: "Co-founder and CEO" },
-  { name: "Lidiya Fitsum", role: "Co-founder and COO" },
+/** The team. `expertSlug`: use the photo from that person's published
+ * expert profile; `photo`: a file in public/team/. Initials otherwise. */
+const TEAM: { name: string; role: string; expertSlug?: string; photo?: string }[] = [
+  { name: "Hailemichael Adugna", role: "Co-founder and CEO", expertSlug: "hailemichael-adugna" },
+  { name: "Lidiya Fitsum", role: "Co-founder and COO", expertSlug: "lidiya-fitsum" },
   { name: "Mahder Weldetensay", role: "Marketing manager" },
 ];
 
-/** About (website design). The "Pivotroom today" figures are live counts
- * from the published directory, never fixed marketing numbers. */
+/** Live counts (057); zeros if the database can't be reached. */
+async function getPlatformStats() {
+  const { data, error } = await createAnonClient().rpc("get_platform_stats_public").maybeSingle();
+  if (error || !data) return { liveExperts: 0, topics: 0, sessionsBooked: 0, clientsServed: 0 };
+  return {
+    liveExperts: Number(data.live_experts),
+    topics: Number(data.topics),
+    sessionsBooked: Number(data.sessions_booked),
+    clientsServed: Number(data.clients_served),
+  };
+}
+
+/** About (website design). "Pivotroom today" shows live counts read on
+ * every visit, never fixed marketing numbers. */
 export default async function AboutPage() {
-  const [experts, categories] = await Promise.all([getDirectoryForRequest(), getCategoryNamesForRequest()]);
-  const sessions = experts.reduce((sum, expert) => sum + expert.stats.sessionsCompleted, 0);
+  const [stats, experts] = await Promise.all([getPlatformStats(), getDirectoryForRequest()]);
+  const photoBySlug = new Map(experts.map((expert) => [expert.slug, expert.photoUrl]));
 
   const figures = [
-    { value: String(experts.length), label: experts.length === 1 ? "Vetted expert you can book today" : "Vetted experts you can book today" },
-    { value: String(categories.length), label: "Topics, from raising money to exporting" },
-    ...(sessions > 0
-      ? [{ value: String(sessions), label: sessions === 1 ? "Session completed so far" : "Sessions completed so far" }]
-      : []),
-  ];
+    {
+      value: stats.liveExperts,
+      label: stats.liveExperts === 1 ? "Vetted expert you can book today" : "Vetted experts you can book today",
+    },
+    { value: stats.topics, label: "Topics, from raising money to exporting" },
+    {
+      value: stats.sessionsBooked,
+      label: stats.sessionsBooked === 1 ? "Session booked so far" : "Sessions booked so far",
+    },
+    {
+      value: stats.clientsServed,
+      label: stats.clientsServed === 1 ? "Client who has booked an expert" : "Clients who have booked an expert",
+    },
+  ].filter((figure) => figure.value > 0);
 
   return (
     <>
@@ -87,24 +121,28 @@ export default async function AboutPage() {
               who opened the second branch, signed the first export contract, won the bank loan or lost it and learned
               why.
             </p>
-            <p style={{ margin: 0 }}>If you knew one of them, you could ask. Most people don&apos;t. So they guess, and guessing is expensive.</p>
             <p style={{ margin: 0 }}>
-              Pivotroom changes who gets to ask. Find the people whose experience fits, see their price up front,
-              and meet them on Google Meet or in person.
+              If you knew one of them, you could ask. Most people don&apos;t. So they guess, and guessing is expensive.
             </p>
-            <p style={{ margin: 0 }}>The expert is paid for their time. You leave with an answer, not a reading list.</p>
+            <p style={{ margin: 0 }}>
+              Pivotroom changes who gets to ask. Find the people whose experience fits, see their price up front, and
+              meet them on Google Meet or in person.
+            </p>
+            <p style={{ margin: 0 }}>
+              The expert is paid for their time. You leave with an answer, not a reading list.
+            </p>
           </div>
         </div>
       </section>
 
-      {experts.length > 0 ? (
+      {figures.length > 0 ? (
         <section style={{ background: "#ffffff" }}>
           <div className="wrap stack" style={{ paddingBlockEnd: "clamp(80px, 9vw, 128px)", gap: 40 }}>
             <h2 className="h2">Pivotroom today</h2>
             <div className="nums">
               {figures.map((figure) => (
                 <div key={figure.label}>
-                  <span className="d num">{figure.value}</span>
+                  <CountUp value={figure.value} className="d num" />
                   <span className="muted">{figure.label}</span>
                 </div>
               ))}
@@ -151,23 +189,31 @@ export default async function AboutPage() {
             </p>
           </div>
           <div className="team">
-            {TEAM.map((person) => (
-              <div key={person.name} className="stack" style={{ gap: 14 }}>
-                <div className="ph">
-                  <span className="initials" aria-hidden="true">
-                    {initialsOf(person.name)}
-                  </span>
+            {TEAM.map((person) => {
+              const photo = person.photo ?? (person.expertSlug ? photoBySlug.get(person.expertSlug) : null);
+              return (
+                <div key={person.name} className="stack" style={{ gap: 14 }}>
+                  <div className="ph">
+                    {photo ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- signed storage URL or static file
+                      <img src={photo} alt={person.name} />
+                    ) : (
+                      <span className="initials" aria-hidden="true">
+                        {initialsOf(person.name)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="stack" style={{ gap: 2 }}>
+                    <span className="d" style={{ fontSize: 20 }}>
+                      {person.name}
+                    </span>
+                    <span className="muted" style={{ fontSize: 15 }}>
+                      {person.role}
+                    </span>
+                  </div>
                 </div>
-                <div className="stack" style={{ gap: 2 }}>
-                  <span className="d" style={{ fontSize: 20 }}>
-                    {person.name}
-                  </span>
-                  <span className="muted" style={{ fontSize: 15 }}>
-                    {person.role}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
