@@ -26,7 +26,12 @@ export function ExpertCard({ expert, showFormat = false }: { expert: PublicDirec
       <div className="meta">
         <div className="nmrow">
           <span className="nm">{expert.fullName}</span>
-          <span className="ms vt" role="img" aria-label="Vetted">
+          <span
+            className={expert.giving ? "ms vt gold" : "ms vt"}
+            role="img"
+            aria-label={expert.giving ? `Vetted, gives ${expert.giving.percent}% to ${expert.giving.ngoName}` : "Vetted"}
+            title={expert.giving ? `Gives ${expert.giving.percent}% to ${expert.giving.ngoName}` : undefined}
+          >
             verified
           </span>
         </div>

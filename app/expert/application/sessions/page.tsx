@@ -3,6 +3,7 @@ import { ensureExpertProfileDraft } from "@/lib/expert/actions";
 import { getExpertApplicationData } from "@/lib/expert/data";
 import { ExpertApplicationNav } from "@/components/layout/ExpertApplicationNav";
 import { SessionPricingForm } from "@/components/expert/SessionPricingForm";
+import { GivingForm } from "@/components/expert/GivingForm";
 import { fetchPlatformPricing } from "@/lib/pricing/platform";
 import type { SessionDuration } from "@/types/expert";
 
@@ -15,7 +16,11 @@ export default async function ExpertApplicationSessionsPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const data = await getExpertApplicationData(supabase, user!.id, ensured);
+  const [data, { data: ngos }, { data: account }] = await Promise.all([
+    getExpertApplicationData(supabase, user!.id, ensured),
+    supabase.from("ngos").select("id, name").eq("is_active", true).order("name"),
+    supabase.from("profiles").select("full_name").eq("id", user!.id).maybeSingle(),
+  ]);
   const expertProfile = data?.expertProfile;
   const offerings = data?.sessionOfferings ?? [];
 
@@ -65,6 +70,13 @@ export default async function ExpertApplicationSessionsPage() {
           initialInPersonEnabled={initialInPersonEnabled}
           initialResponseTime={expertProfile?.response_time ?? null}
           pricing={pricing}
+        />
+
+        <GivingForm
+          ngos={ngos ?? []}
+          initialNgoId={expertProfile?.supported_ngo_id ?? null}
+          initialPercent={expertProfile?.donation_percent ?? null}
+          firstName={(account?.full_name ?? "").split(/\s+/)[0]}
         />
       </div>
     </div>

@@ -78,6 +78,7 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
       { href: "/admin/bookings", label: "Bookings", icon: "event" },
       { href: "/admin/payments", label: "Payments", icon: "payments", badge: adminCounts.payments },
       { href: "/admin/people", label: "Clients & experts", icon: "group" },
+      { href: "/admin/ngos", label: "NGOs", icon: "volunteer_activism" },
     ];
     subtitle = "Admin";
   } else if (area === "expert" && isApprovedExpert) {

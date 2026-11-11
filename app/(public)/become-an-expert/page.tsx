@@ -117,7 +117,7 @@ export default async function BecomeAnExpertPage({ searchParams }: { searchParam
           </h1>
           <p className="xh-p">
             Somewhere in Ethiopia a founder is about to make a mistake you learned from years ago. On Pivotroom they
-            book an hour with you and pay before it starts. You set the price. You choose the hours.
+            book an hour with you.
           </p>
           {from === "availability" ? (
             <p className="notice" style={{ margin: 0 }}>

@@ -36,6 +36,9 @@ export default async function AdminExpertDetailPage({ params }: PageProps<"/admi
   }
 
   const { expertProfile, categoryIds, sessionOfferings } = data;
+  const { data: ngo } = expertProfile.supported_ngo_id
+    ? await supabase.from("ngos").select("name, is_active").eq("id", expertProfile.supported_ngo_id).maybeSingle()
+    : { data: null };
 
   const [identity, photoUrl, allCategories, { data: reviews }] = await Promise.all([
     getApplicantIdentity(supabase, expertProfile.user_id),
@@ -149,6 +152,24 @@ export default async function AdminExpertDetailPage({ params }: PageProps<"/admi
           selectedCategoryIds={categoryIds}
         />
       </details>
+
+      <section className="panel stack" style={{ gap: 8 }}>
+        <h2 className="ws-h2">Giving back</h2>
+        {ngo && expertProfile.donation_percent ? (
+          <p style={{ margin: 0 }}>
+            <span className="ms gold-mark" aria-hidden="true" style={{ fontSize: 18, verticalAlign: -3 }}>
+              verified
+            </span>{" "}
+            Gives <strong>{expertProfile.donation_percent}%</strong> of session earnings to <strong>{ngo.name}</strong>
+            {ngo.is_active ? "" : " (hidden by admin, so not shown on the profile)"}.{" "}
+            <Link href="/admin/ngos">Manage NGOs</Link>
+          </p>
+        ) : (
+          <p className="muted" style={{ margin: 0 }}>
+            No organisation chosen.
+          </p>
+        )}
+      </section>
 
       <section className="panel stack" style={{ gap: 8 }}>
         <h2 className="ws-h2">Sessions</h2>

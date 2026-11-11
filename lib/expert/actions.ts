@@ -488,3 +488,37 @@ export async function cancelExpertBookingAction(
   revalidatePath("/expert/dashboard");
   return { success: true };
 }
+
+/**
+ * The expert's pledge of a share of their earnings to an NGO (056).
+ * Choosing "none" clears both fields. Shown publicly with a gold
+ * verified mark once the profile is published.
+ */
+export async function saveGivingAction(_prevState: ExpertActionState, formData: FormData): Promise<ExpertActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be logged in to do that." };
+
+  const ngoId = String(formData.get("ngo_id") ?? "").trim();
+  let percent: number | null = null;
+  if (ngoId) {
+    percent = Number(formData.get("donation_percent"));
+    if (!Number.isInteger(percent) || percent < 1 || percent > 100) {
+      return { error: "Choose a whole percentage from 1 to 100." };
+    }
+    const { data: ngo } = await supabase.from("ngos").select("id").eq("id", ngoId).eq("is_active", true).maybeSingle();
+    if (!ngo) return { error: "That organisation is no longer on the list. Please choose another." };
+  }
+
+  const { error } = await supabase
+    .from("expert_profiles")
+    .update({ supported_ngo_id: ngoId || null, donation_percent: ngoId ? percent : null })
+    .eq("user_id", user.id);
+  if (error) return { error: GENERIC_ERROR };
+
+  revalidatePath("/expert/application", "layout");
+  invalidatePublicExperts();
+  return { success: true };
+}

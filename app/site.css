@@ -4496,3 +4496,140 @@
   align-items: center;
   gap: 12px;
 }
+
+/* Giving back: gold verified mark and the pledge box (056). */
+.pr {
+  --pr-gold: #b7860b;
+  --pr-gold-tint: #fdf6e3;
+  --pr-gold-line: #f0dfae;
+}
+.pr .vt.gold,
+.pr .gold-mark {
+  color: var(--pr-gold);
+}
+.pr .pill-blue.pill-gold {
+  background: var(--pr-gold-tint);
+  color: #7a5a06;
+}
+.pr .pill-blue.pill-gold .ms {
+  color: var(--pr-gold);
+}
+.pr .giving-box {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  border: 1px solid var(--pr-gold-line);
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fffaf0 0%, var(--pr-gold-tint) 100%);
+}
+.pr .giving-box p {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.5;
+  color: #3d2e05;
+}
+.pr .giving-box strong {
+  font-weight: 700;
+}
+.pr .giving-icon {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--pr-gold);
+  box-shadow: 0 1px 3px rgba(122, 90, 6, 0.15);
+}
+.pr .giving-icon .ms {
+  font-size: 24px;
+}
+.pr .giveback-band {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+.pr .giveback-band .gold-mark {
+  flex: none;
+  font-size: 40px;
+}
+.pr .giving-pct {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pr .giving-pct-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.pr .giving-pct-row input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--pr-gold);
+}
+.pr .giving-pct-value {
+  min-width: 56px;
+  font-size: 22px;
+  font-weight: 700;
+  text-align: right;
+}
+
+/* Admin NGO list. */
+.pr .ngo-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.pr .ngo-add .input {
+  flex: 1 1 280px;
+}
+.pr .ngo-add .notice {
+  flex-basis: 100%;
+  margin: 0;
+}
+.pr .ngo-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pr .ngo-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-block: 12px;
+  border-top: 1px solid var(--pr-line);
+}
+.pr .ngo-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+.pr .ngo-edit {
+  border: 0;
+  background: none;
+  padding: 4px;
+  color: var(--pr-slate);
+  cursor: pointer;
+  border-radius: 8px;
+}
+.pr .ngo-edit:hover {
+  background: var(--pr-mist);
+  color: var(--pr-ink);
+}
+.pr .ngo-edit .ms {
+  font-size: 18px;
+}
+.pr .ngo-rename {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pr .ngo-rename .input {
+  flex: 1 1 240px;
+  min-height: 44px;
+  padding-block: 8px;
+}

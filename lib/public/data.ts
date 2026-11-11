@@ -16,6 +16,9 @@ type TypedClient = SupabaseClient<Database>;
  * /expert/application/preview) resolves the photo to a URL here, once,
  * server-side, before anything reaches a component.
  */
+/** An expert's pledge of part of their earnings to an NGO (056). */
+export type ExpertGiving = { ngoName: string; percent: number };
+
 export type PublicProfileData = {
   slug: string;
   fullName: string;
@@ -42,6 +45,7 @@ export type PublicProfileData = {
   experience: ExperienceEntry[];
   stats: ExpertPublicStats;
   reviews: PublicReview[];
+  giving: ExpertGiving | null;
 };
 
 export type ExpertResponseTime = "few_hours" | "one_day" | "two_days";
@@ -78,6 +82,10 @@ export type PublicReview = {
 };
 
 const EMPTY_STATS: ExpertPublicStats = { sessionsCompleted: 0, reviewCount: 0, ratingAvg: null, isTopExpert: false };
+
+function toGiving(row: { ngo_name: string | null; donation_percent: number | null }): ExpertGiving | null {
+  return row.ngo_name && row.donation_percent ? { ngoName: row.ngo_name, percent: row.donation_percent } : null;
+}
 
 function toResponseTime(value: string | null | undefined): ExpertResponseTime | null {
   return value === "few_hours" || value === "one_day" || value === "two_days" ? value : null;
@@ -116,6 +124,7 @@ export type PublicDirectoryCard = {
   inPersonEnabled: boolean;
   languages: string[];
   stats: ExpertPublicStats;
+  giving: ExpertGiving | null;
 };
 
 /**
@@ -151,11 +160,14 @@ export async function getExpertCategories(supabase: TypedClient): Promise<Expert
 export async function fetchPublicExpertDirectory(supabase: TypedClient): Promise<PublicDirectoryCard[]> {
   // GET (the function is STABLE/read-only) so supabase-js retries it on a
   // dropped connection -- it only auto-retries GET/HEAD/OPTIONS requests.
-  const [{ data, error }, pricing] = await Promise.all([
+  const [{ data, error }, pricing, { data: giving, error: givingError }] = await Promise.all([
     supabase.rpc("get_expert_directory_public_v2", undefined, { get: true }),
     fetchPlatformPricing(supabase),
+    supabase.rpc("get_expert_giving_public", {}, { get: true }),
   ]);
   if (error) throw new Error(`failed to load get_expert_directory_public_v2: ${describeSupabaseError(error)}`);
+  if (givingError) throw new Error(`failed to load get_expert_giving_public: ${describeSupabaseError(givingError)}`);
+  const givingBySlug = new Map((giving ?? []).map((row) => [row.slug, toGiving(row)]));
 
   const rows = data ?? [];
   const photoUrls = await getExpertPhotoUrls(
@@ -183,6 +195,7 @@ export async function fetchPublicExpertDirectory(supabase: TypedClient): Promise
       ratingAvg: row.rating_avg == null ? null : Number(row.rating_avg),
       isTopExpert: row.is_top_expert ?? false,
     },
+    giving: givingBySlug.get(row.slug!) ?? null,
   }));
 }
 
@@ -202,11 +215,13 @@ export async function fetchPublicExpertProfile(supabase: TypedClient, slug: stri
     { data: sessionTypes, error: sessionError },
     { data: reviews, error: reviewsError },
     pricing,
+    { data: giving, error: givingError },
   ] = await Promise.all([
     supabase.rpc("get_expert_profile_public_v2", { p_slug: slug }, { get: true }).maybeSingle(),
     supabase.rpc("get_expert_session_types_public", { p_slug: slug }, { get: true }),
     supabase.rpc("get_expert_reviews_public", { p_slug: slug }, { get: true }),
     fetchPlatformPricing(supabase),
+    supabase.rpc("get_expert_giving_public", { p_slug: slug }, { get: true }).maybeSingle(),
   ]);
   if (error) throw new Error(`failed to load get_expert_profile_public_v2: ${describeSupabaseError(error)}`);
   if (!profile) return null;
@@ -216,6 +231,7 @@ export async function fetchPublicExpertProfile(supabase: TypedClient, slug: stri
   if (reviewsError) {
     throw new Error(`failed to load get_expert_reviews_public: ${describeSupabaseError(reviewsError)}`);
   }
+  if (givingError) throw new Error(`failed to load get_expert_giving_public: ${describeSupabaseError(givingError)}`);
 
   const [photoUrl] = await getExpertPhotoUrls(supabase, [profile.profile_image_path]);
 
@@ -261,6 +277,7 @@ export async function fetchPublicExpertProfile(supabase: TypedClient, slug: stri
       durationMinutes: review.duration_minutes,
       createdAt: review.created_at,
     })),
+    giving: giving ? toGiving(giving) : null,
   };
 }
 
@@ -281,7 +298,12 @@ export async function toPreviewProfileData(
   categoryNames: string[],
 ): Promise<PublicProfileData> {
   const { expertProfile, sessionOfferings } = data;
-  const pricing = await fetchPlatformPricing(supabase);
+  const [pricing, { data: ngo }] = await Promise.all([
+    fetchPlatformPricing(supabase),
+    expertProfile.supported_ngo_id
+      ? supabase.from("ngos").select("name").eq("id", expertProfile.supported_ngo_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
 
   return {
     slug: expertProfile.slug,
@@ -318,6 +340,10 @@ export async function toPreviewProfileData(
     // A preview has no public activity yet.
     stats: EMPTY_STATS,
     reviews: [],
+    giving:
+      ngo && expertProfile.donation_percent
+        ? { ngoName: ngo.name, percent: expertProfile.donation_percent }
+        : null,
   };
 }
 

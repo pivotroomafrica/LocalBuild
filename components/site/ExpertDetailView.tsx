@@ -3,6 +3,7 @@ import { RESPONSE_TIME_LABELS, type PublicProfileData, type PublicReview } from 
 import type { RailBookingSnapshot } from "@/lib/booking/railData";
 import type { CustomerProfile, Industry } from "@/types/profile";
 import { BookingRail } from "@/components/booking/BookingRail";
+import { GivingBox } from "@/components/site/GivingBox";
 import { formatEtb, formatLine, initialsOf } from "@/components/site/format";
 
 type Props = {
@@ -124,11 +125,11 @@ export function ExpertDetailView({ profile, railAuth, railSnapshot }: Props) {
             </div>
             <div className="profile-id">
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                <span className="pill-blue">
+                <span className={profile.giving ? "pill-blue pill-gold" : "pill-blue"}>
                   <span className="ms" aria-hidden="true">
                     verified
                   </span>
-                  Vetted expert
+                  {profile.giving ? "Vetted expert · Gives back" : "Vetted expert"}
                 </span>
                 {stats.isTopExpert ? (
                   <span className="pill-blue" style={{ background: "#0d0f12", color: "#ffffff" }}>
@@ -200,6 +201,8 @@ export function ExpertDetailView({ profile, railAuth, railSnapshot }: Props) {
               </div>
             </div>
           </div>
+
+          {profile.giving ? <GivingBox giving={profile.giving} firstName={firstName} /> : null}
 
           {profile.shortBio || profile.whoIHelp ? (
             <section className="psec">

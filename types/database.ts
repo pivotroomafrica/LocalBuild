@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.18"
   }
   public: {
     Tables: {
@@ -656,6 +656,7 @@ export type Database = {
           created_at: string
           current_company: string | null
           current_position: string | null
+          donation_percent: number | null
           experience: Json
           expertise_summary: string | null
           headline: string | null
@@ -677,6 +678,7 @@ export type Database = {
           short_bio: string | null
           slug: string
           submitted_at: string | null
+          supported_ngo_id: string | null
           terms_accepted_at: string | null
           updated_at: string
           user_id: string
@@ -694,6 +696,7 @@ export type Database = {
           created_at?: string
           current_company?: string | null
           current_position?: string | null
+          donation_percent?: number | null
           experience?: Json
           expertise_summary?: string | null
           headline?: string | null
@@ -715,6 +718,7 @@ export type Database = {
           short_bio?: string | null
           slug: string
           submitted_at?: string | null
+          supported_ngo_id?: string | null
           terms_accepted_at?: string | null
           updated_at?: string
           user_id: string
@@ -732,6 +736,7 @@ export type Database = {
           created_at?: string
           current_company?: string | null
           current_position?: string | null
+          donation_percent?: number | null
           experience?: Json
           expertise_summary?: string | null
           headline?: string | null
@@ -753,6 +758,7 @@ export type Database = {
           short_bio?: string | null
           slug?: string
           submitted_at?: string | null
+          supported_ngo_id?: string | null
           terms_accepted_at?: string | null
           updated_at?: string
           user_id?: string
@@ -779,6 +785,13 @@ export type Database = {
             columns: ["reviewed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expert_profiles_supported_ngo_id_fkey"
+            columns: ["supported_ngo_id"]
+            isOneToOne: false
+            referencedRelation: "ngos"
             referencedColumns: ["id"]
           },
           {
@@ -998,6 +1011,38 @@ export type Database = {
           },
         ]
       }
+      ngos: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ngos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount_paid: number
@@ -1163,48 +1208,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      admin_people: {
-        Args: { p_kind?: string }
-        Returns: {
-          account_status: string
-          application_status: string | null
-          bookings_as_client: number
-          bookings_as_expert: number
-          city: string | null
-          country: string | null
-          created_at: string
-          email: string
-          expert_profile_id: string | null
-          full_name: string
-          phone: string | null
-          profile_status: string | null
-          role: string
-          user_id: string
-        }[]
-      }
-      admin_person: {
-        Args: { p_user_id: string }
-        Returns: {
-          account_status: string
-          application_status: string | null
-          city: string | null
-          client_job_title: string | null
-          client_linkedin: string | null
-          company_name: string | null
-          country: string | null
-          created_at: string
-          email: string
-          expert_linkedin: string | null
-          expert_profile_id: string | null
-          expert_slug: string | null
-          full_name: string
-          last_sign_in_at: string | null
-          phone: string | null
-          profile_status: string | null
-          role: string
-          user_id: string
-        }[]
-      }
       add_expert_monthly_rule: {
         Args: {
           p_day_of_month: number
@@ -1228,6 +1231,48 @@ export type Database = {
       admin_cancel_booking: {
         Args: { p_booking_reference: string; p_reason: string }
         Returns: undefined
+      }
+      admin_people: {
+        Args: { p_kind?: string }
+        Returns: {
+          account_status: string
+          application_status: string
+          bookings_as_client: number
+          bookings_as_expert: number
+          city: string
+          country: string
+          created_at: string
+          email: string
+          expert_profile_id: string
+          full_name: string
+          phone: string
+          profile_status: string
+          role: string
+          user_id: string
+        }[]
+      }
+      admin_person: {
+        Args: { p_user_id: string }
+        Returns: {
+          account_status: string
+          application_status: string
+          city: string
+          client_job_title: string
+          client_linkedin: string
+          company_name: string
+          country: string
+          created_at: string
+          email: string
+          expert_linkedin: string
+          expert_profile_id: string
+          expert_slug: string
+          full_name: string
+          last_sign_in_at: string
+          phone: string
+          profile_status: string
+          role: string
+          user_id: string
+        }[]
       }
       admin_release_booking_reservation: {
         Args: { p_booking_id: string }
@@ -1458,6 +1503,14 @@ export type Database = {
           slug: string
           starting_duration_minutes: number
           starting_price: number
+        }[]
+      }
+      get_expert_giving_public: {
+        Args: { p_slug?: string }
+        Returns: {
+          donation_percent: number
+          ngo_name: string
+          slug: string
         }[]
       }
       get_expert_match_candidates_public: {
