@@ -4726,27 +4726,29 @@
 .pr .profile-main .giving-box .giving-icon {
   display: none;
 }
+/* Reference proportions: two ~450px columns, 50px either side of the line. */
 @media (min-width: 1041px) {
   .pr .profile-cols {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    /* Each track holds a 450px column plus its 50px side of the gap. */
+    grid-template-columns: minmax(0, 500px) minmax(0, 500px);
+    justify-content: center;
     gap: 0;
-    max-width: 1040px;
     width: 100%;
     margin-inline: auto;
   }
   .pr .profile-main {
-    padding-inline-end: 52px;
+    padding-inline-end: 50px;
     border-inline-end: 1px solid var(--pr-line);
     gap: 40px;
   }
   .pr .profile-cols > .bookaside {
     max-width: none;
-    margin-inline-start: 52px;
+    margin-inline-start: 50px;
   }
 }
 @media (min-width: 1041px) {
   .pr .wrap.profile {
-    max-width: calc(1040px + 2 * var(--pr-gutter));
+    max-width: calc(1001px + 2 * var(--pr-gutter));
   }
 }
