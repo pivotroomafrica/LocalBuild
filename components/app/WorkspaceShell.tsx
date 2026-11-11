@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { signOutAction } from "@/lib/auth/actions";
+import { SignOutIconButton } from "@/components/site/SignOutIconButton";
 import { SiteLogo } from "@/components/site/SiteChrome";
 import { initialsOf } from "@/components/site/format";
 import { WorkspaceSidebarNav, type SidebarItem } from "@/components/app/WorkspaceSidebarNav";
@@ -52,7 +53,10 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
 
     if (area === "admin" && isAdmin) {
       const [{ count: applications }, { count: payments }] = await Promise.all([
-        supabase.from("expert_profiles").select("id", { count: "exact", head: true }).eq("application_status", "submitted"),
+        supabase
+          .from("expert_profiles")
+          .select("id", { count: "exact", head: true })
+          .eq("application_status", "submitted"),
         supabase
           .from("payments")
           .select("id", { count: "exact", head: true })
@@ -126,21 +130,24 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
             </Link>
             {area !== "client" ? <span className="ws-badge">{area === "admin" ? "Admin" : "Expert"}</span> : null}
           </span>
-          {area === "client" ? (
-            <Link href="/experts" className="btn btn-ink hide-sm">
-              Find an expert{" "}
-              <span className="ms af" aria-hidden="true">
-                arrow_forward
-              </span>
-            </Link>
-          ) : publicProfileHref ? (
-            <Link href={publicProfileHref} className="btn btn-line even">
-              Public profile{" "}
-              <span className="ms ao" aria-hidden="true">
-                arrow_outward
-              </span>
-            </Link>
-          ) : null}
+          <span className="ws-acts">
+            {area === "client" ? (
+              <Link href="/experts" className="btn btn-ink hide-sm">
+                Find an expert{" "}
+                <span className="ms af" aria-hidden="true">
+                  arrow_forward
+                </span>
+              </Link>
+            ) : publicProfileHref ? (
+              <Link href={publicProfileHref} className="btn btn-line even">
+                Public profile{" "}
+                <span className="ms ao" aria-hidden="true">
+                  arrow_outward
+                </span>
+              </Link>
+            ) : null}
+            <SignOutIconButton />
+          </span>
         </div>
       </header>
       <div className="ws-body">

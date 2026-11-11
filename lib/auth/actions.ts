@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { friendlyAuthError } from "@/lib/auth/errors";
 import {
@@ -196,10 +197,12 @@ export async function signUpForRailAction(
   return { success: true };
 }
 
+/** Signs out and goes to the home page. */
 export async function signOutAction() {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  redirect("/auth/login");
+  revalidatePath("/", "layout");
+  redirect("/");
 }
 
 /** Sign out, then sign in again and return to `next` (e.g. a session link

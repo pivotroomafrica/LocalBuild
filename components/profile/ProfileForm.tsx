@@ -7,6 +7,7 @@ import { SelectField } from "@/components/ui/SelectField";
 import { Button } from "@/components/ui/Button";
 import { FormMessage } from "@/components/ui/FormMessage";
 import { CountryCityFields } from "@/components/ui/CountryCityFields";
+import { PhoneField } from "@/components/ui/PhoneField";
 import {
   EMPLOYMENT_TYPE_LABELS,
   EMPLOYMENT_TYPES,
@@ -157,13 +158,7 @@ export function ProfileForm({ email, profile, customerProfile, industries }: Pro
           </p>
         </div>
 
-        <TextField
-          label="Phone"
-          name="phone"
-          type="tel"
-          defaultValue={profile.phone ?? ""}
-          placeholder="0912345678"
-        />
+        <PhoneField label="Phone" defaultValue={profile.phone} />
         <CountryCityFields defaultCountry={profile.country} defaultCity={profile.city} />
       </section>
 

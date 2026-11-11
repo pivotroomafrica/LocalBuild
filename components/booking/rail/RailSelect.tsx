@@ -26,6 +26,7 @@ import {
 } from "@/types/profile";
 import type { CustomerProfile, Industry } from "@/types/profile";
 import { CountryCityFields } from "@/components/ui/CountryCityFields";
+import { PhoneField } from "@/components/ui/PhoneField";
 
 type SessionOffering = { durationMinutes: number; price: number; currency: string };
 
@@ -521,7 +522,7 @@ export function RailSelect({
               ) : (
                 <>
                   <TextField label="Full name" name="full_name" required />
-                  <TextField label="Phone" name="phone" type="tel" required />
+                  <PhoneField label="Phone" required />
                   <CountryCityFields required />
                   <TextField label="Email" name="email" type="email" required />
                   <TextField label="Password" name="password" type="password" required />

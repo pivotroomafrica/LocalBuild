@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOutAction } from "@/lib/auth/actions";
+import { SignOutIconButton } from "@/components/site/SignOutIconButton";
 
 type Props = {
   isLoggedIn: boolean;
@@ -140,7 +141,10 @@ export function SiteChrome({ isLoggedIn, isApprovedExpert, isAdmin }: Props) {
           </nav>
           <div className="acts">
             {isLoggedIn ? (
-              <AccountMenu isApprovedExpert={isApprovedExpert} isAdmin={isAdmin} />
+              <>
+                <AccountMenu isApprovedExpert={isApprovedExpert} isAdmin={isAdmin} />
+                <SignOutIconButton />
+              </>
             ) : (
               <Link href="/auth/login" className="signin">
                 Sign in

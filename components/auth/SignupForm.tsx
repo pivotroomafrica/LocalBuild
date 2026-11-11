@@ -8,6 +8,7 @@ import { TextField } from "@/components/ui/TextField";
 import { Button } from "@/components/ui/Button";
 import { FormMessage } from "@/components/ui/FormMessage";
 import { CountryCityFields } from "@/components/ui/CountryCityFields";
+import { PhoneField } from "@/components/ui/PhoneField";
 
 const initialState: AuthActionState = {};
 
@@ -49,14 +50,7 @@ export function SignupForm() {
         autoComplete="email"
         required
       />
-      <TextField
-        label="Phone Number"
-        name="phone"
-        type="tel"
-        autoComplete="tel"
-        placeholder="0912345678"
-        required
-      />
+      <PhoneField label="Phone number" required />
       <CountryCityFields required />
       <TextField
         label="Password"
