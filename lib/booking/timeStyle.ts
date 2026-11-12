@@ -76,6 +76,28 @@ export function readStoredTimeStyle(): TimeStyle | null {
   }
 }
 
+const ZONE_KEY = "pr-client-zone";
+
+/** The clock the client chose by country/city, if it's a real zone. */
+export function readStoredClientZone(): string | null {
+  try {
+    const zone = window.localStorage.getItem(ZONE_KEY);
+    if (!zone) return null;
+    new Intl.DateTimeFormat("en", { timeZone: zone });
+    return zone;
+  } catch {
+    return null;
+  }
+}
+
+export function storeClientZone(zone: string) {
+  try {
+    window.localStorage.setItem(ZONE_KEY, zone);
+  } catch {
+    // Not remembered; the browser's zone is used next time.
+  }
+}
+
 export function storeTimeStyle(style: TimeStyle) {
   try {
     window.localStorage.setItem(STORAGE_KEY, style);

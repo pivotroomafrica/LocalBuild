@@ -158,6 +158,99 @@
   }
 }
 
+/* "Times for 🇬🇧 United Kingdom · Change": where the client is sets their
+ * clock. A country, and a city only where a country has several clocks. */
+.pr .place {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.pr .place-line {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  font-size: 14px;
+}
+.pr .place-line .cc-flag {
+  width: 20px;
+  height: 15px;
+  border-radius: 2px;
+  object-fit: cover;
+}
+.pr .place-change {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pr-blue);
+  font: inherit;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.pr .place-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--pr-line);
+  border-radius: 14px;
+  background: var(--pr-mist);
+}
+.pr .place-cities {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 6px;
+}
+.pr .place-cities button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 8px 10px;
+  border: 1px solid var(--pr-line);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--pr-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pr .place-cities button.on {
+  border-color: var(--pr-blue);
+  background: var(--pr-blue-tint);
+  color: var(--pr-blue);
+}
+.pr .place-city {
+  font-size: 14px;
+  font-weight: 600;
+}
+.pr .place-now {
+  font-size: 12px;
+  color: var(--pr-slate);
+}
+
+/* Abroad: their time big, Addis Ababa time under it. */
+.pr .chip.tchip {
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  line-height: 1.2;
+}
+.pr .tchip-addis {
+  font-size: 12px;
+  color: var(--pr-slate);
+}
+.pr .chip.tchip[aria-pressed="true"] .tchip-addis {
+  color: var(--pr-blue);
+}
+
 /* Time style switch: Ethiopian time or the 12-hour clock. */
 .pr .tstyle {
   display: grid;

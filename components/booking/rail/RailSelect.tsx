@@ -9,12 +9,17 @@ import {
   defaultTimeStyle,
   formatSlotTime,
   formatSlotTimeFull,
+  readStoredClientZone,
   readStoredTimeStyle,
+  storeClientZone,
   storeTimeStyle,
   styleTimeZone,
   type DayPart,
   type TimeStyle,
 } from "@/lib/booking/timeStyle";
+import { ADDIS, cityOf, countryOfZone, sameClock, zoneChoices } from "@/lib/geo/clientZone";
+import { CountrySelect, Flag, findCountry } from "@/components/ui/CountrySelect";
+import type { Country } from "@/lib/geo/countries";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
@@ -159,14 +164,41 @@ export function RailSelect({
   const [format, setFormat] = useState<SessionFormat | null>(
     availableFormats.length === 1 ? availableFormats[0] : null,
   );
-  const [customerTimezone] = useState(detectTimezone);
+  // The client's own clock: the country they picked (remembered), else the
+  // browser's zone, else Addis Ababa. Saved with the booking.
+  const [customerTimezone, setCustomerTimezone] = useState(
+    () => (typeof window === "undefined" ? null : readStoredClientZone()) ?? (detectTimezone() || ADDIS),
+  );
+  const clientCountry = findCountry(countryOfZone(customerTimezone) ?? "ET");
+  const abroad = clientCountry?.code !== "ET";
   const [timeStyle, setTimeStyle] = useState<TimeStyle>(
-    () => (typeof window === "undefined" ? null : readStoredTimeStyle()) ?? defaultTimeStyle(detectTimezone() || undefined),
+    () => (typeof window === "undefined" ? null : readStoredTimeStyle()) ?? defaultTimeStyle(customerTimezone || undefined),
   );
   const chooseTimeStyle = (style: TimeStyle) => {
     setTimeStyle(style);
     storeTimeStyle(style);
   };
+  const [placeOpen, setPlaceOpen] = useState(false);
+  const chooseZone = (zone: string) => {
+    setCustomerTimezone(zone);
+    storeClientZone(zone);
+    // Abroad, their own clock is the useful default; at home, Ethiopian.
+    chooseTimeStyle(countryOfZone(zone) === "ET" ? "ethiopian" : "12h");
+    setSelectedDate(null);
+    setSelectedSlot(null);
+  };
+  const chooseCountry = (country: Country) => {
+    const choices = zoneChoices(country.code);
+    if (choices.length === 0) return;
+    // One clock: done. Several: keep the current one if it's in this
+    // country, else the main city, and show the city list.
+    const keep = choices.find((c) => sameClock(c.zone, customerTimezone)) && countryOfZone(customerTimezone) === country.code;
+    chooseZone(keep ? customerTimezone : choices[0].zone);
+    if (choices.length === 1) setPlaceOpen(false);
+  };
+  // Days and times are read on this clock: Addis for Ethiopian time,
+  // otherwise theirs.
+  const displayZone = styleTimeZone(timeStyle, customerTimezone || undefined);
   // The month the client chose with the arrows ("YYYY-MM"); null = the
   // first month that has free times.
   const [chosenMonth, setChosenMonth] = useState<string | null>(null);
@@ -220,13 +252,13 @@ export function RailSelect({
     const map = new Map<string, BookableSlot[]>();
     const currentSlots = loadKey && slotsResult?.key === loadKey ? slotsResult.slots : [];
     for (const slot of currentSlots) {
-      const key = toDateKey(slot.startAt, customerTimezone || undefined);
+      const key = toDateKey(slot.startAt, displayZone);
       const bucket = map.get(key) ?? [];
       bucket.push(slot);
       map.set(key, bucket);
     }
     return map;
-  }, [loadKey, slotsResult, customerTimezone]);
+  }, [loadKey, slotsResult, displayZone]);
 
   const allDates = useMemo(() => Array.from(slotsByDate.keys()).sort(), [slotsByDate]);
   // Only months with free times can be shown, so the arrows skip empty
@@ -325,8 +357,10 @@ export function RailSelect({
     );
   }
 
-  const tzLabel =
-    customerTimezone === "Africa/Addis_Ababa" ? "Addis Ababa time" : customerTimezone ? `${customerTimezone} time` : "";
+  const tzLabel = customerTimezone ? `${cityOf(customerTimezone)} time` : "";
+  const placeChoices = clientCountry ? zoneChoices(clientCountry.code) : [];
+  // Abroad on their own clock: each time also shows the Addis Ababa time.
+  const showAddisToo = timeStyle === "12h" && !sameClock(customerTimezone, ADDIS);
   const selectedOffering = sessionOfferings.find((offering) => offering.durationMinutes === duration) ?? null;
   // Times grouped by part of the day, in the order the day runs.
   const timeGroups = (["morning", "afternoon", "evening", "night"] as DayPart[])
@@ -428,6 +462,62 @@ export function RailSelect({
       {duration && format ? (
         <fieldset data-testid="rail-date-time">
           <legend>Day</legend>
+
+          {/* Where they are sets their clock: a country, and a city only
+              for the few countries with several clocks. */}
+          <div className="place">
+            <p className="place-line">
+              <span className="muted">Times for</span>{" "}
+              {clientCountry ? (
+                <>
+                  <Flag code={clientCountry.code} />{" "}
+                  <strong>{clientCountry.name}</strong>
+                  {placeChoices.length > 1 ? <span className="muted"> · {cityOf(customerTimezone)}</span> : null}
+                </>
+              ) : (
+                <strong>{cityOf(customerTimezone)}</strong>
+              )}{" "}
+              <button type="button" className="place-change" onClick={() => setPlaceOpen((open) => !open)}>
+                {placeOpen ? "Done" : "Change"}
+              </button>
+            </p>
+            {placeOpen ? (
+              <div className="place-panel">
+                <span className="label" id="rail-country-label">
+                  Where are you?
+                </span>
+                <CountrySelect
+                  value={clientCountry}
+                  onChange={chooseCountry}
+                  labelledBy="rail-country-label"
+                  listLabel="Your country"
+                />
+                {placeChoices.length > 1 ? (
+                  <>
+                    <span className="label">Which city&apos;s clock?</span>
+                    <div className="place-cities" role="radiogroup" aria-label="Your city's clock">
+                      {placeChoices.map((choice) => {
+                        const on = sameClock(choice.zone, customerTimezone);
+                        return (
+                          <button
+                            key={choice.zone}
+                            type="button"
+                            role="radio"
+                            aria-checked={on}
+                            className={on ? "on" : ""}
+                            onClick={() => chooseZone(choice.zone)}
+                          >
+                            <span className="place-city">{choice.city}</span>
+                            <span className="place-now">now {choice.now}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
 
           {slotsLoading ? (
             <div className="dstrip-skel" aria-busy="true">
@@ -577,8 +667,8 @@ export function RailSelect({
               className={timeStyle === "12h" ? "on" : ""}
               onClick={() => chooseTimeStyle("12h")}
             >
-              <span>12-hour</span>
-              <span className="tstyle-sub">{timeStyle === "12h" && tzLabel ? tzLabel : "AM / PM"}</span>
+              <span>{abroad ? "Your time" : "12-hour"}</span>
+              <span className="tstyle-sub">{abroad ? tzLabel : "AM / PM"}</span>
             </button>
           </div>
 
@@ -598,14 +688,19 @@ export function RailSelect({
                   <button
                     key={slot.startAt}
                     type="button"
-                    className="chip"
+                    className={showAddisToo ? "chip tchip" : "chip"}
                     aria-pressed={selectedSlot?.startAt === slot.startAt}
                     aria-label={`${formatSlotTimeFull(slot.startAt, timeStyle, customerTimezone || undefined)}${
-                      timeStyle === "ethiopian" ? ` (${formatSlotTime(slot.startAt, "12h", ADDIS_TIMEZONE)})` : ""
+                      timeStyle === "ethiopian" || showAddisToo
+                        ? ` (${formatSlotTime(slot.startAt, "12h", ADDIS_TIMEZONE)} in Addis Ababa)`
+                        : ""
                     }`}
                     onClick={() => setSelectedSlot(slot)}
                   >
                     {formatSlotTime(slot.startAt, timeStyle, customerTimezone || undefined)}
+                    {showAddisToo ? (
+                      <span className="tchip-addis">{formatSlotTime(slot.startAt, "12h", ADDIS_TIMEZONE)} Addis</span>
+                    ) : null}
                   </button>
                 ))}
               </div>
