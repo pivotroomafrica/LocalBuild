@@ -31,7 +31,8 @@ export function credibilityLine(expert: ExpertIdentity): string {
   return [expert.currentPosition, expert.currentCompany].filter(Boolean).join(" at ");
 }
 
-/** The one-line summary shown under a name: headline first, role second. */
+/** The one-line summary shown under a name on cards: their role ("Founder &
+ * CEO at Awash Logistics") first, the headline only if no role is set. */
 export function summaryLine(expert: ExpertIdentity): string {
-  return expert.headline || credibilityLine(expert);
+  return credibilityLine(expert) || expert.headline || "";
 }

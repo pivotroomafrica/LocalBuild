@@ -1,0 +1,187 @@
+/* Booking card day picker (RailSelect): month tabs with open-day counts and
+ * a swipeable strip of open days. Website tokens (--pr-*). */
+/* At most four months (90 days ahead), so the tabs wrap rather than
+ * scroll: every month stays visible. */
+.pr .mtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.pr .mtabs::-webkit-scrollbar {
+  display: none;
+}
+.pr .mtab {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 8px 0 14px;
+  border: 1px solid var(--pr-line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--pr-ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 160ms var(--pr-ease),
+    background-color 160ms var(--pr-ease);
+}
+.pr .mtab:hover {
+  border-color: var(--pr-slate-light);
+}
+.pr .mtab-count {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--pr-mist);
+  color: var(--pr-slate);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.pr .mtab.on {
+  border-color: var(--pr-ink);
+  background: var(--pr-ink);
+  color: #ffffff;
+}
+.pr .mtab.on .mtab-count {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+.pr .dstrip-wrap {
+  position: relative;
+}
+.pr .dstrip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 2px;
+  padding: 2px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.pr .dstrip::-webkit-scrollbar {
+  display: none;
+}
+.pr .dcard {
+  flex: none;
+  width: 76px;
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  scroll-snap-align: start;
+  border: 1px solid var(--pr-line);
+  border-radius: 14px;
+  background: #ffffff;
+  color: var(--pr-ink);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color 160ms var(--pr-ease),
+    background-color 160ms var(--pr-ease),
+    transform 120ms var(--pr-ease);
+}
+.pr .dcard:hover {
+  border-color: var(--pr-slate-light);
+}
+.pr .dcard:active {
+  transform: translateY(1px);
+}
+.pr .dcard-wd {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pr-slate);
+}
+.pr .dcard-d {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.pr .dcard-n {
+  font-size: 12px;
+  color: var(--pr-slate);
+}
+.pr .dcard.on {
+  border-color: var(--pr-blue);
+  background: var(--pr-blue-tint);
+  color: var(--pr-blue);
+  box-shadow: inset 0 0 0 1px var(--pr-blue);
+}
+.pr .dcard.on .dcard-wd,
+.pr .dcard.on .dcard-n {
+  color: var(--pr-blue);
+}
+
+/* Arrows for mouse users; touch screens just swipe. */
+.pr .dstrip-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--pr-line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--pr-ink);
+  box-shadow: 0 4px 12px rgba(13, 15, 18, 0.08);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+.pr .dstrip-arrow.prev {
+  left: -12px;
+}
+.pr .dstrip-arrow.next {
+  right: -12px;
+}
+.pr .dstrip-arrow .ms {
+  font-size: 20px;
+}
+@media (hover: none) {
+  .pr .dstrip-arrow {
+    display: none;
+  }
+}
+
+/* Loading placeholders in the same shape. */
+.pr .dstrip-skel .mtabs span,
+.pr .dstrip-skel .dcard {
+  border: 0;
+  background: linear-gradient(90deg, var(--pr-mist) 25%, #fbfbfc 50%, var(--pr-mist) 75%) 0 0 / 200% 100%;
+  animation: dstrip-shimmer 1.2s linear infinite;
+  cursor: default;
+}
+.pr .dstrip-skel .mtabs span {
+  flex: none;
+  width: 72px;
+  height: 40px;
+  border-radius: 999px;
+}
+@keyframes dstrip-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+.pr .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

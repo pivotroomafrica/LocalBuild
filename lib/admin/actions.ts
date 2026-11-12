@@ -199,7 +199,13 @@ export async function publishExpertAction(
   // service role: availability rows are the expert's own (RLS).
   const service = createServiceRoleClient();
   const today = new Date().toISOString().slice(0, 10);
-  const [{ count: ruleCount }, { count: oneOffCount }] = await Promise.all([
+  // Any of the three kinds counts: same weekdays every week (the monthly
+  // plan, 060), same dates every month, or an upcoming specific date.
+  const [{ count: weeklyCount }, { count: ruleCount }, { count: oneOffCount }] = await Promise.all([
+    service
+      .from("expert_weekly_availability_rules")
+      .select("id", { count: "exact", head: true })
+      .eq("expert_profile_id", expertProfileId),
     service
       .from("expert_monthly_availability_rules")
       .select("id", { count: "exact", head: true })
@@ -210,7 +216,7 @@ export async function publishExpertAction(
       .eq("expert_profile_id", expertProfileId)
       .gte("available_date", today),
   ]);
-  if (!ruleCount && !oneOffCount) {
+  if (!weeklyCount && !ruleCount && !oneOffCount) {
     return { error: "Cannot publish yet: the expert hasn't set any hours clients can book. Ask them to add availability first." };
   }
 

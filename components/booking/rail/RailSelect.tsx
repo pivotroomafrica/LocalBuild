@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import "./day-strip.css";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
@@ -90,6 +91,14 @@ function monthLabel(month: string) {
     year: "numeric",
     timeZone: "UTC",
   });
+}
+
+/** "2026-11" -> "Nov"; adds the year when it differs from the first tab's
+ * ("Jan 2027" after "Dec"). */
+function shortMonthLabel(month: string, firstMonth: string | undefined) {
+  const [year, mon] = month.split("-").map(Number);
+  const name = new Date(Date.UTC(year, mon - 1, 1)).toLocaleDateString(undefined, { month: "short", timeZone: "UTC" });
+  return firstMonth && firstMonth.slice(0, 4) !== month.slice(0, 4) ? `${name} ${year}` : name;
 }
 
 type SlotsResult = { key: string; slots: BookableSlot[] };
@@ -205,9 +214,23 @@ export function RailSelect({
   const availableMonths = useMemo(() => Array.from(new Set(allDates.map((date) => date.slice(0, 7)))), [allDates]);
   const viewMonth =
     chosenMonth && availableMonths.includes(chosenMonth) ? chosenMonth : (availableMonths[0] ?? null);
-  const monthIndex = viewMonth ? availableMonths.indexOf(viewMonth) : -1;
   const availableDates = viewMonth ? allDates.filter((date) => date.startsWith(viewMonth)) : [];
-  const timesForSelectedDate = selectedDate ? (slotsByDate.get(selectedDate) ?? []) : [];
+  // The month's first open day is picked for them until they tap another,
+  // so the times show without an extra tap.
+  const activeDate = selectedDate && availableDates.includes(selectedDate) ? selectedDate : (availableDates[0] ?? null);
+  const timesForSelectedDate = activeDate ? (slotsByDate.get(activeDate) ?? []) : [];
+  const stripRef = useRef<HTMLDivElement | null>(null);
+  const scrollStrip = (direction: 1 | -1) =>
+    stripRef.current?.scrollBy({ left: direction * stripRef.current.clientWidth * 0.8, behavior: "smooth" });
+  // Arrows only where there are more days to see, so they never sit on top
+  // of the first or last card.
+  const [stripEdges, setStripEdges] = useState({ start: true, end: true });
+  const measureStrip = (node: HTMLDivElement | null) => {
+    if (!node) return;
+    const start = node.scrollLeft <= 2;
+    const end = node.scrollLeft + node.clientWidth >= node.scrollWidth - 2;
+    setStripEdges((prev) => (prev.start === start && prev.end === end ? prev : { start, end }));
+  };
 
   // --- Hold creation -------------------------------------------------
   const [holdState, holdFormAction, holdPending] = useActionState(
@@ -357,49 +380,43 @@ export function RailSelect({
         </fieldset>
       ) : null}
 
+      {/* Days load once both choices are made; say so instead of showing
+          nothing, which read as "no dates available". */}
+      {!duration || !format ? (
+        <fieldset>
+          <legend>Day</legend>
+          <p className="notice" style={{ margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+            <span className="ms" aria-hidden="true" style={{ fontSize: 20 }}>
+              calendar_month
+            </span>
+            {!duration && !format && availableFormats.length > 1
+              ? "Choose a length and where to meet, and the open days will show here."
+              : !duration
+                ? "Choose a length, and the open days will show here."
+                : "Choose where to meet, and the open days will show here."}
+          </p>
+        </fieldset>
+      ) : null}
+
       {duration && format ? (
         <fieldset data-testid="rail-date-time">
-          <legend style={{ width: "100%" }}>
-            <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-              <span>Day</span>
-              {viewMonth ? (
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 400 }}>
-                  <button
-                    type="button"
-                    className="rbtn"
-                    style={{ width: 32, height: 32 }}
-                    disabled={monthIndex <= 0}
-                    onClick={() => setChosenMonth(availableMonths[monthIndex - 1])}
-                    aria-label="Previous month with free times"
-                  >
-                    <span className="ms" aria-hidden="true">
-                      chevron_left
-                    </span>
-                  </button>
-                  <span className="muted" style={{ fontSize: 14, minWidth: 110, textAlign: "center" }}>
-                    {monthLabel(viewMonth)}
-                  </span>
-                  <button
-                    type="button"
-                    className="rbtn"
-                    style={{ width: 32, height: 32 }}
-                    disabled={monthIndex >= availableMonths.length - 1}
-                    onClick={() => setChosenMonth(availableMonths[monthIndex + 1])}
-                    aria-label="Next month with free times"
-                  >
-                    <span className="ms" aria-hidden="true">
-                      chevron_right
-                    </span>
-                  </button>
-                </span>
-              ) : null}
-            </span>
-          </legend>
+          <legend>Day</legend>
 
           {slotsLoading ? (
-            <p className="muted" style={{ margin: 0, fontSize: 15 }}>
-              Loading available times…
-            </p>
+            <div className="dstrip-skel" aria-busy="true">
+              <span className="sr-only">Loading open days…</span>
+              <div className="mtabs" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="dstrip" aria-hidden="true">
+                <span className="dcard" />
+                <span className="dcard" />
+                <span className="dcard" />
+                <span className="dcard" />
+              </div>
+            </div>
           ) : slotsError ? (
             <p role="alert" className="notice err" style={{ margin: 0 }}>
               {slotsError}
@@ -409,35 +426,109 @@ export function RailSelect({
               No free times in the next 90 days for this session length. Try another length or format.
             </p>
           ) : (
-            <div className="opt-grid c5">
-              {availableDates.map((date) => {
-                const day = new Date(`${date}T00:00:00`);
-                return (
+            <>
+              {/* Only months with open days get a tab; the count tells
+                  them where the availability is before they tap. */}
+              <div className="mtabs" role="tablist" aria-label="Months with open days">
+                {availableMonths.map((month) => {
+                  const count = allDates.filter((date) => date.startsWith(month)).length;
+                  const on = month === viewMonth;
+                  return (
+                    <button
+                      key={month}
+                      type="button"
+                      role="tab"
+                      aria-selected={on}
+                      className={on ? "mtab on" : "mtab"}
+                      aria-label={`${monthLabel(month)}, ${count} open ${count === 1 ? "day" : "days"}`}
+                      onClick={() => {
+                        setChosenMonth(month);
+                        setSelectedDate(null);
+                        setSelectedSlot(null);
+                        stripRef.current?.scrollTo({ left: 0 });
+                      }}
+                    >
+                      <span className="mtab-name">{shortMonthLabel(month, availableMonths[0])}</span>
+                      <span className="mtab-count">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="dstrip-wrap">
+                {stripEdges.start ? null : (
                   <button
-                    key={date}
                     type="button"
-                    className="chip day"
-                    aria-pressed={selectedDate === date}
-                    aria-label={day.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
-                    onClick={() => {
-                      setSelectedDate(date);
-                      setSelectedSlot(null);
-                    }}
+                    className="dstrip-arrow prev"
+                    aria-label="Earlier days"
+                    onClick={() => scrollStrip(-1)}
                   >
-                    <span className="sub">{day.toLocaleDateString("en-GB", { weekday: "short" })}</span>
-                    <span className="big">{day.getDate()}</span>
+                    <span className="ms" aria-hidden="true">
+                      chevron_left
+                    </span>
                   </button>
-                );
-              })}
-            </div>
+                )}
+                <div
+                  key={viewMonth}
+                  className="dstrip"
+                  ref={(node) => {
+                    stripRef.current = node;
+                    measureStrip(node);
+                  }}
+                  onScroll={(e) => measureStrip(e.currentTarget)}
+                  role="group"
+                  aria-label={`Open days in ${monthLabel(viewMonth!)}`}
+                >
+                  {availableDates.map((date) => {
+                    const day = new Date(`${date}T00:00:00`);
+                    const open = slotsByDate.get(date)?.length ?? 0;
+                    const on = activeDate === date;
+                    return (
+                      <button
+                        key={date}
+                        type="button"
+                        className={on ? "dcard on" : "dcard"}
+                        aria-pressed={on}
+                        aria-label={`${day.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}, ${open} open ${open === 1 ? "time" : "times"}`}
+                        onClick={() => {
+                          setSelectedDate(date);
+                          setSelectedSlot(null);
+                        }}
+                      >
+                        <span className="dcard-wd">{day.toLocaleDateString("en-GB", { weekday: "short" })}</span>
+                        <span className="dcard-d num">{day.getDate()}</span>
+                        <span className="dcard-n">{open} open</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {stripEdges.end ? null : (
+                  <button
+                    type="button"
+                    className="dstrip-arrow next"
+                    aria-label="Later days"
+                    onClick={() => scrollStrip(1)}
+                  >
+                    <span className="ms" aria-hidden="true">
+                      chevron_right
+                    </span>
+                  </button>
+                )}
+              </div>
+            </>
           )}
         </fieldset>
       ) : null}
 
-      {duration && format && selectedDate && timesForSelectedDate.length > 0 ? (
+      {duration && format && activeDate && timesForSelectedDate.length > 0 ? (
         <fieldset>
           <legend>
-            Time{" "}
+            Times on{" "}
+            {new Date(`${activeDate}T00:00:00`).toLocaleDateString("en-GB", {
+              weekday: "short",
+              day: "numeric",
+              month: "short",
+            })}{" "}
             {tzLabel ? (
               <span className="muted" style={{ fontWeight: 400 }}>
                 · {tzLabel}
