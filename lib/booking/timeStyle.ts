@@ -1,5 +1,5 @@
 /**
- * How a booking time is shown: Ethiopian time (the day counted from 6am,
+ * How a booking time is shown: Ethiopian time for clients in Ethiopia (the day counted from 6am,
  * so 14:00 is "8:00 ከሰዓት") or the 12-hour clock (2:00 PM). Ethiopian time
  * is always worked out from Addis Ababa time -- it only exists there.
  * Nothing here is server-only.
@@ -62,20 +62,6 @@ export function formatSlotTimeFull(iso: string, style: TimeStyle, customerTimeZo
   return `${time} ${DAY_PART_LABELS[dayPartOf(iso, style, customerTimeZone)].am}`;
 }
 
-export const defaultTimeStyle = (customerTimeZone: string | undefined): TimeStyle =>
-  !customerTimeZone || customerTimeZone === ADDIS_TIMEZONE ? "ethiopian" : "12h";
-
-const STORAGE_KEY = "pr-time-style";
-
-export function readStoredTimeStyle(): TimeStyle | null {
-  try {
-    const value = window.localStorage.getItem(STORAGE_KEY);
-    return value === "ethiopian" || value === "12h" ? value : null;
-  } catch {
-    return null;
-  }
-}
-
 const ZONE_KEY = "pr-client-zone";
 
 /** The clock the client chose by country/city, if it's a real zone. */
@@ -95,13 +81,5 @@ export function storeClientZone(zone: string) {
     window.localStorage.setItem(ZONE_KEY, zone);
   } catch {
     // Not remembered; the browser's zone is used next time.
-  }
-}
-
-export function storeTimeStyle(style: TimeStyle) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, style);
-  } catch {
-    // Private mode or blocked storage: the choice just isn't remembered.
   }
 }

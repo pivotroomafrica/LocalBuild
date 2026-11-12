@@ -6,13 +6,10 @@ import {
   ADDIS_TIMEZONE,
   DAY_PART_LABELS,
   dayPartOf,
-  defaultTimeStyle,
   formatSlotTime,
   formatSlotTimeFull,
   readStoredClientZone,
-  readStoredTimeStyle,
   storeClientZone,
-  storeTimeStyle,
   styleTimeZone,
   type DayPart,
   type TimeStyle,
@@ -171,31 +168,25 @@ export function RailSelect({
   );
   const clientCountry = findCountry(countryOfZone(customerTimezone) ?? "ET");
   const abroad = clientCountry?.code !== "ET";
-  const [chosenTimeStyle, setTimeStyle] = useState<TimeStyle>(
-    () => (typeof window === "undefined" ? null : readStoredTimeStyle()) ?? defaultTimeStyle(customerTimezone || undefined),
-  );
-  // Ethiopian time is only offered in Ethiopia; abroad it's always their
-  // own clock, so there's one place that sets time (the country line).
-  const timeStyle: TimeStyle = abroad ? "12h" : chosenTimeStyle;
-  const chooseTimeStyle = (style: TimeStyle) => {
-    setTimeStyle(style);
-    storeTimeStyle(style);
-  };
+  // One rule, no switch: in Ethiopia, Ethiopian time; anywhere else, the
+  // client's own clock (set by the country line).
+  const timeStyle: TimeStyle = abroad ? "12h" : "ethiopian";
   const [placeOpen, setPlaceOpen] = useState(false);
-  const chooseZone = (zone: string) => {
+  const chooseZone = (zone: string, close = false) => {
     setCustomerTimezone(zone);
     storeClientZone(zone);
     setSelectedDate(null);
     setSelectedSlot(null);
+    if (close) setPlaceOpen(false);
   };
   const chooseCountry = (country: Country) => {
     const choices = zoneChoices(country.code);
     if (choices.length === 0) return;
-    // One clock: done. Several: keep the current one if it's in this
-    // country, else the main city, and show the city list.
+    // One clock: that's the whole choice, so close. Several: keep the
+    // current one if it's in this country, else the main city, and leave
+    // the city list open.
     const keep = choices.find((c) => sameClock(c.zone, customerTimezone)) && countryOfZone(customerTimezone) === country.code;
-    chooseZone(keep ? customerTimezone : choices[0].zone);
-    if (choices.length === 1) setPlaceOpen(false);
+    chooseZone(keep ? customerTimezone : choices[0].zone, choices.length === 1);
   };
   // Days and times are read on this clock: Addis for Ethiopian time,
   // otherwise theirs.
@@ -475,9 +466,11 @@ export function RailSelect({
               ) : (
                 <strong>{cityOf(customerTimezone)}</strong>
               )}{" "}
-              <button type="button" className="place-change" onClick={() => setPlaceOpen((open) => !open)}>
-                {placeOpen ? "Done" : "Change"}
-              </button>
+              {placeOpen ? null : (
+                <button type="button" className="place-change" onClick={() => setPlaceOpen(true)}>
+                  Change
+                </button>
+              )}
             </p>
             {placeOpen ? (
               <div className="place-panel">
@@ -503,7 +496,7 @@ export function RailSelect({
                             role="radio"
                             aria-checked={on}
                             className={on ? "on" : ""}
-                            onClick={() => chooseZone(choice.zone)}
+                            onClick={() => chooseZone(choice.zone, true)}
                           >
                             <span className="place-city">{choice.city}</span>
                             <span className="place-now">now {choice.now}</span>
@@ -513,6 +506,10 @@ export function RailSelect({
                     </div>
                   </>
                 ) : null}
+                {/* At the bottom, where the eye ends up after choosing. */}
+                <button type="button" className="btn btn-ink place-done" onClick={() => setPlaceOpen(false)}>
+                  Done
+                </button>
               </div>
             ) : null}
           </div>
@@ -646,33 +643,6 @@ export function RailSelect({
             })}
           </legend>
 
-          {/* In Ethiopia only: Ethiopian time (from 6am) or the 12-hour
-              clock, remembered. Abroad the country line already set it. */}
-          {abroad ? null : (
-            <div className="tstyle" role="radiogroup" aria-label="How to show times">
-              <button
-                type="button"
-                role="radio"
-                aria-checked={timeStyle === "ethiopian"}
-                className={timeStyle === "ethiopian" ? "on" : ""}
-                onClick={() => chooseTimeStyle("ethiopian")}
-              >
-                <span lang="am">በኢትዮጵያ ሰዓት</span>
-                <span className="tstyle-sub">Ethiopian time</span>
-              </button>
-              <button
-                type="button"
-                role="radio"
-                aria-checked={timeStyle === "12h"}
-                className={timeStyle === "12h" ? "on" : ""}
-                onClick={() => chooseTimeStyle("12h")}
-              >
-                <span>12-hour</span>
-                <span className="tstyle-sub">AM / PM</span>
-              </button>
-            </div>
-          )}
-
           {timeGroups.map((group) => (
             <div key={group.part} className="tgroup">
               <p className="tgroup-label">
@@ -702,13 +672,6 @@ export function RailSelect({
               </div>
             </div>
           ))}
-          {timeStyle === "ethiopian" && timesForSelectedDate.length > 0 ? (
-            <p className="tstyle-note">
-              On the 12-hour clock: {formatSlotTime(timesForSelectedDate[0].startAt, "12h", ADDIS_TIMEZONE)} –{" "}
-              {formatSlotTime(timesForSelectedDate[timesForSelectedDate.length - 1].startAt, "12h", ADDIS_TIMEZONE)}{" "}
-              Addis Ababa time.
-            </p>
-          ) : null}
         </fieldset>
       ) : null}
 
