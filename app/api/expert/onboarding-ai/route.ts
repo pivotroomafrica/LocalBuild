@@ -19,9 +19,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  // A real request is ~2 KB; refuse anything far larger before parsing it.
+  const MAX_BYTES = 64 * 1024;
+  if (Number(request.headers.get("content-length") ?? 0) > MAX_BYTES) {
+    return NextResponse.json({ error: "Too large" }, { status: 413 });
+  }
+
   let body: { kind?: string; step?: string; field?: string; tweak?: string; answers?: OnboardingAnswers };
   try {
-    body = await request.json();
+    const text = await request.text();
+    if (text.length > MAX_BYTES) return NextResponse.json({ error: "Too large" }, { status: 413 });
+    body = JSON.parse(text);
   } catch {
     return NextResponse.json({ error: "Bad request" }, { status: 400 });
   }

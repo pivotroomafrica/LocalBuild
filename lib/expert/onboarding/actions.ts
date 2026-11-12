@@ -17,6 +17,7 @@ import {
   fallbackChips,
   FALLBACK_PRICES,
   answersFrom,
+  emptyDrafts,
   fallbackDrafts,
   yearsLabel,
   type ChipStep,
@@ -68,9 +69,11 @@ function serviceClient() {
   }
 }
 
+/** Fails closed: if usage can't be checked, no paid AI call is made (the
+ * card just uses the built-in suggestions). */
 async function underCap(userId: string, kind: keyof typeof DAILY_CAP): Promise<boolean> {
   const service = serviceClient();
-  if (!service) return true;
+  if (!service) return false;
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { count, error } = await service
     .from("ai_onboarding_requests")
@@ -79,7 +82,7 @@ async function underCap(userId: string, kind: keyof typeof DAILY_CAP): Promise<b
     .eq("kind", kind)
     .eq("outcome", "ai")
     .gte("created_at", since);
-  if (error) return true;
+  if (error) return false;
   return (count ?? 0) < DAILY_CAP[kind];
 }
 
@@ -213,11 +216,13 @@ export async function draftProfileAction(
   options: { field?: DraftField; tweak?: string } = {},
 ): Promise<{ drafts: Drafts; source: Source }> {
   const ctx = await loadContext();
-  const answers = ctx ? clean(input, ctx.profile) : input;
-  const names = ctx ? await categoryNames(ctx.supabase, answers.categoryIds) : [];
+  // Signed out (or no expert profile): never touch the raw browser data.
+  if (!ctx) return { drafts: emptyDrafts(), source: "fallback" };
+  const answers = clean(input, ctx.profile);
+  const names = await categoryNames(ctx.supabase, answers.categoryIds);
   const fallback = { drafts: { ...answers.drafts, ...fallbackDrafts(answers, names) }, source: "fallback" as const };
   if (options.field) fallback.drafts = { ...answers.drafts, [options.field]: fallbackDrafts(answers, names)[options.field] };
-  if (!ctx || !aiConfigured()) return fallback;
+  if (!aiConfigured()) return fallback;
 
   if (!(await underCap(ctx.userId, "draft"))) {
     await logUsage(ctx.userId, "draft", "rate_limited");
@@ -270,10 +275,11 @@ export async function draftProfileAction(
  */
 export async function suggestPricesAction(input: OnboardingAnswers): Promise<{ prices: number[]; peers: number }> {
   const ctx = await loadContext();
-  const answers = ctx ? clean(input, ctx.profile) : input;
+  if (!ctx) return { prices: FALLBACK_PRICES[""], peers: 0 };
+  const answers = clean(input, ctx.profile);
   const fallback = { prices: FALLBACK_PRICES[answers.years], peers: 0 };
   const service = serviceClient();
-  if (!ctx || !service || answers.categoryIds.length === 0) return fallback;
+  if (!service || answers.categoryIds.length === 0) return fallback;
 
   const { data: links } = await service
     .from("expert_profile_categories")
