@@ -172,6 +172,14 @@ export function RailSelect({
   // client's own clock (set by the country line).
   const timeStyle: TimeStyle = abroad ? "12h" : "ethiopian";
   const [placeOpen, setPlaceOpen] = useState(false);
+  const [pane, setPane] = useState<"session" | "day" | "time">("session");
+  const [signupPart, setSignupPart] = useState<1 | 2>(1);
+  const signupPartOneRef = useRef<HTMLDivElement>(null);
+  const goToSignupPartTwo = () => {
+    const fields = signupPartOneRef.current?.querySelectorAll("input") ?? [];
+    for (const field of fields) if (!field.reportValidity()) return;
+    setSignupPart(2);
+  };
   const chooseZone = (zone: string, close = false) => {
     setCustomerTimezone(zone);
     storeClientZone(zone);
@@ -376,8 +384,44 @@ export function RailSelect({
     .filter(Boolean)
     .join(" · ");
 
+  // One step at a time so the card stays short: Session -> Day -> Time.
+  const formatLabel = format === "online" ? "Google Meet" : format === "in_person" ? "In person" : null;
+  const dayLabel = activeDate
+    ? new Date(`${activeDate}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })
+    : null;
+  // Signing in replaces the times, so the row then carries the whole choice.
+  const stepSummary =
+    gate !== "none" && summary
+      ? summary
+      : [duration ? `${duration} min` : null, formatLabel, pane === "time" ? dayLabel : null].filter(Boolean).join(" · ");
+  const goBack = () => {
+    if (gate === "auth" && authTab === "signup" && signupPart === 2) {
+      setSignupPart(1);
+      return;
+    }
+    if (gate !== "none") {
+      setGate("none");
+      return;
+    }
+    setPane(pane === "time" ? "day" : "session");
+  };
+
   return (
-    <div className="stack" style={{ gap: 24 }}>
+    <div className="stack" style={{ gap: 20 }}>
+      {pane !== "session" ? (
+        <div className="rstep">
+          <button type="button" className="rstep-back" onClick={goBack}>
+            <span className="ms" aria-hidden="true">
+              arrow_back
+            </span>
+            Back
+          </button>
+          <span className="rstep-sum">{stepSummary}</span>
+        </div>
+      ) : null}
+
+      {pane === "session" ? (
+        <>
       <fieldset>
         <legend>Length</legend>
         <div className={`opt-grid ${sessionOfferings.length === 1 ? "c2" : "c3"}`}>
@@ -390,6 +434,8 @@ export function RailSelect({
               onClick={() => {
                 setDuration(offering.durationMinutes);
                 setSelectedSlot(null);
+                // Both choices made: straight on to the day.
+                if (format || availableFormats.length <= 1) setPane("day");
               }}
             >
               <span style={{ fontSize: 15, fontWeight: 600 }}>{offering.durationMinutes} min</span>
@@ -418,6 +464,7 @@ export function RailSelect({
                 onClick={() => {
                   setFormat(f);
                   setSelectedSlot(null);
+                  if (duration) setPane("day");
                 }}
               >
                 <span className="ms" aria-hidden="true" style={{ fontSize: 20 }}>
@@ -430,27 +477,29 @@ export function RailSelect({
         </fieldset>
       ) : null}
 
-      {/* Days load once both choices are made; say so instead of showing
-          nothing, which read as "no dates available". */}
-      {!duration || !format ? (
-        <fieldset>
-          <legend>Day</legend>
-          <p className="notice" style={{ margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
-            <span className="ms" aria-hidden="true" style={{ fontSize: 20 }}>
-              calendar_month
-            </span>
-            {!duration && !format && availableFormats.length > 1
-              ? "Choose a length and where to meet, and the open days will show here."
-              : !duration
-                ? "Choose a length, and the open days will show here."
-                : "Choose where to meet, and the open days will show here."}
-          </p>
-        </fieldset>
+      {/* Coming back to this step with both chosen: a way forward again. */}
+      {duration && format ? (
+        <button type="button" className="btn btn-ink block" style={{ minHeight: 52 }} onClick={() => setPane("day")}>
+          Choose a day{" "}
+          <span className="ms af" aria-hidden="true">
+            arrow_forward
+          </span>
+        </button>
+      ) : (
+        <p className="muted" style={{ margin: 0, fontSize: 14 }}>
+          {!duration && !format && availableFormats.length > 1
+            ? "Choose a length and where to meet."
+            : !duration
+              ? "Choose a length."
+              : "Choose where to meet."}
+        </p>
+      )}
+        </>
       ) : null}
 
-      {duration && format ? (
+      {pane === "day" && duration && format ? (
         <fieldset data-testid="rail-date-time">
-          <legend>Day</legend>
+          <legend>Pick a day</legend>
 
           {/* Where they are sets their clock: a country, and a city only
               for the few countries with several clocks. */}
@@ -605,6 +654,7 @@ export function RailSelect({
                         onClick={() => {
                           setSelectedDate(date);
                           setSelectedSlot(null);
+                          setPane("time");
                         }}
                       >
                         <span className="dcard-wd">{day.toLocaleDateString("en-GB", { weekday: "short" })}</span>
@@ -632,7 +682,18 @@ export function RailSelect({
         </fieldset>
       ) : null}
 
-      {duration && format && activeDate && timesForSelectedDate.length > 0 ? (
+      {pane === "time" && slotsLoading ? (
+        <p className="muted" style={{ margin: 0, fontSize: 15 }}>
+          Loading times…
+        </p>
+      ) : null}
+      {pane === "time" && !slotsLoading && timesForSelectedDate.length === 0 ? (
+        <p className="notice" style={{ margin: 0 }}>
+          That day has no open times left. Go back and pick another day.
+        </p>
+      ) : null}
+
+      {pane === "time" && gate === "none" && duration && format && activeDate && timesForSelectedDate.length > 0 ? (
         <fieldset>
           <legend>
             Times on{" "}
@@ -675,6 +736,7 @@ export function RailSelect({
         </fieldset>
       ) : null}
 
+      {pane === "time" && gate === "none" ? (
       <div className="stack" style={{ gap: 12, paddingBlockStart: 20, borderTop: "1px solid var(--pr-line)" }}>
         {summary ? <span className="summary-line">{summary}</span> : null}
         {holdState.error && gate === "none" ? (
@@ -716,8 +778,9 @@ export function RailSelect({
           </form>
         )}
       </div>
+      ) : null}
 
-      {selectedSlot && gate === "auth" ? (
+      {pane === "time" && selectedSlot && gate === "auth" ? (
         <div className="mt-4 rounded-[var(--radius-input)] border border-[var(--color-border)] p-4">
           <div className="mb-3 flex gap-4 border-b border-[var(--color-border)] text-sm font-medium">
             <button
@@ -746,7 +809,17 @@ export function RailSelect({
               </Button>
             </form>
           ) : (
-            <form action={signUpFormAction} className="flex flex-col gap-3">
+            <form
+              action={signUpFormAction}
+              className="flex flex-col gap-3"
+              onSubmit={(event) => {
+                // Enter on the first screen means Next, not "send".
+                if (signupPart === 1) {
+                  event.preventDefault();
+                  goToSignupPartTwo();
+                }
+              }}
+            >
               {signUpState.error ? <FormMessage variant="error">{signUpState.error}</FormMessage> : null}
               {signUpState.status === "check-email" ? (
                 <FormMessage variant="success">
@@ -755,14 +828,26 @@ export function RailSelect({
                 </FormMessage>
               ) : (
                 <>
-                  <TextField label="Full name" name="full_name" required />
-                  <PhoneField label="Phone" required />
-                  <CountryCityFields required />
-                  <TextField label="Email" name="email" type="email" required />
-                  <TextField label="Password" name="password" type="password" required />
-                  <Button type="submit" isLoading={signUpPending} loadingText="Creating account…">
-                    Create account and continue
-                  </Button>
+                  {/* Two short screens so the card never needs scrolling; one
+                      form underneath, sent once at the end. */}
+                  <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+                    {signupPart === 1 ? "1 of 2 · Your account" : "2 of 2 · How to reach you"}
+                  </p>
+                  <div ref={signupPartOneRef} className="flex flex-col gap-3" hidden={signupPart !== 1}>
+                    <TextField label="Full name" name="full_name" required />
+                    <TextField label="Email" name="email" type="email" required />
+                    <TextField label="Password" name="password" type="password" required />
+                    <Button type="button" onClick={goToSignupPartTwo}>
+                      Next
+                    </Button>
+                  </div>
+                  <div className="flex flex-col gap-3" hidden={signupPart !== 2}>
+                    <PhoneField label="Phone" required={signupPart === 2} />
+                    <CountryCityFields required={signupPart === 2} />
+                    <Button type="submit" isLoading={signUpPending} loadingText="Creating account…">
+                      Create account and continue
+                    </Button>
+                  </div>
                 </>
               )}
             </form>
@@ -770,7 +855,7 @@ export function RailSelect({
         </div>
       ) : null}
 
-      {selectedSlot && gate === "profile" ? (
+      {pane === "time" && selectedSlot && gate === "profile" ? (
         <div className="mt-4 rounded-[var(--radius-input)] border border-[var(--color-border)] p-4">
           <h2 className="mb-3 text-sm font-medium text-[var(--color-text)]">Your professional background</h2>
           <p className="mb-3 text-xs text-[var(--color-text-muted)]">

@@ -1,3 +1,40 @@
+/* Step row on the Day and Time steps: Back, and what's chosen so far. */
+.pr .rstep {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--pr-line);
+}
+.pr .rstep-back {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+  padding: 0 12px 0 8px;
+  border: 1px solid var(--pr-line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--pr-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.pr .rstep-back:hover {
+  border-color: var(--pr-slate-light);
+}
+.pr .rstep-back .ms {
+  font-size: 18px;
+}
+.pr .rstep-sum {
+  min-width: 0;
+  color: var(--pr-slate);
+  font-size: 14px;
+  line-height: 1.3;
+}
+
 /* Booking card day picker (RailSelect): month tabs with open-day counts and
  * a swipeable strip of open days. Website tokens (--pr-*). */
 /* At most four months (90 days ahead), so the tabs wrap rather than
