@@ -9,7 +9,10 @@ export const metadata = { title: "Your profile preview — Pivotroom", robots: {
 
 /** The expert's own preview, only of their own application (RLS), exactly
  * as clients will see it, including anything our team chose to hide. */
-export default async function MyProfilePreviewPage() {
+export default async function MyProfilePreviewPage({ searchParams }: PageProps<"/preview/my-profile">) {
+  // Opened from the guided onboarding: go back to its last step, not to the
+  // classic application overview.
+  const fromOnboarding = (await searchParams).from === "onboarding";
   const supabase = await createClient();
   const {
     data: { user },
@@ -41,8 +44,8 @@ export default async function MyProfilePreviewPage() {
     <>
       <PreviewBar
         note="Only you can see this. It is how clients will see your profile once it is published."
-        backHref="/expert/application"
-        backLabel="Back to your application"
+        backHref={fromOnboarding ? "/expert/onboarding" : "/expert/application"}
+        backLabel={fromOnboarding ? "Back to your profile setup" : "Back to your application"}
       />
       <main className="flex-1" style={{ background: "#ffffff" }}>
         <ExpertDetailView profile={profile} />

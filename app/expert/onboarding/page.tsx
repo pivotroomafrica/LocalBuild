@@ -4,6 +4,7 @@ import { ensureExpertProfileDraft } from "@/lib/expert/actions";
 import { getActiveExpertCategories, getExpertApplicationData, getExpertPhotoUrl } from "@/lib/expert/data";
 import { fetchPlatformPricing } from "@/lib/pricing/platform";
 import { answersFrom } from "@/lib/expert/onboarding/answers";
+import { planFromRules } from "@/lib/availability/plan";
 import { OnboardingFlow } from "@/components/expert/onboarding/OnboardingFlow";
 
 export const metadata = { title: "Build your expert profile" };
@@ -35,6 +36,15 @@ export default async function ExpertOnboardingPage() {
     data?.categoryIds ?? [],
     (data?.sessionOfferings ?? []).map((row) => row.duration_minutes),
   );
+  // A plan saved earlier (here or on the Availability page) wins over the
+  // working copy, so both screens always show the same thing.
+  const [{ data: weekly }, { data: monthly }] = await Promise.all([
+    supabase.from("expert_weekly_availability_rules").select("day_of_week, start_time, end_time"),
+    supabase.from("expert_monthly_availability_rules").select("day_of_month, start_time, end_time"),
+  ]);
+  if ((weekly ?? []).length > 0 || (monthly ?? []).length > 0) {
+    initial.plan = planFromRules(expertProfile.monthly_hours, weekly ?? [], monthly ?? []);
+  }
   // Where they live was asked at signup (054); don't ask twice.
   initial.country ||= account?.country ?? "";
   initial.city ||= account?.city ?? "";

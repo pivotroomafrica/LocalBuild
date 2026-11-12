@@ -18,6 +18,7 @@ function toSafeError(message: string | undefined): string {
   if (!message) return GENERIC_ERROR;
   const knownFragments = [
     "logged in",
+    "fully booked for that month",
     "Booking not found",
     "not confirmed",
     "cannot be rescheduled",

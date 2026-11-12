@@ -606,6 +606,33 @@ export type Database = {
           },
         ]
       }
+      expert_weekly_availability_rules: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          end_time: string
+          expert_profile_id: string
+          id: string
+          start_time: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          expert_profile_id: string
+          id?: string
+          start_time: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          expert_profile_id?: string
+          id?: string
+          start_time?: string
+        }
+        Relationships: []
+      }
       expert_one_off_availability: {
         Row: {
           available_date: string
@@ -701,6 +728,7 @@ export type Database = {
           in_person_enabled: boolean
           languages: string[]
           linkedin_url: string | null
+          monthly_hours: number | null
           onboarding_answers: Json | null
           online_enabled: boolean
           problems_help_with: string | null
@@ -742,6 +770,7 @@ export type Database = {
           in_person_enabled?: boolean
           languages?: string[]
           linkedin_url?: string | null
+          monthly_hours?: number | null
           onboarding_answers?: Json | null
           online_enabled?: boolean
           problems_help_with?: string | null
@@ -783,6 +812,7 @@ export type Database = {
           in_person_enabled?: boolean
           languages?: string[]
           linkedin_url?: string | null
+          monthly_hours?: number | null
           onboarding_answers?: Json | null
           online_enabled?: boolean
           problems_help_with?: string | null
@@ -1801,6 +1831,10 @@ export type Database = {
       session_reminder_offsets_minutes: { Args: never; Returns: number[] }
       set_expert_availability_timezone: {
         Args: { p_timezone: string }
+        Returns: undefined
+      }
+      set_expert_availability_plan: {
+        Args: { p_monthly_hours: number; p_mode: string; p_days: number[]; p_windows: Json }
         Returns: undefined
       }
       set_expert_month_override: {

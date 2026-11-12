@@ -7,6 +7,8 @@ import { ChipGroup } from "@/components/expert/onboarding/ChipGroup";
 import { MiniProfile } from "@/components/expert/onboarding/MiniProfile";
 import { Confetti } from "@/components/expert/onboarding/Confetti";
 import { PhotoUpload } from "@/components/expert/PhotoUpload";
+import { MonthlyPlanPicker } from "@/components/expert/MonthlyPlanPicker";
+import { planProblem } from "@/lib/availability/plan";
 import { PHOTO_PREVIEW_EVENT } from "@/components/expert/LiveProfilePreview";
 import { CountryCityFields } from "@/components/ui/CountryCityFields";
 import {
@@ -30,7 +32,7 @@ import {
   type OnboardingAnswers,
 } from "@/lib/expert/onboarding/answers";
 import { RESPONSE_TIME_OPTIONS } from "@/lib/expert/profileDetails";
-import { customerPrice, expertPayout, type PlatformPricing } from "@/lib/pricing/platform";
+import { customerPrice, expertPayout, formatVatRate, type PlatformPricing } from "@/lib/pricing/platform";
 import {
   EXPERT_EXPERIENCE_RANGES,
   EXPERT_EXPERIENCE_RANGE_LABELS,
@@ -53,6 +55,7 @@ type CardId =
   | "drafts"
   | "photo"
   | "price"
+  | "availability"
   | "giving"
   | "submit";
 
@@ -83,7 +86,13 @@ const CARDS: CardDef[] = [
   { id: "location", title: "Where are you, and which languages do you speak?", save: "basics" },
   { id: "drafts", title: "Here's your profile, written from your answers", save: "drafts" },
   { id: "photo", title: "Add a clear photo of your face", hint: "Profiles with a real photo get booked far more often." },
-  { id: "price", title: "Set your price", hint: "For 60 minutes, in ETB. You can change it any time.", save: "pricing" },
+  { id: "price", title: "Set your price", hint: "What you charge for 60 minutes, in ETB. You can change it any time.", save: "pricing" },
+  {
+    id: "availability",
+    title: "When can clients book you?",
+    hint: "Give Pivotroom at least 2 hours a month. You can change this any time from your Availability page.",
+    save: "availability",
+  },
   {
     id: "giving",
     title: "Give part of your earnings to a cause?",
@@ -380,6 +389,8 @@ export function OnboardingFlow({
         return Boolean(photoUrl);
       case "price":
         return Number(a.price) > 0 && a.durations.length > 0 && (a.online || a.inPerson);
+      case "availability":
+        return planProblem(a.plan) === null;
       default:
         return true;
     }
@@ -442,6 +453,7 @@ export function OnboardingFlow({
               firstName={fullName.split(/\s+/)[0]}
               city={answers.city}
               percentDone={percentDone}
+              onRestart={() => go(1, "fwd")}
             />
           ) : (
             <header className="ob-head">
@@ -630,6 +642,10 @@ export function OnboardingFlow({
               <Price answers={answers} prices={prices} pricing={pricing} onChange={set} />
             ) : null}
 
+            {def.id === "availability" ? (
+              <MonthlyPlanPicker plan={answers.plan} onChange={(plan) => set({ plan })} />
+            ) : null}
+
             {def.id === "giving" ? (
               <Giving answers={answers} ngos={ngos} firstName={fullName.split(/\s+/)[0]} onChange={set} />
             ) : null}
@@ -705,11 +721,13 @@ function Welcome({
   firstName,
   city,
   percentDone,
+  onRestart,
 }: {
   resuming: boolean;
   firstName: string;
   city: string;
   percentDone: number;
+  onRestart: () => void;
 }) {
   const name = firstName ? `${firstName}, ` : "";
   if (resuming) {
@@ -722,6 +740,13 @@ function Welcome({
           Welcome back{firstName ? `, ${firstName}` : ""}. Your profile is {percentDone}% done.
         </h1>
         <p className="ob-lede">The hard part is behind you. A few more taps and clients can start finding you.</p>
+        <p className="ob-sub">
+          Want to look over everything again?{" "}
+          <button type="button" className="ob-link" onClick={onRestart}>
+            Start from the beginning
+          </button>{" "}
+          Your answers stay filled in.
+        </p>
       </header>
     );
   }
@@ -1105,6 +1130,36 @@ function Drafts({
   );
 }
 
+/** A compact chip with a tick box (square = pick several, round = pick
+ * one), so it's obvious how many can be chosen. */
+function TickChip({
+  on,
+  onClick,
+  round = false,
+  icon,
+  children,
+}: {
+  on: boolean;
+  onClick: () => void;
+  round?: boolean;
+  icon?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button type="button" className={on ? "ob-chip ob-tickchip on" : "ob-chip ob-tickchip"} aria-pressed={on} onClick={onClick}>
+      <span className={round ? "ob-tick round" : "ob-tick"} aria-hidden="true">
+        <span className="ms">check</span>
+      </span>
+      {icon ? (
+        <span className="ms" aria-hidden="true">
+          {icon}
+        </span>
+      ) : null}
+      {children}
+    </button>
+  );
+}
+
 function Price({
   answers,
   prices,
@@ -1118,7 +1173,12 @@ function Price({
 }) {
   const price = Number(answers.price);
   const suggested = prices?.prices ?? [];
-  const custom = answers.price !== "" && !suggested.includes(price);
+  // Typing in "Other" keeps its own text: deriving the box from the price
+  // emptied it the moment 1,500 (on the way to 15,000) matched a chip.
+  const [ownText, setOwnText] = useState<string | null>(null);
+  const custom = ownText !== null || (answers.price !== "" && !suggested.includes(price));
+  const fee = formatVatRate(pricing.commissionRate);
+  const vat = formatVatRate(pricing.vatRate);
   const toggleDuration = (d: SessionDuration) =>
     onChange({
       durations: answers.durations.includes(d) ? answers.durations.filter((x) => x !== d) : [...answers.durations, d].sort((a, b) => a - b),
@@ -1133,9 +1193,12 @@ function Price({
               <button
                 key={p}
                 type="button"
-                className={price === p ? "ob-chip big on" : "ob-chip big"}
-                aria-pressed={price === p}
-                onClick={() => onChange({ price: String(p) })}
+                className={!custom && price === p ? "ob-chip big on" : "ob-chip big"}
+                aria-pressed={!custom && price === p}
+                onClick={() => {
+                  setOwnText(null);
+                  onChange({ price: String(p) });
+                }}
               >
                 <span className="num">{p.toLocaleString()}</span> ETB
               </button>
@@ -1144,70 +1207,77 @@ function Price({
           <span className="muted">Other</span>
           <input
             type="number"
-            inputMode="decimal"
+            inputMode="numeric"
             min={1}
             step={50}
             className="num"
             aria-label="Your own price in ETB"
-            value={custom ? answers.price : ""}
+            value={ownText ?? (custom ? answers.price : "")}
             placeholder="0"
-            onChange={(e) => onChange({ price: e.target.value })}
+            onFocus={() => setOwnText(ownText ?? (custom ? answers.price : ""))}
+            onChange={(e) => {
+              setOwnText(e.target.value);
+              onChange({ price: e.target.value });
+            }}
           />
+          <span className="muted">ETB</span>
         </label>
       </div>
       {prices ? (
         <p className="ob-hint">
           {prices.peers > 0
-            ? `Based on ${prices.peers} experts in your areas on Pivotroom.`
+            ? `Based on what ${prices.peers} experts in your areas charge on Pivotroom.`
             : "Typical starting prices for your experience."}
         </p>
       ) : null}
       {price > 0 ? (
-        <p className="ob-note">
-          Client pays <strong className="num">{customerPrice(price, pricing.vatRate).toLocaleString()} ETB</strong> · you
-          receive <strong className="num">{expertPayout(price, pricing.commissionRate).toLocaleString()} ETB</strong>
-        </p>
+        <dl className="ob-money" aria-live="polite">
+          <div>
+            <dt>Your price</dt>
+            <dd className="num">{price.toLocaleString()} ETB</dd>
+            <p>What you set for 60 minutes.</p>
+          </div>
+          <div>
+            <dt>Client pays</dt>
+            <dd className="num">{customerPrice(price, pricing.vatRate).toLocaleString()} ETB</dd>
+            <p>
+              Your price plus {vat} VAT. VAT is a government tax added on top for the client, so it doesn&apos;t come
+              out of your price.
+            </p>
+          </div>
+          <div className="ob-money-you">
+            <dt>You receive</dt>
+            <dd className="num">{expertPayout(price, pricing.commissionRate).toLocaleString()} ETB</dd>
+            <p>
+              Your price minus Pivotroom&apos;s {fee} service fee. This is <strong>before income tax</strong>, so what
+              you take home will be a little less.
+            </p>
+          </div>
+        </dl>
       ) : null}
 
-      <p className="label ob-label">Session lengths you offer</p>
+      <p className="label ob-label">
+        Session lengths you offer <span className="muted">(pick as many as you like)</span>
+      </p>
       <div className="ob-chips" role="group" aria-label="Session lengths">
         {SESSION_DURATIONS.map((d) => (
-          <button
-            key={d}
-            type="button"
-            className={answers.durations.includes(d) ? "ob-chip on" : "ob-chip"}
-            aria-pressed={answers.durations.includes(d)}
-            onClick={() => toggleDuration(d)}
-          >
+          <TickChip key={d} on={answers.durations.includes(d)} onClick={() => toggleDuration(d)}>
             {d} min
-          </button>
+          </TickChip>
         ))}
       </div>
+      <p className="ob-hint">Other lengths are priced from your 60-minute price automatically.</p>
 
-      <p className="label ob-label">How you meet clients</p>
+      <p className="label ob-label">
+        How you meet clients <span className="muted">(one or both)</span>
+      </p>
       <div className="ob-chips" role="group" aria-label="Session formats">
-        <button
-          type="button"
-          className={answers.online ? "ob-chip on" : "ob-chip"}
-          aria-pressed={answers.online}
-          onClick={() => onChange({ online: !answers.online })}
-        >
-          <span className="ms" aria-hidden="true">
-            videocam
-          </span>
+        <TickChip on={answers.online} onClick={() => onChange({ online: !answers.online })} icon="videocam">
           Online
-        </button>
-        <button
-          type="button"
-          className={answers.inPerson ? "ob-chip on" : "ob-chip"}
-          aria-pressed={answers.inPerson}
-          onClick={() => onChange({ inPerson: !answers.inPerson })}
-        >
-          <span className="ms" aria-hidden="true">
-            handshake
-          </span>
+        </TickChip>
+        <TickChip on={answers.inPerson} onClick={() => onChange({ inPerson: !answers.inPerson })} icon="handshake">
           In person
-        </button>
+        </TickChip>
       </div>
 
       <p className="label ob-label">
@@ -1215,15 +1285,14 @@ function Price({
       </p>
       <div className="ob-chips" role="group" aria-label="Reply time">
         {RESPONSE_TIME_OPTIONS.map((option) => (
-          <button
+          <TickChip
             key={option.value}
-            type="button"
-            className={answers.responseTime === option.value ? "ob-chip on" : "ob-chip"}
-            aria-pressed={answers.responseTime === option.value}
+            round
+            on={answers.responseTime === option.value}
             onClick={() => onChange({ responseTime: answers.responseTime === option.value ? "" : option.value })}
           >
             {option.label}
-          </button>
+          </TickChip>
         ))}
       </div>
     </>
@@ -1325,7 +1394,7 @@ function Submit({
         <h2 className="ob-title">You&apos;re in the review queue</h2>
         <p className="ob-sub">Our team reads every application, usually within 2 working days. We&apos;ll email you.</p>
         <div className="ob-done-acts">
-          <Link href="/preview/my-profile" className="btn btn-ink md">
+          <Link href="/preview/my-profile?from=onboarding" className="btn btn-ink md">
             Preview your profile
           </Link>
           <Link href="/expert/application" className="btn btn-line md">
@@ -1340,7 +1409,7 @@ function Submit({
     <form action={formAction} className="ob-submit">
       {mini}
       <p className="ob-sub">
-        Want to see the full page? <Link href="/preview/my-profile">Preview your profile</Link>
+        Want to see the full page? <Link href="/preview/my-profile?from=onboarding">Preview your profile</Link>
       </p>
       {state.error ? (
         <div className="notice err" role="alert">

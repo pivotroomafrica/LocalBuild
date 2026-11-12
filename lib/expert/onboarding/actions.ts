@@ -7,6 +7,7 @@ import { parseExpertiseFields, parseIdentityFields } from "@/lib/expert/profileF
 import { syncExpertCategories } from "@/lib/expert/categorySync";
 import { syncSessionPricing } from "@/lib/expert/pricingSync";
 import { validateResponseTime } from "@/lib/expert/profileDetails";
+import { saveAvailabilityPlanAction } from "@/lib/availability/planActions";
 import { validateBasePrice, validateDurations, validateHeadline, validateSessionFormat } from "@/lib/validation/expert";
 import {
   CHIP_STEPS,
@@ -296,7 +297,7 @@ export async function suggestPricesAction(input: OnboardingAnswers): Promise<{ p
   return { prices: chips, peers: prices.length };
 }
 
-export type OnboardingSavePart = "progress" | "basics" | "drafts" | "pricing" | "giving";
+export type OnboardingSavePart = "progress" | "basics" | "drafts" | "pricing" | "availability" | "giving";
 
 /**
  * Saves the working answers, plus -- depending on the card -- the real
@@ -368,6 +369,11 @@ export async function saveOnboardingAction(
       extraUpdate: { response_time: responseTime.value },
     });
     if (!saved) return { error: GENERIC_ERROR };
+  }
+
+  if (part === "availability") {
+    const result = await saveAvailabilityPlanAction(answers.plan);
+    if (result.error) return { error: result.error };
   }
 
   if (part === "giving") {

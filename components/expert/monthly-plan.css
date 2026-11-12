@@ -1,0 +1,256 @@
+/* Monthly availability plan picker (components/expert/MonthlyPlanPicker.tsx),
+ * used in onboarding and on the Availability page. Website tokens (--pr-*). */
+.pr .mp {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+.pr .mp-part {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pr .mp-q,
+.pr .ws-main .mp-q {
+  margin: 0;
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.pr .mp-hint {
+  margin: 0;
+  color: var(--pr-slate);
+  font-size: 14px;
+}
+.pr .mp-err {
+  color: #b42318;
+}
+.pr .mp-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pr .mp-pill,
+.pr .mp-day,
+.pr .mp-date,
+.pr .mp-block,
+.pr .mp-switch button {
+  border: 1.5px solid var(--pr-line);
+  border-bottom-width: 3px;
+  background: #ffffff;
+  color: var(--pr-ink);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color 160ms var(--pr-ease),
+    background-color 160ms var(--pr-ease),
+    transform 120ms var(--pr-ease);
+}
+.pr .mp-pill:hover,
+.pr .mp-day:hover,
+.pr .mp-date:hover,
+.pr .mp-block:hover {
+  border-color: var(--pr-slate-light);
+}
+.pr .mp-pill:active,
+.pr .mp-day:active,
+.pr .mp-date:active,
+.pr .mp-block:active {
+  transform: translateY(2px);
+}
+.pr .mp-pill.on,
+.pr .mp-day.on,
+.pr .mp-date.on,
+.pr .mp-block.on,
+.pr .mp-switch button.on {
+  border-color: var(--pr-blue);
+  background: var(--pr-blue-tint);
+  color: var(--pr-blue);
+}
+.pr .mp-pill {
+  min-width: 76px;
+  min-height: 52px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  font-size: 16px;
+}
+.pr .mp-pill .num {
+  font-size: 18px;
+  font-weight: 600;
+}
+.pr .mp-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.pr .mp-switch button {
+  min-height: 48px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 15px;
+}
+.pr .mp-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.pr .mp-day {
+  min-height: 52px;
+  padding: 0;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 500;
+}
+.pr .mp-quick {
+  display: flex;
+  gap: 14px;
+}
+.pr .mp-quick button,
+.pr .mp-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--pr-blue);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  align-self: flex-start;
+}
+.pr .mp-more .ms {
+  font-size: 18px;
+}
+.pr .mp-dates {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  max-width: 460px;
+}
+.pr .mp-date {
+  aspect-ratio: 1;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 10px;
+  border-bottom-width: 2px;
+  font-size: 15px;
+}
+.pr .mp-blocks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+  gap: 8px;
+}
+.pr .mp-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 64px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  text-align: left;
+}
+.pr .mp-block-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+.pr .mp-block-time {
+  font-size: 14px;
+  color: var(--pr-slate);
+}
+.pr .mp-block.on .mp-block-time {
+  color: var(--pr-blue);
+}
+.pr .mp-custom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+.pr .mp-custom label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--pr-slate);
+}
+.pr .mp-custom select {
+  min-width: 120px;
+}
+.pr .mp-custom .mp-hint {
+  flex-basis: 100%;
+}
+.pr .mp-custom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 8px 8px 14px;
+  border: 1.5px solid var(--pr-blue);
+  border-radius: 12px;
+  background: var(--pr-blue-tint);
+  color: var(--pr-blue);
+  font-weight: 500;
+}
+.pr .mp-x {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.pr .mp-summary {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #f6fdf9;
+  border: 1px solid #a7e3c9;
+}
+.pr .mp-summary > .ms {
+  color: #047857;
+}
+.pr .mp-summary.warn {
+  background: var(--pr-mist);
+  border-color: var(--pr-line);
+}
+.pr .mp-summary.warn > .ms {
+  color: var(--pr-slate);
+}
+.pr .mp-summary p {
+  margin: 0;
+}
+.pr .mp-summary-main {
+  font-weight: 600;
+}
+.pr .mp-summary-sub {
+  color: var(--pr-slate);
+  font-size: 14px;
+}
+.pr .mp-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--pr-mist);
+}
+.pr .mp-meter-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 15px;
+}
+@media (max-width: 420px) {
+  .pr .mp-switch {
+    grid-template-columns: 1fr;
+  }
+  .pr .mp-day {
+    font-size: 13px;
+  }
+}

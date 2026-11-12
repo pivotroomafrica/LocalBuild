@@ -8,6 +8,9 @@ import {
 } from "@/lib/availability/data";
 import { AvailabilityManager } from "@/components/expert/AvailabilityManager";
 import { RouterRefreshOnMount } from "@/components/layout/RouterRefreshOnMount";
+import { MonthlyPlanSection } from "@/components/expert/MonthlyPlanSection";
+import { planFromRules } from "@/lib/availability/plan";
+import { bookedMinutesThisMonth } from "@/lib/availability/booked";
 
 /** Explicit documentation of intent (already implied by requireApprovedExpertPage's
  * cookies() read): this page must never be served from a static/prerendered
@@ -19,12 +22,20 @@ export default async function ExpertAvailabilityPage() {
   const supabase = await createClient();
   const { expertProfileId } = await requireApprovedExpertPage(supabase, "/expert/availability");
 
-  const [settings, rules, overrides, oneOffs] = await Promise.all([
+  const [settings, rules, overrides, oneOffs, { data: weekly }, { data: profile }] = await Promise.all([
     getExpertAvailabilitySettings(supabase),
     getExpertMonthlyAvailabilityRules(supabase),
     getExpertAvailabilityOverrides(supabase),
     getExpertOneOffAvailability(supabase),
+    supabase.from("expert_weekly_availability_rules").select("day_of_week, start_time, end_time"),
+    supabase.from("expert_profiles").select("monthly_hours").eq("id", expertProfileId).maybeSingle(),
   ]);
+
+  const bookedMinutes = await bookedMinutesThisMonth(
+    supabase,
+    expertProfileId,
+    settings?.timezone ?? "Africa/Addis_Ababa",
+  );
 
   return (
     <div>
@@ -34,11 +45,18 @@ export default async function ExpertAvailabilityPage() {
         <div className="stack" style={{ gap: 6 }}>
           <h1 className="ws-h1">Your available hours</h1>
           <p className="muted" style={{ margin: 0, maxWidth: "62ch" }}>
-            Clients can only book the times you add here. Add specific dates, a time that repeats every month, or both.
+            Clients can only book the times you open here. Set your regular days once; add extra dates whenever you like.
           </p>
         </div>
 
+        <MonthlyPlanSection
+          initialPlan={planFromRules(profile?.monthly_hours ?? null, weekly ?? [], rules)}
+          bookedMinutesThisMonth={bookedMinutes}
+        />
+
         <AvailabilityManager
+          key={rules.map((r) => r.id).join(",")}
+          withPlan
           expertProfileId={expertProfileId}
           initialTimezone={settings?.timezone ?? null}
           initialRules={rules}

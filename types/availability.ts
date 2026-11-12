@@ -16,7 +16,7 @@ export const DEFAULT_TIMEZONE = "Africa/Addis_Ababa";
  * the RPC's own enforcement must be updated together if the cap ever
  * changes. Used for BOTH caps described there: the sum of a rule's own
  * durations (Cap A), and one real month's actual total (Cap B). */
-export const MAX_RECURRING_MONTHLY_MINUTES = 300;
+export const MAX_RECURRING_MONTHLY_MINUTES = 1200;
 export const RECOMMENDED_MIN_MONTHLY_MINUTES = 60;
 
 /** Every month has a 1st through 28th unambiguously -- no "there's no

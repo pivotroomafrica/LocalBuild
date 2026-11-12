@@ -1,4 +1,5 @@
 import type { Json } from "@/types/database";
+import { emptyPlan, type AvailabilityPlan } from "@/lib/availability/plan";
 import {
   EXPERT_EXPERIENCE_RANGES,
   EXPERT_EXPERIENCE_RANGE_LABELS,
@@ -106,7 +107,28 @@ export type OnboardingAnswers = {
   responseTime: string;
   ngoId: string;
   percent: number;
+  /** Monthly availability plan (060), saved through set_expert_availability_plan(). */
+  plan: AvailabilityPlan;
 };
+
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** Clamp a stored or posted plan to valid values. */
+export function cleanPlan(value: unknown, fallback: AvailabilityPlan = emptyPlan()): AvailabilityPlan {
+  if (!value || typeof value !== "object") return fallback;
+  const raw = value as Record<string, unknown>;
+  const mode = raw.mode === "monthly" ? "monthly" : "weekly";
+  const hours = typeof raw.hours === "number" && raw.hours >= 2 && raw.hours <= 20 ? Math.round(raw.hours) : null;
+  const days = (Array.isArray(raw.days) ? raw.days : [])
+    .map(Number)
+    .filter((d) => Number.isInteger(d) && (mode === "weekly" ? d >= 0 && d <= 6 : d >= 1 && d <= 28));
+  const windows = (Array.isArray(raw.windows) ? raw.windows : [])
+    .map((w) => (w ?? {}) as Record<string, unknown>)
+    .filter((w) => typeof w.start === "string" && typeof w.end === "string" && TIME_RE.test(w.start) && TIME_RE.test(w.end))
+    .map((w) => ({ start: String(w.start), end: String(w.end) }))
+    .slice(0, 4);
+  return { hours, mode, days: [...new Set(days)], windows };
+}
 
 export const emptyDrafts = (): Drafts =>
   Object.fromEntries(DRAFT_FIELDS.map((field) => [field, ""])) as Drafts;
@@ -180,6 +202,7 @@ export function answersFrom(
     responseTime: text(raw.responseTime, 20) || (profile.response_time ?? ""),
     ngoId: text(raw.ngoId, 60) || (profile.supported_ngo_id ?? ""),
     percent: typeof raw.percent === "number" ? raw.percent : (profile.donation_percent ?? 10),
+    plan: cleanPlan(raw.plan, { ...emptyPlan(), hours: profile.monthly_hours ?? null }),
   };
 }
 

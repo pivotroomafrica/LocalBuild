@@ -46,6 +46,9 @@ type Props = {
   initialRules: ExpertMonthlyAvailabilityRule[];
   initialOverrides: ExpertAvailabilityOverride[];
   initialOneOffs: ExpertOneOffAvailability[];
+  /** The monthly plan (MonthlyPlanSection) sits above and owns the regular
+   * days and the hours meter: hide this editor's versions of both. */
+  withPlan?: boolean;
 };
 
 const UPCOMING_MONTHS_AHEAD = 6;
@@ -141,6 +144,7 @@ export function AvailabilityManager({
   initialRules,
   initialOverrides,
   initialOneOffs,
+  withPlan = false,
 }: Props) {
   const [timezone, setTimezone] = useState(initialTimezone ?? detectBrowserTimezone());
   const [rules, setRules] = useState(initialRules.map((r) => ({ ...toRuleInput(r), id: r.id })));
@@ -286,7 +290,7 @@ export function AvailabilityManager({
       return;
     }
     if (wouldExceedRecurringCap(otherRules, candidate)) {
-      setRuleFormError("Pivotroom currently supports up to 5 hours of recurring availability per month.");
+      setRuleFormError("Pivotroom currently supports up to 20 hours of regular availability per month.");
       return;
     }
 
@@ -526,17 +530,25 @@ export function AvailabilityManager({
       : recurringMinutes < RECOMMENDED_MIN_MONTHLY_MINUTES
         ? "Pivotroom recommends making at least 1 hour available each month."
         : recurringMinutes >= MAX_RECURRING_MONTHLY_MINUTES
-          ? "You've reached Pivotroom's current 5-hour monthly availability limit."
+          ? "You've reached Pivotroom's 20-hour monthly availability limit."
           : null;
 
   const btnText = "av-link";
   return (
     <div className="stack" style={{ gap: 24 }}>
-      <section className="stats">
+      {withPlan ? (
+        <div className="stack" style={{ gap: 4 }}>
+          <h2 className="ws-h2">Extra dates and one-off changes</h2>
+          <p className="muted" style={{ margin: 0 }}>
+            On top of your monthly plan: open a specific date, or move or skip a regular date for one month.
+          </p>
+        </div>
+      ) : null}
+      <section className="stats" hidden={withPlan}>
         <div className="stat">
           <span className="k">Open this month</span>
           <span className="v num">{compactDuration(thisMonthMinutes)}</span>
-          <span className="s">Aim for 1–5 hours a month</span>
+          <span className="s">At least 2 hours a month</span>
           <div className="meter" aria-hidden="true">
             <span style={{ width: `${Math.min(100, (thisMonthMinutes / MAX_RECURRING_MONTHLY_MINUTES) * 100)}%` }} />
           </div>
@@ -552,7 +564,7 @@ export function AvailabilityManager({
           <span className="s">Upcoming one-off dates</span>
         </div>
       </section>
-      {recurringMessage ? <p className="notice" style={{ margin: 0 }}>{recurringMessage}</p> : null}
+      {recurringMessage && !withPlan ? <p className="notice" style={{ margin: 0 }}>{recurringMessage}</p> : null}
 
       <div className="av-grid">
         <section className="panel stack" style={{ gap: 14 }}>
@@ -630,7 +642,7 @@ export function AvailabilityManager({
           )}
         </section>
 
-        <section className="panel stack" style={{ gap: 14 }}>
+        <section className="panel stack" style={{ gap: 14 }} hidden={withPlan}>
           <div className="stack" style={{ gap: 4 }}>
             <h2 className="ws-h2">Same day every month</h2>
             <p className="muted" style={{ margin: 0 }}>
