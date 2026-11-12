@@ -171,9 +171,12 @@ export function RailSelect({
   );
   const clientCountry = findCountry(countryOfZone(customerTimezone) ?? "ET");
   const abroad = clientCountry?.code !== "ET";
-  const [timeStyle, setTimeStyle] = useState<TimeStyle>(
+  const [chosenTimeStyle, setTimeStyle] = useState<TimeStyle>(
     () => (typeof window === "undefined" ? null : readStoredTimeStyle()) ?? defaultTimeStyle(customerTimezone || undefined),
   );
+  // Ethiopian time is only offered in Ethiopia; abroad it's always their
+  // own clock, so there's one place that sets time (the country line).
+  const timeStyle: TimeStyle = abroad ? "12h" : chosenTimeStyle;
   const chooseTimeStyle = (style: TimeStyle) => {
     setTimeStyle(style);
     storeTimeStyle(style);
@@ -182,8 +185,6 @@ export function RailSelect({
   const chooseZone = (zone: string) => {
     setCustomerTimezone(zone);
     storeClientZone(zone);
-    // Abroad, their own clock is the useful default; at home, Ethiopian.
-    chooseTimeStyle(countryOfZone(zone) === "ET" ? "ethiopian" : "12h");
     setSelectedDate(null);
     setSelectedSlot(null);
   };
@@ -357,10 +358,7 @@ export function RailSelect({
     );
   }
 
-  const tzLabel = customerTimezone ? `${cityOf(customerTimezone)} time` : "";
   const placeChoices = clientCountry ? zoneChoices(clientCountry.code) : [];
-  // Abroad on their own clock: each time also shows the Addis Ababa time.
-  const showAddisToo = timeStyle === "12h" && !sameClock(customerTimezone, ADDIS);
   const selectedOffering = sessionOfferings.find((offering) => offering.durationMinutes === duration) ?? null;
   // Times grouped by part of the day, in the order the day runs.
   const timeGroups = (["morning", "afternoon", "evening", "night"] as DayPart[])
@@ -648,29 +646,32 @@ export function RailSelect({
             })}
           </legend>
 
-          {/* Ethiopian time (from 6am) or the 12-hour clock; remembered. */}
-          <div className="tstyle" role="radiogroup" aria-label="How to show times">
-            <button
-              type="button"
-              role="radio"
-              aria-checked={timeStyle === "ethiopian"}
-              className={timeStyle === "ethiopian" ? "on" : ""}
-              onClick={() => chooseTimeStyle("ethiopian")}
-            >
-              <span lang="am">በኢትዮጵያ ሰዓት</span>
-              <span className="tstyle-sub">Ethiopian time</span>
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={timeStyle === "12h"}
-              className={timeStyle === "12h" ? "on" : ""}
-              onClick={() => chooseTimeStyle("12h")}
-            >
-              <span>{abroad ? "Your time" : "12-hour"}</span>
-              <span className="tstyle-sub">{abroad ? tzLabel : "AM / PM"}</span>
-            </button>
-          </div>
+          {/* In Ethiopia only: Ethiopian time (from 6am) or the 12-hour
+              clock, remembered. Abroad the country line already set it. */}
+          {abroad ? null : (
+            <div className="tstyle" role="radiogroup" aria-label="How to show times">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={timeStyle === "ethiopian"}
+                className={timeStyle === "ethiopian" ? "on" : ""}
+                onClick={() => chooseTimeStyle("ethiopian")}
+              >
+                <span lang="am">በኢትዮጵያ ሰዓት</span>
+                <span className="tstyle-sub">Ethiopian time</span>
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={timeStyle === "12h"}
+                className={timeStyle === "12h" ? "on" : ""}
+                onClick={() => chooseTimeStyle("12h")}
+              >
+                <span>12-hour</span>
+                <span className="tstyle-sub">AM / PM</span>
+              </button>
+            </div>
+          )}
 
           {timeGroups.map((group) => (
             <div key={group.part} className="tgroup">
@@ -688,19 +689,14 @@ export function RailSelect({
                   <button
                     key={slot.startAt}
                     type="button"
-                    className={showAddisToo ? "chip tchip" : "chip"}
+                    className="chip"
                     aria-pressed={selectedSlot?.startAt === slot.startAt}
                     aria-label={`${formatSlotTimeFull(slot.startAt, timeStyle, customerTimezone || undefined)}${
-                      timeStyle === "ethiopian" || showAddisToo
-                        ? ` (${formatSlotTime(slot.startAt, "12h", ADDIS_TIMEZONE)} in Addis Ababa)`
-                        : ""
+                      timeStyle === "ethiopian" ? ` (${formatSlotTime(slot.startAt, "12h", ADDIS_TIMEZONE)})` : ""
                     }`}
                     onClick={() => setSelectedSlot(slot)}
                   >
                     {formatSlotTime(slot.startAt, timeStyle, customerTimezone || undefined)}
-                    {showAddisToo ? (
-                      <span className="tchip-addis">{formatSlotTime(slot.startAt, "12h", ADDIS_TIMEZONE)} Addis</span>
-                    ) : null}
                   </button>
                 ))}
               </div>
