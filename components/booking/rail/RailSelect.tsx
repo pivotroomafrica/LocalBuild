@@ -2,6 +2,19 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import "./day-strip.css";
+import {
+  ADDIS_TIMEZONE,
+  DAY_PART_LABELS,
+  dayPartOf,
+  defaultTimeStyle,
+  formatSlotTime,
+  formatSlotTimeFull,
+  readStoredTimeStyle,
+  storeTimeStyle,
+  styleTimeZone,
+  type DayPart,
+  type TimeStyle,
+} from "@/lib/booking/timeStyle";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
@@ -147,6 +160,13 @@ export function RailSelect({
     availableFormats.length === 1 ? availableFormats[0] : null,
   );
   const [customerTimezone] = useState(detectTimezone);
+  const [timeStyle, setTimeStyle] = useState<TimeStyle>(
+    () => (typeof window === "undefined" ? null : readStoredTimeStyle()) ?? defaultTimeStyle(detectTimezone() || undefined),
+  );
+  const chooseTimeStyle = (style: TimeStyle) => {
+    setTimeStyle(style);
+    storeTimeStyle(style);
+  };
   // The month the client chose with the arrows ("YYYY-MM"); null = the
   // first month that has free times.
   const [chosenMonth, setChosenMonth] = useState<string | null>(null);
@@ -308,19 +328,26 @@ export function RailSelect({
   const tzLabel =
     customerTimezone === "Africa/Addis_Ababa" ? "Addis Ababa time" : customerTimezone ? `${customerTimezone} time` : "";
   const selectedOffering = sessionOfferings.find((offering) => offering.durationMinutes === duration) ?? null;
+  // Times grouped by part of the day, in the order the day runs.
+  const timeGroups = (["morning", "afternoon", "evening", "night"] as DayPart[])
+    .map((part) => ({
+      part,
+      slots: timesForSelectedDate.filter(
+        (slot) => dayPartOf(slot.startAt, timeStyle, customerTimezone || undefined) === part,
+      ),
+    }))
+    .filter((group) => group.slots.length > 0);
   const summary = [
     duration ? `${duration} min` : null,
     selectedOffering ? `ETB ${selectedOffering.price.toLocaleString("en-US")}` : null,
     format ? (format === "online" ? "Google Meet" : "In person") : null,
     selectedSlot
-      ? new Date(selectedSlot.startAt).toLocaleString("en-GB", {
+      ? `${new Date(selectedSlot.startAt).toLocaleDateString("en-GB", {
           weekday: "short",
           day: "numeric",
           month: "short",
-          hour: "2-digit",
-          minute: "2-digit",
-          timeZone: customerTimezone || undefined,
-        })
+          timeZone: styleTimeZone(timeStyle, customerTimezone || undefined),
+        })}, ${formatSlotTimeFull(selectedSlot.startAt, timeStyle, customerTimezone || undefined)}`
       : null,
   ]
     .filter(Boolean)
@@ -528,30 +555,69 @@ export function RailSelect({
               weekday: "short",
               day: "numeric",
               month: "short",
-            })}{" "}
-            {tzLabel ? (
-              <span className="muted" style={{ fontWeight: 400 }}>
-                · {tzLabel}
-              </span>
-            ) : null}
+            })}
           </legend>
-          <div className="opt-grid c3">
-            {timesForSelectedDate.map((slot) => (
-              <button
-                key={slot.startAt}
-                type="button"
-                className="chip"
-                aria-pressed={selectedSlot?.startAt === slot.startAt}
-                onClick={() => setSelectedSlot(slot)}
-              >
-                {new Date(slot.startAt).toLocaleTimeString("en-GB", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  timeZone: customerTimezone || undefined,
-                })}
-              </button>
-            ))}
+
+          {/* Ethiopian time (from 6am) or the 12-hour clock; remembered. */}
+          <div className="tstyle" role="radiogroup" aria-label="How to show times">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={timeStyle === "ethiopian"}
+              className={timeStyle === "ethiopian" ? "on" : ""}
+              onClick={() => chooseTimeStyle("ethiopian")}
+            >
+              <span lang="am">በኢትዮጵያ ሰዓት</span>
+              <span className="tstyle-sub">Ethiopian time</span>
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={timeStyle === "12h"}
+              className={timeStyle === "12h" ? "on" : ""}
+              onClick={() => chooseTimeStyle("12h")}
+            >
+              <span>12-hour</span>
+              <span className="tstyle-sub">{timeStyle === "12h" && tzLabel ? tzLabel : "AM / PM"}</span>
+            </button>
           </div>
+
+          {timeGroups.map((group) => (
+            <div key={group.part} className="tgroup">
+              <p className="tgroup-label">
+                {timeStyle === "ethiopian" ? (
+                  <>
+                    <span lang="am">{DAY_PART_LABELS[group.part].am}</span> · {DAY_PART_LABELS[group.part].en}
+                  </>
+                ) : (
+                  DAY_PART_LABELS[group.part].en
+                )}
+              </p>
+              <div className="opt-grid c3">
+                {group.slots.map((slot) => (
+                  <button
+                    key={slot.startAt}
+                    type="button"
+                    className="chip"
+                    aria-pressed={selectedSlot?.startAt === slot.startAt}
+                    aria-label={`${formatSlotTimeFull(slot.startAt, timeStyle, customerTimezone || undefined)}${
+                      timeStyle === "ethiopian" ? ` (${formatSlotTime(slot.startAt, "12h", ADDIS_TIMEZONE)})` : ""
+                    }`}
+                    onClick={() => setSelectedSlot(slot)}
+                  >
+                    {formatSlotTime(slot.startAt, timeStyle, customerTimezone || undefined)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          {timeStyle === "ethiopian" && timesForSelectedDate.length > 0 ? (
+            <p className="tstyle-note">
+              On the 12-hour clock: {formatSlotTime(timesForSelectedDate[0].startAt, "12h", ADDIS_TIMEZONE)} –{" "}
+              {formatSlotTime(timesForSelectedDate[timesForSelectedDate.length - 1].startAt, "12h", ADDIS_TIMEZONE)}{" "}
+              Addis Ababa time.
+            </p>
+          ) : null}
         </fieldset>
       ) : null}
 
