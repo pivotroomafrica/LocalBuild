@@ -20,6 +20,10 @@ import {
   DRAFT_LABELS,
   DRAFT_LIMITS,
   LANGUAGE_CHIPS,
+  ROLE_JOIN,
+  WORK_TYPES,
+  companyLabel,
+  splitRole,
   type ChipStep,
   type DraftField,
   type ExperienceRow,
@@ -37,6 +41,7 @@ import {
 
 type CardId =
   | "welcome"
+  | "work"
   | "field"
   | "role"
   | "years"
@@ -55,8 +60,15 @@ type CardDef = { id: CardId; title: string; hint?: string; save?: OnboardingSave
 
 const CARDS: CardDef[] = [
   { id: "welcome", title: "Let's build your expert profile" },
+  { id: "work", title: "Which best describes you?", hint: "Pick one, or two if you wear both hats." },
   { id: "field", title: "Which areas do you advise on?", hint: "Pick up to 3. Clients browse by these.", save: "basics" },
-  { id: "role", title: "What's your current role?", hint: "Suggested from your areas. Tap one or write your own.", save: "basics", chips: "role" },
+  {
+    id: "role",
+    title: "What's your role?",
+    hint: "Pick one, or two if you hold both (like Founder & CEO).",
+    save: "basics",
+    chips: "role",
+  },
   { id: "years", title: "How many years of experience do you have?", save: "basics" },
   { id: "problems", title: "What problems do clients bring you?", hint: "Tap the ones you're great at. Up to 6.", chips: "problems" },
   { id: "who", title: "Who do you help most?", hint: "Up to 4.", chips: "who" },
@@ -116,7 +128,7 @@ type ChipState = { key: string; options: string[]; source: "ai" | "fallback"; lo
 
 function chipKey(step: ChipStep, a: OnboardingAnswers) {
   const parts: Record<ChipStep, unknown[]> = {
-    role: [a.categoryIds],
+    role: [a.categoryIds, a.workTypes],
     problems: [a.categoryIds, a.role, a.years],
     who: [a.categoryIds, a.role, a.problems],
     highlights: [a.role, a.problems, a.who],
@@ -342,10 +354,12 @@ export function OnboardingFlow({
   function canContinue(): boolean {
     const a = answers;
     switch (def.id) {
+      case "work":
+        return a.workTypes.length > 0;
       case "field":
         return a.categoryIds.length > 0;
       case "role":
-        return Boolean(a.role.trim());
+        return Boolean(a.role.trim()) && Boolean(a.company.trim());
       case "years":
         return Boolean(a.years);
       case "problems":
@@ -423,7 +437,12 @@ export function OnboardingFlow({
       <div className={def.id !== "submit" && def.id !== "welcome" ? "ob-grid with-side" : "ob-grid"}>
         <section key={card} className={`ob-card ob-${direction}`} aria-labelledby="ob-title">
           {def.id === "welcome" ? (
-            <Welcome resuming={initial.card > 0} firstName={fullName.split(/\s+/)[0]} />
+            <Welcome
+              resuming={initial.card > 1}
+              firstName={fullName.split(/\s+/)[0]}
+              city={answers.city}
+              percentDone={percentDone}
+            />
           ) : (
             <header className="ob-head">
               <p className="ob-step num">
@@ -458,29 +477,53 @@ export function OnboardingFlow({
               />
             ) : null}
 
+            {def.id === "work" ? (
+              <ChipGroup
+                label="How you work"
+                options={WORK_TYPES.map((w) => w.label)}
+                selected={WORK_TYPES.filter((w) => answers.workTypes.includes(w.key)).map((w) => w.label)}
+                max={2}
+                allowCustom={false}
+                icons={Object.fromEntries(WORK_TYPES.map((w) => [w.label, w.icon]))}
+                onChange={(labels) =>
+                  set({ workTypes: WORK_TYPES.filter((w) => labels.includes(w.label)).map((w) => w.key) })
+                }
+              />
+            ) : null}
+
             {def.id === "role" ? (
               <>
                 <ChipGroup
-                  label="Current role"
+                  label="Your role"
                   options={chips.role?.options ?? []}
                   loading={chips.role?.loading}
-                  selected={answers.role ? [answers.role] : []}
+                  selected={splitRole(answers.role)}
+                  max={2}
                   customPlaceholder="Your job title"
-                  customMaxLength={120}
-                  onChange={(picked) => set({ role: picked[0] ?? "" })}
+                  customMaxLength={60}
+                  onChange={(picked) => set({ role: picked.join(ROLE_JOIN).slice(0, 120) })}
                 />
+                {splitRole(answers.role).length === 2 ? (
+                  <p className="ob-note ob-pop">
+                    <span className="ms" aria-hidden="true">
+                      visibility
+                    </span>
+                    Clients will see: <strong>{answers.role}</strong>
+                  </p>
+                ) : null}
                 <MoreButton chip={chips.role} onClick={() => loadChips("role", true)} />
                 <div className="field ob-field">
                   <label className="label" htmlFor="ob-company">
-                    Company or organisation <span className="muted">(optional)</span>
+                    {companyLabel(answers.workTypes).label}
                   </label>
                   <input
                     id="ob-company"
                     className="input"
                     maxLength={150}
+                    required
                     value={answers.company}
                     onChange={(e) => set({ company: e.target.value })}
-                    placeholder="e.g. Ethio Telecom, or Self-employed"
+                    placeholder={companyLabel(answers.workTypes).placeholder}
                   />
                 </div>
               </>
@@ -542,6 +585,7 @@ export function OnboardingFlow({
                 <p className="label ob-label">Languages you can hold a session in</p>
                 <ChipGroup
                   label="Languages"
+                  layout="pills"
                   options={LANGUAGE_CHIPS}
                   selected={answers.languages}
                   max={8}
@@ -619,9 +663,9 @@ export function OnboardingFlow({
                 {saving
                   ? "Saving…"
                   : def.id === "welcome"
-                    ? initial.card > 0
+                    ? initial.card > 1
                       ? "Pick up where I left off"
-                      : "Let's go"
+                      : "Start my profile"
                     : isEmptyOptional
                       ? "Skip for now"
                       : def.id === "drafts"
@@ -651,37 +695,79 @@ export function OnboardingFlow({
   );
 }
 
-function Welcome({ resuming, firstName }: { resuming: boolean; firstName: string }) {
+/**
+ * The first screen is about them, not the form: a specific person who needs
+ * what they know (the reason to bother), then the three quiet worries --
+ * effort, words, risk -- answered one line each.
+ */
+function Welcome({
+  resuming,
+  firstName,
+  city,
+  percentDone,
+}: {
+  resuming: boolean;
+  firstName: string;
+  city: string;
+  percentDone: number;
+}) {
+  const name = firstName ? `${firstName}, ` : "";
+  if (resuming) {
+    return (
+      <header className="ob-head ob-welcome">
+        <span className="ob-badge" aria-hidden="true">
+          <span className="ms">waving_hand</span>
+        </span>
+        <h1 id="ob-title" className="ob-title">
+          Welcome back{firstName ? `, ${firstName}` : ""}. Your profile is {percentDone}% done.
+        </h1>
+        <p className="ob-lede">The hard part is behind you. A few more taps and clients can start finding you.</p>
+      </header>
+    );
+  }
   return (
     <header className="ob-head ob-welcome">
       <span className="ob-badge" aria-hidden="true">
         <span className="ms">auto_awesome</span>
       </span>
       <h1 id="ob-title" className="ob-title">
-        {resuming ? `Welcome back${firstName ? `, ${firstName}` : ""}` : `Let's build your expert profile${firstName ? `, ${firstName}` : ""}`}
+        {name ? name.charAt(0).toUpperCase() + name.slice(1) : ""}
+        {name ? "someone" : "Someone"} {city ? `in ${city}` : "near you"} is stuck on a problem you&apos;ve already
+        solved.
       </h1>
+      <p className="ob-lede">
+        Your experience is worth paying for. Let&apos;s put it where the right people can find it, and book you.
+      </p>
       <ul className="ob-points">
         <li>
           <span className="ms" aria-hidden="true">
             touch_app
           </span>
-          Mostly taps. We suggest answers as you go.
+          <span>
+            <strong>You won&apos;t face a blank page.</strong> We suggest the answers; you tap the ones that are true.
+          </span>
         </li>
         <li>
           <span className="ms" aria-hidden="true">
-            edit_note
+            draw
           </span>
-          AI writes your profile from your answers. You approve every word.
+          <span>
+            <strong>We write it, you sign it.</strong> Your profile is drafted from your answers, in your voice.
+            Nothing goes out until you approve every line.
+          </span>
         </li>
         <li>
           <span className="ms" aria-hidden="true">
-            schedule
+            verified_user
           </span>
-          About 5 minutes, saved after every step.
+          <span>
+            <strong>Five minutes, no risk.</strong> Saved after every tap, and our team reviews it before anyone
+            sees it.
+          </span>
         </li>
       </ul>
       <p className="ob-sub">
-        Prefer typing it all yourself? <Link href="/expert/application/profile">Use the full form</Link>
+        Rather write every word yourself? <Link href="/expert/application/profile">Use the full form</Link>
       </p>
     </header>
   );

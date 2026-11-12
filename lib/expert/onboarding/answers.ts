@@ -46,10 +46,46 @@ export const DRAFT_LIMITS: Record<DraftField, number> = {
 
 export type ExperienceRow = { title: string; organization: string; start_year: string; end_year: string };
 
+/** "Which best describes you?" -- asked before the role, so role ideas and
+ * the company question fit (a founder names their business, an employee
+ * their employer). Up to two: plenty of experts run a business and hold a
+ * job. */
+export const WORK_TYPES = [
+  { key: "owner", label: "I own or run a business", icon: "storefront" },
+  { key: "employed", label: "I'm employed at a company", icon: "badge" },
+  { key: "independent", label: "I work for myself: consulting or freelance", icon: "work" },
+  { key: "public", label: "I work in government or an NGO", icon: "account_balance" },
+  { key: "academic", label: "I teach or do research", icon: "school" },
+  { key: "retired", label: "I'm retired or between roles", icon: "self_improvement" },
+] as const;
+export type WorkType = (typeof WORK_TYPES)[number]["key"];
+const WORK_TYPE_KEYS = WORK_TYPES.map((w) => w.key) as readonly string[];
+
+/** The company question, worded for how they work (first match wins). */
+export function companyLabel(workTypes: WorkType[]): { label: string; placeholder: string } {
+  if (workTypes.includes("owner")) return { label: "What's your business called?", placeholder: "e.g. Awash Logistics" };
+  if (workTypes.includes("employed")) return { label: "Where do you work?", placeholder: "e.g. Ethio Telecom" };
+  if (workTypes.includes("independent")) return { label: "Your business or brand name", placeholder: "e.g. Hana Advisory, or your own name" };
+  if (workTypes.includes("public")) return { label: "Which organisation?", placeholder: "e.g. Ministry of Health, or Save the Children" };
+  if (workTypes.includes("academic")) return { label: "Which university or institute?", placeholder: "e.g. Addis Ababa University" };
+  if (workTypes.includes("retired")) return { label: "Where did you work last?", placeholder: "e.g. Commercial Bank of Ethiopia" };
+  return { label: "Company or organisation", placeholder: "e.g. Ethio Telecom, or your own business" };
+}
+
+const ROLE_IDEAS: Record<WorkType, string[]> = {
+  owner: ["Founder", "Co-founder", "CEO", "Managing Director", "Owner", "General Manager"],
+  employed: ["Senior Manager", "Director", "Head of Department", "Team Lead", "Manager", "Specialist"],
+  independent: ["Consultant", "Advisor", "Freelancer", "Coach", "Trainer"],
+  public: ["Program Manager", "Director", "Advisor", "Officer", "Country Director"],
+  academic: ["Lecturer", "Professor", "Researcher", "Dean", "Department Head"],
+  retired: ["Former CEO", "Former Director", "Retired Executive", "Board Member"],
+};
+
 export type OnboardingAnswers = {
   version: 1;
   /** Furthest card reached, to resume there. */
   card: number;
+  workTypes: WorkType[];
   categoryIds: string[];
   role: string;
   company: string;
@@ -123,6 +159,7 @@ export function answersFrom(
   return {
     version: 1,
     card: typeof raw.card === "number" && raw.card >= 0 ? Math.floor(raw.card) : 0,
+    workTypes: strings(raw.workTypes, 2).filter((w): w is WorkType => WORK_TYPE_KEYS.includes(w)),
     categoryIds: strings(raw.categoryIds).length ? strings(raw.categoryIds, 3) : categoryIds,
     role: text(raw.role, 120) || (profile.current_position ?? ""),
     company: text(raw.company, 150) || (profile.current_company ?? ""),
@@ -186,6 +223,17 @@ export const FALLBACK_CHIPS: Record<ChipStep, string[]> = {
   titles: ["Manager", "Senior Manager", "Director", "Founder", "Consultant", "Officer", "Team Lead", "Analyst"],
 };
 
+/** Built-in chips for a card when the AI isn't available. Role ideas follow
+ * how they work; the rest are generic. */
+export function fallbackChips(step: ChipStep, answers: Pick<OnboardingAnswers, "workTypes">): string[] {
+  if (step !== "role" || answers.workTypes.length === 0) return FALLBACK_CHIPS[step];
+  return Array.from(new Set(answers.workTypes.flatMap((w) => ROLE_IDEAS[w]))).slice(0, 8);
+}
+
+/** A role picked as one or two titles ("Founder & CEO"). */
+export const ROLE_JOIN = " & ";
+export const splitRole = (role: string) => (role ? role.split(ROLE_JOIN).filter(Boolean) : []);
+
 /** Common languages offered as chips (lib/expert/profileFields.ts). */
 export const LANGUAGE_CHIPS = ["Amharic", "English", "Afaan Oromoo", "Tigrinya", "Somali", "Arabic", "French"];
 
@@ -218,7 +266,8 @@ export function fallbackDrafts(answers: OnboardingAnswers, categoryNames: string
   return {
     headline: `${role}${field ? ` helping with ${field}` : ""}`.slice(0, 160),
     short_bio: [
-      `I'm ${/^[aeiou]/i.test(role) ? "an" : "a"} ${role.toLowerCase()}${at}${years ? ` with ${years} of experience` : ""}.`,
+      // Keep the role's own capitals ("Founder & CEO", not "founder & ceo").
+      `I'm ${/^[aeiou]/i.test(role) ? "an" : "a"} ${role}${at}${years ? ` with ${years} of experience` : ""}.`,
       problems.length ? `I help with ${joinList(problems.map((p) => p.toLowerCase()))}.` : "",
       who.length ? `I mostly work with ${joinList(who.map((w) => w.toLowerCase()))}.` : "",
     ]

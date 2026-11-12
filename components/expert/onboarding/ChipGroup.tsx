@@ -3,9 +3,13 @@
 import { useState } from "react";
 
 /**
- * Big tap-to-select answer chips, with an optional "Write my own" that adds
- * the typed answer as a selected chip. Shows shimmering placeholders while
+ * Tap-to-select answers, with an optional "Write my own" that adds the typed
+ * answer as a selected option. Shows shimmering placeholders while
  * suggestions load.
+ *
+ * "tiles" (default): an even grid of answer cards with a tick that is always
+ * there and just fills in, so tapping never changes a card's size and
+ * nothing jumps around. "pills": short values (years, languages) in a row.
  */
 export function ChipGroup({
   label,
@@ -17,6 +21,8 @@ export function ChipGroup({
   allowCustom = true,
   customPlaceholder = "Type your own answer",
   customMaxLength = 80,
+  layout = "tiles",
+  icons,
 }: {
   label: string;
   options: string[];
@@ -28,6 +34,9 @@ export function ChipGroup({
   allowCustom?: boolean;
   customPlaceholder?: string;
   customMaxLength?: number;
+  layout?: "tiles" | "pills";
+  /** Optional Material Symbols icon per option. */
+  icons?: Record<string, string>;
 }) {
   const [writing, setWriting] = useState(false);
   const [draft, setDraft] = useState("");
@@ -35,6 +44,8 @@ export function ChipGroup({
   // Keep the expert's own answers visible even if new suggestions arrive.
   const shown = [...options, ...selected.filter((s) => !options.some((o) => o.toLowerCase() === s.toLowerCase()))];
   const full = max > 1 && selected.length >= max;
+  const waiting = loading && options.length === 0;
+  const tiles = layout === "tiles";
 
   function toggle(option: string) {
     const on = lower.includes(option.toLowerCase());
@@ -55,35 +66,50 @@ export function ChipGroup({
 
   return (
     <div className="ob-chips-wrap">
-      <div className="ob-chips" role="group" aria-label={label} aria-busy={loading || undefined}>
+      <div
+        className={tiles ? "ob-tiles" : "ob-chips"}
+        role="group"
+        aria-label={label}
+        aria-busy={loading || undefined}
+      >
         {/* While suggestions load, keep the expert's own picks on screen. */}
-        {(loading && options.length === 0 ? selected : shown).map((option) => {
-              const on = lower.includes(option.toLowerCase());
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  className={on ? "ob-chip on" : "ob-chip"}
-                  aria-pressed={on}
-                  disabled={!on && full}
-                  onClick={() => toggle(option)}
-                >
-                  {on ? (
-                    <span className="ms ob-chip-check" aria-hidden="true">
-                      check
-                    </span>
-                  ) : null}
-                  {option}
-                </button>
-              );
-            })}
-        {loading && options.length === 0
+        {(waiting ? selected : shown).map((option) => {
+          const on = lower.includes(option.toLowerCase());
+          return (
+            <button
+              key={option}
+              type="button"
+              className={`${tiles ? "ob-tile" : "ob-chip"}${on ? " on" : ""}`}
+              aria-pressed={on}
+              disabled={!on && full}
+              onClick={() => toggle(option)}
+            >
+              {tiles ? (
+                <span className={max === 1 ? "ob-tick round" : "ob-tick"} aria-hidden="true">
+                  <span className="ms">check</span>
+                </span>
+              ) : null}
+              {icons?.[option] ? (
+                <span className="ms ob-tile-icon" aria-hidden="true">
+                  {icons[option]}
+                </span>
+              ) : null}
+              <span className="ob-tile-text">{option}</span>
+            </button>
+          );
+        })}
+        {waiting
           ? Array.from({ length: Math.max(3, 6 - selected.length) }, (_, i) => (
-              <span key={`skel-${i}`} className="ob-chip ob-chip-skel" aria-hidden="true" />
+              <span key={`skel-${i}`} className={`${tiles ? "ob-tile" : "ob-chip"} ob-chip-skel`} aria-hidden="true" />
             ))
           : null}
         {allowCustom && !writing ? (
-          <button type="button" className="ob-chip ob-chip-add" onClick={() => setWriting(true)} disabled={full}>
+          <button
+            type="button"
+            className={`${tiles ? "ob-tile" : "ob-chip"} ob-chip-add`}
+            onClick={() => setWriting(true)}
+            disabled={full}
+          >
             <span className="ms" aria-hidden="true">
               add
             </span>

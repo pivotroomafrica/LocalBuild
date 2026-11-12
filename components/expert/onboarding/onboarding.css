@@ -182,6 +182,111 @@
   font-size: 14px;
 }
 
+/* Answer tiles: an even grid, so tapping never resizes or reflows anything.
+ * The tick is always there and only fills in. */
+.pr .ob-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
+  gap: 10px;
+}
+.pr .ob-tile {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border: 1.5px solid var(--pr-line);
+  border-bottom-width: 3px;
+  border-radius: 14px;
+  background: #ffffff;
+  color: var(--pr-ink);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.3;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms var(--pr-ease),
+    background-color 160ms var(--pr-ease),
+    transform 120ms var(--pr-ease);
+}
+.pr .ob-tile:hover {
+  border-color: var(--pr-slate-light);
+}
+.pr .ob-tile:active:not(:disabled) {
+  transform: translateY(2px);
+}
+.pr .ob-tile.on {
+  border-color: var(--pr-blue);
+  background: var(--pr-blue-tint);
+  color: var(--pr-blue);
+}
+/* Limit reached: the rest fade back rather than turning into grey blocks. */
+.pr .ob-tile:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.pr .ob-tile-text {
+  flex: 1;
+  min-width: 0;
+}
+.pr .ob-tile-icon {
+  flex: none;
+  font-size: 22px;
+  color: var(--pr-slate);
+}
+.pr .ob-tile.on .ob-tile-icon {
+  color: var(--pr-blue);
+}
+.pr .ob-tick {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--pr-line);
+  border-radius: 6px;
+  background: #ffffff;
+  transition:
+    background-color 160ms var(--pr-ease),
+    border-color 160ms var(--pr-ease);
+}
+.pr .ob-tick.round {
+  border-radius: 50%;
+}
+.pr .ob-tick .ms {
+  font-size: 16px;
+  color: #ffffff;
+  transform: scale(0);
+  transition: transform 220ms var(--pr-ease);
+}
+.pr .ob-tile.on .ob-tick {
+  border-color: var(--pr-blue);
+  background: var(--pr-blue);
+}
+.pr .ob-tile.on .ob-tick .ms {
+  transform: scale(1);
+}
+.pr .ob-tile.ob-chip-add {
+  border-style: dashed;
+  border-bottom-width: 1.5px;
+  color: var(--pr-slate);
+  gap: 8px;
+}
+.pr .ob-tile.ob-chip-skel {
+  width: auto;
+}
+.pr .ob-lede {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--pr-ink);
+  max-width: 56ch;
+}
+.pr .ob-points strong {
+  font-weight: 600;
+}
+
 /* Chips: bigger and friendlier than the filter chips. */
 .pr .ob-chips {
   display: flex;
@@ -219,12 +324,11 @@
 .pr .ob-chip:active:not(:disabled) {
   transform: translateY(2px);
 }
+/* Colour only: a weight or size change here would reflow the row. */
 .pr .ob-chip.on {
   border-color: var(--pr-blue);
   background: var(--pr-blue-tint);
   color: var(--pr-blue);
-  font-weight: 500;
-  animation: ob-pop 260ms var(--pr-ease);
 }
 .pr .ob-chip:disabled {
   color: var(--pr-slate-light);
