@@ -143,3 +143,106 @@ export function notifyAdminsManualPayment(bookingReference: string) {
     );
   });
 }
+
+/**
+ * To every admin: a booking has been paid and confirmed (a new order).
+ * Called from the confirmation job, outside a request, so it sends
+ * directly instead of via after(). Never throws.
+ */
+export async function sendAdminsNewOrder(order: {
+  bookingId: string;
+  bookingReference: string;
+  customerName: string | null;
+  expertName: string | null;
+  startAt: string;
+  durationMinutes: number;
+  sessionFormat: string;
+}) {
+  try {
+    const supabase = createServiceRoleClient();
+    const [admins, { data: payment }] = await Promise.all([
+      adminRecipients(),
+      supabase
+        .from("payments")
+        .select("amount_paid, currency, payment_method")
+        .eq("booking_id", order.bookingId)
+        .in("payment_status", ["verified", "paid"])
+        .order("submitted_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+    const when = new Date(order.startAt).toLocaleString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Africa/Addis_Ababa",
+    });
+    const amount = payment
+      ? `${Number(payment.amount_paid).toLocaleString("en-US")} ${payment.currency} by ${payment.payment_method === "chapa" ? "Chapa" : "bank transfer"}`
+      : "Paid";
+    await send(
+      admins,
+      noticeEmail({
+        subject: `New order ${order.bookingReference}: ${order.customerName ?? "Client"} with ${order.expertName ?? "expert"}`,
+        heading: "New paid booking",
+        paragraphs: [
+          `${order.customerName ?? "A client"} booked ${order.expertName ?? "an expert"} for ${order.durationMinutes} minutes (${order.sessionFormat === "online" ? "Google Meet" : "in person"}).`,
+          `When: ${when} (Addis Ababa time). Payment: ${amount}.`,
+          `Reference: ${order.bookingReference}.`,
+        ],
+        ctaLabel: "Open booking",
+        ctaUrl: `${getAppUrl()}/admin/bookings/${order.bookingReference}`,
+      }),
+      `new-order:${order.bookingReference}`,
+    );
+  } catch (error) {
+    console.error("new order notice:", error instanceof Error ? error.message : error);
+  }
+}
+
+/** To every admin: a client asked for a receipt. */
+export function notifyAdminsReceiptRequested(bookingReference: string, receiptName: string, requestId: string) {
+  later(async () => {
+    const admins = await adminRecipients();
+    await send(
+      admins,
+      noticeEmail({
+        subject: `Receipt requested: ${bookingReference}`,
+        heading: "A client asked for a receipt",
+        paragraphs: [
+          `The client on booking ${bookingReference} asked for a receipt in the name of ${receiptName}.`,
+          "Prepare it, then upload it and mark it sent on the Receipts page. The client is emailed when you do.",
+        ],
+        ctaLabel: "Open receipts",
+        ctaUrl: `${getAppUrl()}/admin/receipts`,
+      }),
+      `receipt-requested:${requestId}`,
+    );
+  });
+}
+
+/** To the client: their receipt is ready. */
+export function notifyCustomerReceiptIssued(customerId: string, bookingReference: string, requestId: string, hasFile: boolean) {
+  later(async () => {
+    const client = await userRecipient(customerId);
+    if (!client) return;
+    await send(
+      [client],
+      noticeEmail({
+        subject: `Your receipt for ${bookingReference}`,
+        heading: "Your receipt is ready",
+        paragraphs: [
+          `Hi ${firstName(client.name)},`,
+          hasFile
+            ? `Your receipt for booking ${bookingReference} is ready. You can download it from your session page.`
+            : `Your receipt for booking ${bookingReference} has been sent. Reply to this email if you can't find it.`,
+        ],
+        ctaLabel: "Open your session",
+        ctaUrl: `${getAppUrl()}/dashboard/sessions/${bookingReference}`,
+      }),
+      `receipt-issued:${requestId}`,
+    );
+  });
+}

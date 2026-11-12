@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 const STEPS = [
-  { href: "/expert/application/profile", label: "1. Who you are" },
+  { href: "/expert/application/profile", label: "1. Introduce yourself" },
   { href: "/expert/application/expertise", label: "2. What you've solved" },
   { href: "/expert/application/sessions", label: "3. Sessions and hours" },
   { href: "/expert/application", label: "Review and submit" },

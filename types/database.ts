@@ -1203,6 +1203,70 @@ export type Database = {
         }
         Relationships: []
       }
+      receipt_requests: {
+        Row: {
+          booking_id: string
+          customer_id: string
+          file_path: string | null
+          id: string
+          issued_at: string | null
+          issued_by: string | null
+          note: string | null
+          receipt_name: string
+          requested_at: string
+          status: string
+          tin: string | null
+        }
+        Insert: {
+          booking_id: string
+          customer_id: string
+          file_path?: string | null
+          id?: string
+          issued_at?: string | null
+          issued_by?: string | null
+          note?: string | null
+          receipt_name: string
+          requested_at?: string
+          status?: string
+          tin?: string | null
+        }
+        Update: {
+          booking_id?: string
+          customer_id?: string
+          file_path?: string | null
+          id?: string
+          issued_at?: string | null
+          issued_by?: string | null
+          note?: string | null
+          receipt_name?: string
+          requested_at?: string
+          status?: string
+          tin?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipt_requests_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipt_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipt_requests_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1505,15 +1569,6 @@ export type Database = {
           starting_price: number
         }[]
       }
-      get_platform_stats_public: {
-        Args: never
-        Returns: {
-          clients_served: number
-          live_experts: number
-          sessions_booked: number
-          topics: number
-        }[]
-      }
       get_expert_giving_public: {
         Args: { p_slug?: string }
         Returns: {
@@ -1612,6 +1667,15 @@ export type Database = {
       get_expert_slug_for_booking: {
         Args: { p_booking_id: string }
         Returns: string
+      }
+      get_platform_stats_public: {
+        Args: never
+        Returns: {
+          clients_served: number
+          live_experts: number
+          sessions_booked: number
+          topics: number
+        }[]
       }
       integration_max_attempts: { Args: never; Returns: number }
       is_admin: { Args: never; Returns: boolean }

@@ -100,7 +100,7 @@ export type ExpertActionState = {
   missingFields?: string[];
 };
 
-/** Onboarding step 1, "Who you are". Partial answers are saved, so an
+/** Onboarding step 1, "Introduce yourself". Partial answers are saved, so an
  * expert can stop and come back; completeness is checked at submit. */
 export async function saveOnboardingIdentityAction(
   _prevState: ExpertActionState,

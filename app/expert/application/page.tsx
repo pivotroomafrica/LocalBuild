@@ -7,7 +7,7 @@ import { SubmitApplicationPanel } from "@/components/expert/SubmitApplicationPan
 import type { ApplicationSection } from "@/lib/expert/data";
 
 const STEPS: { section: ApplicationSection; title: string; href: string }[] = [
-  { section: "profile", title: "1. Who you are", href: "/expert/application/profile" },
+  { section: "profile", title: "1. Introduce yourself", href: "/expert/application/profile" },
   { section: "expertise", title: "2. What you've solved", href: "/expert/application/expertise" },
   { section: "sessions", title: "3. Sessions and hours", href: "/expert/application/sessions" },
 ];

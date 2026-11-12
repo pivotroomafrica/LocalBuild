@@ -27,7 +27,7 @@ function StepButtons({ isPending, next }: { isPending: boolean; next: string }) 
   );
 }
 
-/** Onboarding step 1, "Who you are". */
+/** Onboarding step 1, "Introduce yourself". */
 export function IdentityStepForm({
   profile,
   fullName,

@@ -21,7 +21,7 @@ type Parsed = { ok: true; update: ProfileUpdate } | { ok: false; error: string }
 const str = (formData: FormData, name: string) => String(formData.get(name) ?? "");
 
 /**
- * Onboarding step 1, "Who you are": role, one-line summary, years,
+ * Onboarding step 1, "Introduce yourself": role, one-line summary, years,
  * location, languages, LinkedIn. Shared by the expert's own form and the
  * admin editor so both apply exactly the same rules.
  */

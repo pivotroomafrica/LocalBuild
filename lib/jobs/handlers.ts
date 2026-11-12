@@ -1,6 +1,7 @@
 import { getEmailProvider } from "@/lib/email/factory";
 import { getCalendarProvider } from "@/lib/calendar/factory";
 import { getAppUrl } from "./config";
+import { sendAdminsNewOrder } from "@/lib/notify/account";
 import {
   type IntegrationJobRow,
   getNotificationContext,
@@ -105,6 +106,20 @@ async function handleBookingConfirmationEmailCustomer(job: IntegrationJobRow): P
     text: content.text,
     idempotencyKey: job.dedupe_key,
   });
+
+  // One confirmation job runs per paid booking: tell the team about the
+  // new order too. Best effort; never fails the client's job.
+  if (result.ok) {
+    await sendAdminsNewOrder({
+      bookingId: job.booking_id,
+      bookingReference: ctx.booking_reference,
+      customerName: ctx.customer_full_name,
+      expertName: ctx.expert_full_name,
+      startAt: ctx.start_at,
+      durationMinutes: ctx.duration_minutes,
+      sessionFormat: ctx.session_format,
+    });
+  }
 
   return result.ok ? { ok: true, providerId: result.providerId } : { ok: false, error: result.error };
 }

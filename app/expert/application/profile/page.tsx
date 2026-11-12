@@ -25,10 +25,10 @@ export default async function ExpertApplicationProfilePage({ searchParams }: Pag
       <div className="app-split">
         <div className="stack" style={{ gap: 24 }}>
           <div className="stack" style={{ gap: 6 }}>
-            <h1 className="ws-h1">Who you are</h1>
+            <h1 className="ws-h1">Introduce yourself</h1>
             <p className="muted" style={{ margin: 0, maxWidth: "62ch" }}>
-              Step 1 of 3, about 3 minutes. Clients see this at the top of your profile. Nothing is public until our
-              team has reviewed and approved it.
+              Step 1 of 3 · about 3 minutes. This is the first thing clients see: your photo, your name and the work
+              you&apos;re known for. Nothing goes public until our team has approved it.
             </p>
           </div>
 

@@ -35,7 +35,7 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
     slug: string;
     approved_at: string | null;
   } | null = null;
-  let adminCounts = { applications: 0, payments: 0 };
+  let adminCounts = { applications: 0, payments: 0, receipts: 0 };
 
   if (user) {
     const [{ data: profile }, { data: expertProfile }] = await Promise.all([
@@ -52,7 +52,7 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
     expert = expertProfile;
 
     if (area === "admin" && isAdmin) {
-      const [{ count: applications }, { count: payments }] = await Promise.all([
+      const [{ count: applications }, { count: payments }, { count: receipts }] = await Promise.all([
         supabase
           .from("expert_profiles")
           .select("id", { count: "exact", head: true })
@@ -61,8 +61,9 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
           .from("payments")
           .select("id", { count: "exact", head: true })
           .in("payment_status", ["pending_verification", "requires_review"]),
+        supabase.from("receipt_requests").select("id", { count: "exact", head: true }).eq("status", "requested"),
       ]);
-      adminCounts = { applications: applications ?? 0, payments: payments ?? 0 };
+      adminCounts = { applications: applications ?? 0, payments: payments ?? 0, receipts: receipts ?? 0 };
     }
   }
 
@@ -77,6 +78,7 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
       { href: "/admin/experts", label: "Applications", icon: "how_to_reg", badge: adminCounts.applications },
       { href: "/admin/bookings", label: "Bookings", icon: "event" },
       { href: "/admin/payments", label: "Payments", icon: "payments", badge: adminCounts.payments },
+      { href: "/admin/receipts", label: "Receipts", icon: "receipt_long", badge: adminCounts.receipts },
       { href: "/admin/people", label: "Clients & experts", icon: "group" },
       { href: "/admin/ngos", label: "NGOs", icon: "volunteer_activism" },
     ];

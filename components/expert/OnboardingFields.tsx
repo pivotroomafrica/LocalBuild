@@ -80,7 +80,7 @@ function Counted({
   );
 }
 
-/** Step 1, "Who you are" (the photo is uploaded separately). The name
+/** Step 1, "Introduce yourself" (the photo is uploaded separately). The name
  * question shows only when `fullName` is given (the expert's own form). */
 export function IdentityQuestions({
   profile,

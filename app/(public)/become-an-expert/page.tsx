@@ -32,7 +32,7 @@ const STEPS = [
   {
     n: "01",
     title: "Apply",
-    body: "Three short steps: who you are, the problems you have solved, and your sessions and price. Save and finish later if you need to.",
+    body: "Three short steps: introduce yourself, the problems you have solved, and your sessions and price. Save and finish later if you need to.",
   },
   {
     n: "02",

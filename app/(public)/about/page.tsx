@@ -62,14 +62,6 @@ export default async function AboutPage() {
       label: stats.liveExperts === 1 ? "Vetted expert you can book today" : "Vetted experts you can book today",
     },
     { value: stats.topics, label: "Topics, from raising money to exporting" },
-    {
-      value: stats.sessionsBooked,
-      label: stats.sessionsBooked === 1 ? "Session booked so far" : "Sessions booked so far",
-    },
-    {
-      value: stats.clientsServed,
-      label: stats.clientsServed === 1 ? "Client who has booked an expert" : "Clients who have booked an expert",
-    },
   ].filter((figure) => figure.value > 0);
 
   return (

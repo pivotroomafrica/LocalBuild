@@ -11,6 +11,8 @@ import type { PaymentStatus } from "@/types/payment";
 import { getOwnReviewForBooking, isReviewable } from "@/lib/reviews/data";
 import { resolveSessionRoute } from "@/lib/booking/sessionRoute";
 import { NotYourSession } from "@/components/session/NotYourSession";
+import { ReceiptPanel } from "@/components/receipts/ReceiptPanel";
+import { getReceiptForBooking } from "@/lib/receipts/data";
 
 /**
  * Session detail (spec sections 12-14). Ownership is enforced both by RLS
@@ -53,6 +55,13 @@ export default async function DashboardSessionDetailPage({
   const { booking, intake, payments, derivedState, rescheduleHistory, cancellation, pendingChangeRequest } = detail;
   const action = pendingActionForSession(derivedState, booking.booking_reference);
   const ownReview = isReviewable(booking) ? await getOwnReviewForBooking(supabase, booking.id) : null;
+  const isPaid = booking.booking_status === "confirmed" || booking.booking_status === "completed";
+  const [receipt, { data: me }] = isPaid
+    ? await Promise.all([
+        getReceiptForBooking(supabase, booking.id),
+        supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
+      ])
+    : [null, { data: null }];
 
   return (
     <div className="flex flex-col gap-8">
@@ -238,6 +247,10 @@ export default async function DashboardSessionDetailPage({
             ))}
           </ul>
         </section>
+      ) : null}
+
+      {isPaid ? (
+        <ReceiptPanel bookingReference={booking.booking_reference} defaultName={me?.full_name ?? ""} receipt={receipt} />
       ) : null}
     </div>
   );
