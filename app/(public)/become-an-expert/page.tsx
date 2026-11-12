@@ -97,9 +97,10 @@ export default async function BecomeAnExpertPage({ searchParams }: { searchParam
   } = await supabase.auth.getUser();
 
   // proxy.ts protects everything under /expert; a logged-out visitor
-  // creates an account first and lands back on the application.
-  const applyHref = user ? "/expert/application" : `/auth/signup?next=${encodeURIComponent("/expert/application")}`;
-  const loginHref = `/auth/login?next=${encodeURIComponent("/expert/application")}`;
+  // creates an account first and lands back on the guided onboarding (which
+  // sends anyone whose application is already submitted to /expert/application).
+  const applyHref = user ? "/expert/onboarding" : `/auth/signup?next=${encodeURIComponent("/expert/onboarding")}`;
+  const loginHref = `/auth/login?next=${encodeURIComponent("/expert/onboarding")}`;
 
   return (
     <>

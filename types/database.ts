@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_onboarding_requests: {
+        Row: {
+          created_at: string
+          estimated_cost_usd: number | null
+          id: string
+          input_tokens: number | null
+          kind: string
+          model: string | null
+          outcome: string
+          output_tokens: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          estimated_cost_usd?: number | null
+          id?: string
+          input_tokens?: number | null
+          kind: string
+          model?: string | null
+          outcome: string
+          output_tokens?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          estimated_cost_usd?: number | null
+          id?: string
+          input_tokens?: number | null
+          kind?: string
+          model?: string | null
+          outcome?: string
+          output_tokens?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       ai_match_requests: {
         Row: {
           candidate_count: number
@@ -665,6 +701,7 @@ export type Database = {
           in_person_enabled: boolean
           languages: string[]
           linkedin_url: string | null
+          onboarding_answers: Json | null
           online_enabled: boolean
           problems_help_with: string | null
           profile_image_path: string | null
@@ -705,6 +742,7 @@ export type Database = {
           in_person_enabled?: boolean
           languages?: string[]
           linkedin_url?: string | null
+          onboarding_answers?: Json | null
           online_enabled?: boolean
           problems_help_with?: string | null
           profile_image_path?: string | null
@@ -745,6 +783,7 @@ export type Database = {
           in_person_enabled?: boolean
           languages?: string[]
           linkedin_url?: string | null
+          onboarding_answers?: Json | null
           online_enabled?: boolean
           problems_help_with?: string | null
           profile_image_path?: string | null

@@ -108,8 +108,11 @@ export default async function ExpertApplicationPage() {
         {applicationStatus === "draft" ? (
           firstIncomplete ? (
             <div className="oq-actions">
-              <Link href={firstIncomplete.href} className="btn btn-ink md">
-                Continue with {firstIncomplete.title.replace(/^\d\.\s/, "").toLowerCase()}
+              <Link href="/expert/onboarding" className="btn btn-ink md">
+                Continue guided setup
+              </Link>
+              <Link href={firstIncomplete.href} className="btn btn-line md">
+                Or fill in {firstIncomplete.title.replace(/^\d\.\s/, "").toLowerCase()}
               </Link>
             </div>
           ) : (

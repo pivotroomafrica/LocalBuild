@@ -14,7 +14,7 @@ import {
   validateDurations,
   validateSessionFormat,
 } from "@/lib/validation/expert";
-import { calculateDurationPrice } from "@/lib/expert/pricing";
+import { syncSessionPricing } from "@/lib/expert/pricingSync";
 import type { ExpertProfile } from "@/types/expert";
 import { kickJobs } from "@/lib/jobs/inProcess";
 import { notifyAdminsApplicationSubmitted } from "@/lib/notify/account";
@@ -251,68 +251,14 @@ export async function saveSessionPricingAction(
   const format = validateSessionFormat(onlineEnabled, inPersonEnabled);
   if (!format.valid) return { error: format.error };
 
-  const { data: expertProfile } = await supabase
-    .from("expert_profiles")
-    .select("id")
-    .eq("user_id", user.id)
-    .single();
-  if (!expertProfile) return { error: GENERIC_ERROR };
-
-  // Source of truth for the pricing configuration.
-  const { error: profileError } = await supabase
-    .from("expert_profiles")
-    .update({
-      base_hourly_price: price.value,
-      online_enabled: onlineEnabled,
-      in_person_enabled: inPersonEnabled,
-      ...responseTime.update,
-    })
-    .eq("user_id", user.id);
-  if (profileError) return { error: GENERIC_ERROR };
-
-  // Derived rows, one per enabled duration -- synchronized, not
-  // accumulated: update the ones that already exist, insert the ones
-  // that don't, remove any duration no longer enabled.
-  for (const duration of durations.value) {
-    const derivedPrice = calculateDurationPrice(price.value, duration);
-
-    const { data: updatedRows, error: updateError } = await supabase
-      .from("expert_session_types")
-      .update({
-        base_price: derivedPrice,
-        currency: "ETB",
-        online_enabled: onlineEnabled,
-        in_person_enabled: inPersonEnabled,
-      })
-      .eq("expert_profile_id", expertProfile.id)
-      .eq("duration_minutes", duration)
-      .select("id");
-
-    if (updateError) return { error: GENERIC_ERROR };
-
-    if (!updatedRows || updatedRows.length === 0) {
-      const { error: insertError } = await supabase.from("expert_session_types").insert({
-        expert_profile_id: expertProfile.id,
-        duration_minutes: duration,
-        base_price: derivedPrice,
-        currency: "ETB",
-        online_enabled: onlineEnabled,
-        in_person_enabled: inPersonEnabled,
-      });
-      // A concurrent duplicate insert would hit the unique constraint on
-      // (expert_profile_id, duration_minutes) -- treat that as the row
-      // already existing (another request's save already covers it)
-      // rather than a failure, same pattern as ensureExpertProfileDraft.
-      if (insertError && insertError.code !== "23505") return { error: GENERIC_ERROR };
-    }
-  }
-
-  const { error: deleteError } = await supabase
-    .from("expert_session_types")
-    .delete()
-    .eq("expert_profile_id", expertProfile.id)
-    .not("duration_minutes", "in", `(${durations.value.join(",")})`);
-  if (deleteError) return { error: GENERIC_ERROR };
+  const saved = await syncSessionPricing(supabase, user.id, {
+    basePrice: price.value,
+    durations: durations.value,
+    onlineEnabled,
+    inPersonEnabled,
+    extraUpdate: responseTime.update,
+  });
+  if (!saved) return { error: GENERIC_ERROR };
 
   revalidatePath("/expert/application");
   invalidatePublicExperts();

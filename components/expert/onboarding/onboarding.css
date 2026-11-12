@@ -1,0 +1,727 @@
+/* ---------------------------------------------------------------------------
+ * Guided expert onboarding (app/expert/onboarding): one question per card,
+ * big tap chips, a profile card that fills itself in. Uses the website
+ * tokens from app/site.css (--pr-*).
+ * ------------------------------------------------------------------------- */
+.pr .ob {
+  max-width: 1080px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+/* Phones: focus mode. Drop the workspace's menu row (Save & exit is in the
+ * top bar) and tighten the page padding. */
+@media (max-width: 900px) {
+  .pr .ws-body:has(.ob) {
+    padding-block: 8px 24px;
+    gap: 0;
+  }
+  .pr .ws-body:has(.ob) > .ws-side {
+    display: none;
+  }
+}
+.pr .ob-top {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-block: 10px;
+  background: #ffffff;
+}
+.pr .ob-progress {
+  flex: 1;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--pr-mist);
+  overflow: hidden;
+}
+.pr .ob-progress > span {
+  display: block;
+  height: 100%;
+  min-width: 10px;
+  border-radius: inherit;
+  background: var(--pr-blue);
+  transition: width 520ms var(--pr-ease);
+}
+.pr .ob-exit {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--pr-slate);
+  white-space: nowrap;
+}
+.pr .ob-icon-btn {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--pr-ink);
+  cursor: pointer;
+}
+.pr .ob-icon-btn:hover {
+  background: var(--pr-mist);
+}
+.pr .ob-icon-btn:disabled {
+  color: var(--pr-slate-light);
+  background: transparent;
+  cursor: default;
+}
+.pr .ob-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.pr .ob-side {
+  display: none;
+}
+/* Two columns only when there's room beside the workspace sidebar, and
+ * only on cards that show the profile card. */
+@media (min-width: 1180px) {
+  .pr .ob-grid.with-side {
+    grid-template-columns: minmax(0, 1fr) 300px;
+  }
+  .pr .ob-side {
+    display: block;
+    position: sticky;
+    top: 76px;
+  }
+}
+
+.pr .ob-card {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+  max-width: 680px;
+  animation: ob-in-fwd 420ms var(--pr-ease) both;
+}
+.pr .ob-card.ob-back {
+  animation-name: ob-in-back;
+}
+@keyframes ob-in-fwd {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+@keyframes ob-in-back {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+}
+.pr .ob-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pr .ob-step {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--pr-blue);
+}
+.pr .ob-ai {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px 2px 8px;
+  border-radius: 999px;
+  background: var(--pr-blue-tint);
+  font-size: 13px;
+  font-weight: 500;
+  animation: ob-pop 360ms var(--pr-ease) both;
+}
+.pr .ob-ai .ms,
+.pr .ob-note .ms {
+  font-size: 16px;
+}
+.pr .ob-note .ms {
+  margin-inline-end: 6px;
+  vertical-align: -3px;
+}
+.pr .ws-main .ob-title,
+.pr .ob-title {
+  margin: 0;
+  font-family: var(--pr-display);
+  font-size: clamp(26px, 3.4vw, 34px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+.pr .ob-sub {
+  margin: 0;
+  color: var(--pr-slate);
+  font-size: 16px;
+}
+.pr .ob-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.pr .ob-label {
+  margin: 10px 0 0;
+}
+.pr .ob-field {
+  margin-top: 8px;
+}
+.pr .ob-hint {
+  margin: 0;
+  color: var(--pr-slate);
+  font-size: 14px;
+}
+
+/* Chips: bigger and friendlier than the filter chips. */
+.pr .ob-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.pr .ob-chips-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pr .ob-chip {
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border: 1.5px solid var(--pr-line);
+  border-bottom-width: 3px;
+  border-radius: 14px;
+  background: #ffffff;
+  color: var(--pr-ink);
+  font: inherit;
+  font-size: 16px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms var(--pr-ease),
+    background-color 160ms var(--pr-ease),
+    transform 160ms var(--pr-ease);
+}
+.pr .ob-chip:hover {
+  border-color: var(--pr-slate-light);
+}
+.pr .ob-chip:active:not(:disabled) {
+  transform: translateY(2px);
+}
+.pr .ob-chip.on {
+  border-color: var(--pr-blue);
+  background: var(--pr-blue-tint);
+  color: var(--pr-blue);
+  font-weight: 500;
+  animation: ob-pop 260ms var(--pr-ease);
+}
+.pr .ob-chip:disabled {
+  color: var(--pr-slate-light);
+  background: var(--pr-mist);
+  border-color: var(--pr-mist);
+  cursor: not-allowed;
+}
+.pr .ob-chip .ms {
+  font-size: 20px;
+}
+.pr .ob-chip-check {
+  animation: ob-pop 300ms var(--pr-ease);
+}
+.pr .ob-chip.sm {
+  min-height: 38px;
+  padding: 6px 12px;
+  border-bottom-width: 2px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+.pr .ob-chip.big {
+  min-height: 64px;
+  padding-inline: 22px;
+  font-size: 18px;
+}
+.pr .ob-chip-add {
+  border-style: dashed;
+  border-bottom-width: 1.5px;
+  color: var(--pr-slate);
+}
+.pr .ob-chip-skel {
+  width: 150px;
+  cursor: default;
+  border-color: var(--pr-mist);
+  background: linear-gradient(90deg, var(--pr-mist) 25%, #fbfbfc 50%, var(--pr-mist) 75%) 0 0 / 200% 100%;
+  animation: ob-shimmer 1.2s linear infinite;
+}
+.pr .ob-chip-skel:nth-child(2n) {
+  width: 200px;
+}
+.pr .ob-chip-skel:nth-child(3n) {
+  width: 120px;
+}
+.pr .ob-price-own input {
+  width: 110px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 18px;
+  color: inherit;
+  outline: none;
+}
+.pr .ob-custom {
+  display: flex;
+  gap: 8px;
+}
+.pr .ob-more {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px;
+  border: 0;
+  background: none;
+  color: var(--pr-blue);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.pr .ob-more:disabled {
+  color: var(--pr-slate);
+  cursor: default;
+}
+.pr .ob-more .ms {
+  font-size: 18px;
+}
+.pr .ob-spin {
+  animation: ob-spin 1s linear infinite;
+}
+
+.pr .ob-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pr .ob-list li,
+.pr .ob-role-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.pr .ob-role {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--pr-line);
+  border-radius: 16px;
+}
+.pr .ob-role-years {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.pr .ob-note {
+  margin: 0;
+  display: block;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--pr-mist);
+  color: var(--pr-slate);
+  font-size: 15px;
+}
+.pr .ob-note.ai {
+  background: var(--pr-blue-tint);
+  color: var(--pr-blue);
+}
+.pr .ob-tones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.pr .ob-draft {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  border: 1.5px solid var(--pr-line);
+  border-radius: 18px;
+  transition:
+    border-color 200ms var(--pr-ease),
+    background-color 200ms var(--pr-ease);
+}
+.pr .ob-draft.ok {
+  border-color: #a7e3c9;
+  background: #f6fdf9;
+}
+.pr .ob-draft header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.pr .ws-main .ob-draft h2 {
+  margin: 0;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--pr-slate);
+  text-transform: uppercase;
+}
+.pr .ob-draft-text {
+  margin: 0;
+  white-space: pre-line;
+  font-size: 16px;
+  line-height: 1.55;
+}
+.pr .ob-draft-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pr .ob-ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #047857;
+  font-size: 14px;
+  font-weight: 600;
+}
+.pr .ob-ok .ms {
+  font-size: 18px;
+}
+.pr .ob-ghost {
+  color: var(--pr-slate-light);
+}
+.pr .ob-writing {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px;
+  border-radius: 18px;
+  background: var(--pr-blue-tint);
+  color: var(--pr-blue);
+}
+.pr .ob-writing p {
+  margin: 0;
+  font-weight: 500;
+}
+.pr .ob-writing.sm {
+  padding: 4px 0;
+  background: none;
+}
+.pr .ob-writing > .ms {
+  font-size: 28px;
+  align-self: flex-start;
+}
+.pr .ob-skel-line {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #dbe3fb 25%, #f3f6fe 50%, #dbe3fb 75%) 0 0 / 200% 100%;
+  animation: ob-shimmer 1.2s linear infinite;
+}
+.pr .ob-skel-line.short {
+  width: 60%;
+}
+
+.pr .ob-foot {
+  position: sticky;
+  bottom: 0;
+  padding-block: 14px;
+  background: linear-gradient(to top, #ffffff 70%, rgba(255, 255, 255, 0));
+}
+.pr .ob-go {
+  width: 100%;
+  height: 56px;
+  font-size: 17px;
+}
+@media (min-width: 640px) {
+  .pr .ob-go {
+    width: auto;
+    min-width: 220px;
+  }
+}
+.pr .ob-photo {
+  padding: 18px;
+  border: 1px solid var(--pr-line);
+  border-radius: 18px;
+  overflow: hidden;
+}
+/* The shared PhotoUpload row: let it stack on narrow screens. */
+.pr .ob-photo > div {
+  flex-wrap: wrap;
+}
+.pr .ob-photo form {
+  min-width: min(100%, 240px);
+}
+.pr .ob-photo input[type="file"] {
+  max-width: 100%;
+}
+.pr .ob-photo button {
+  white-space: normal;
+}
+
+/* Welcome */
+.pr .ob-badge {
+  width: 56px;
+  height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: var(--pr-blue-tint);
+  color: var(--pr-blue);
+  animation: ob-pop 500ms var(--pr-ease) both;
+}
+.pr .ob-badge .ms {
+  font-size: 30px;
+}
+.pr .ob-badge.big {
+  width: 80px;
+  height: 80px;
+  border-radius: 26px;
+}
+.pr .ob-badge.big .ms {
+  font-size: 44px;
+}
+.pr .ob-points {
+  margin: 8px 0 4px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 17px;
+}
+.pr .ob-points li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pr .ob-points .ms {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: var(--pr-mist);
+  font-size: 22px;
+}
+
+/* Mini profile */
+.pr .ob-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid var(--pr-line);
+  border-radius: 20px;
+  background: #ffffff;
+}
+.pr .ob-mini-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.pr .ob-mini-photo {
+  width: 72px;
+  height: 90px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: var(--pr-mist);
+  color: var(--pr-slate-light);
+}
+.pr .ob-mini-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pr .ob-mini-photo .ms {
+  font-size: 36px;
+}
+.pr .ob-ring {
+  --p: 0;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(var(--pr-blue) calc(var(--p) * 1%), var(--pr-mist) 0);
+}
+.pr .ob-ring span {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+}
+.pr .ob-mini-name {
+  margin: 6px 0 0;
+  font-family: var(--pr-display);
+  font-size: 19px;
+  font-weight: 700;
+}
+.pr .ob-mini-head,
+.pr .ob-mini-meta,
+.pr .ob-mini-bio {
+  margin: 0;
+  font-size: 14px;
+}
+.pr .ob-mini-meta,
+.pr .ob-mini-bio {
+  color: var(--pr-slate);
+}
+.pr .ob-mini-bio {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pr .ob-mini-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pr .ob-mini-tags .topic {
+  height: auto;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.3;
+}
+.pr .ob-mini-facts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+.pr .ob-mini-facts li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pr .ob-mini-facts .ms {
+  font-size: 18px;
+  color: var(--pr-slate);
+}
+
+/* Submit and celebration */
+.pr .ob-submit {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 420px;
+}
+.pr .ob-terms {
+  align-self: flex-start;
+  min-height: 48px;
+}
+.pr .ob-missing {
+  margin: 8px 0 0;
+  padding-inline-start: 20px;
+}
+.pr .ob-missing .ob-more {
+  padding-block: 0;
+  margin-inline-start: 8px;
+}
+.pr .ob-done {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 40px 12px;
+  text-align: center;
+}
+.pr .ob-done-acts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.pr .ob-confetti {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 50;
+}
+.pr .ob-confetti span {
+  position: absolute;
+  top: -20px;
+  height: 14px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: ob-fall 1800ms cubic-bezier(0.3, 0.6, 0.5, 1) forwards;
+}
+@keyframes ob-fall {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--x), 100vh) rotate(calc(var(--r) + 540deg));
+  }
+}
+.pr .ob-pop {
+  animation: ob-pop 320ms var(--pr-ease) both;
+}
+@keyframes ob-pop {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.4;
+  }
+  60% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes ob-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes ob-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pr .ob-confetti {
+    display: none;
+  }
+}
