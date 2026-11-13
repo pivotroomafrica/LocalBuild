@@ -36,7 +36,6 @@ export function SiteFooter() {
         </div>
         <div className="base">
           <span>© {new Date().getFullYear()} Pivotroom · Modern Ethiopia Marketing PLC · Addis Ababa</span>
-          <span>Payments by Chapa · Sessions on Google Meet or in person</span>
         </div>
       </div>
     </footer>

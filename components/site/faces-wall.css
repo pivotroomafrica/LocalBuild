@@ -1,0 +1,156 @@
+/* "You could keep reading" wall of expert faces (FacesWall.tsx). The grid is
+ * wider than the screen on purpose: it's centred and clipped, so the edges
+ * run off the page like a crowd. Website tokens (--pr-*). */
+.pr .fw {
+  --fw-tile: 84px;
+  --fw-gap: 11px;
+  position: relative;
+  overflow: hidden;
+  padding-block: 56px;
+  background: #ffffff;
+}
+/* Wider than the screen and centred on it (a plain grid would line up from
+ * the left edge and push the cleared middle off-centre). */
+.pr .fw-grid {
+  display: grid;
+  width: max-content;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  gap: var(--fw-gap);
+  grid-auto-rows: var(--fw-tile);
+  /* Fade the far edges so the wall dissolves into the page. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 9%, #000 91%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 9%, #000 91%, transparent 100%);
+}
+.pr .fw-tile {
+  display: block;
+  width: var(--fw-tile);
+  height: var(--fw-tile);
+  border-radius: 18px;
+  background: #f7f7f9;
+  box-shadow: inset 0 0 0 1px rgba(13, 15, 18, 0.02);
+}
+/* The cleared middle behind the headline: kept in the grid for spacing,
+ * not drawn. */
+.pr .fw-void {
+  visibility: hidden;
+}
+.pr .fw-face {
+  overflow: hidden;
+  background: var(--pr-mist);
+  box-shadow: 0 6px 16px rgba(13, 15, 18, 0.14);
+  transition:
+    transform 220ms var(--pr-ease),
+    box-shadow 220ms var(--pr-ease);
+  animation: fw-in 520ms var(--pr-ease) both;
+}
+.pr .fw-face:hover {
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 12px 28px rgba(13, 15, 18, 0.2);
+}
+.pr .fw-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+@keyframes fw-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+/* The headline sits over the cleared middle of the grid. */
+.pr .fw-copy {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: min(560px, calc(100% - 32px));
+  height: fit-content;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+  pointer-events: none;
+}
+.pr .fw-copy > * {
+  pointer-events: auto;
+}
+.pr .fw-title {
+  margin: 0;
+  /* Narrow enough to break like the reference: "You could keep /
+   * reading. Or ask / someone who's done it." */
+  max-width: 15ch;
+  font-family: var(--pr-display);
+  font-size: clamp(32px, 3.6vw, 52px);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  color: var(--pr-ink);
+  text-wrap: balance;
+}
+.pr .fw-title em {
+  color: var(--pr-blue);
+  font-style: italic;
+}
+.pr .fw-sub {
+  margin: 0;
+  max-width: 46ch;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--pr-slate);
+  text-wrap: pretty;
+}
+
+.pr .fw-desktop {
+  display: grid;
+}
+.pr .fw-phone {
+  display: none;
+}
+
+/* Smaller screens: same desktop grid, smaller tiles. */
+@media (max-width: 1100px) {
+  .pr .fw {
+    --fw-tile: 68px;
+    --fw-gap: 9px;
+  }
+}
+
+/* Phones: their own 6-column grid with a band cleared for the text. */
+@media (max-width: 720px) {
+  .pr .fw {
+    --fw-tile: min(52px, calc((100vw - 32px - 5 * 8px) / 6));
+    --fw-gap: 8px;
+    padding-block: 32px;
+  }
+  .pr .fw-desktop {
+    display: none;
+  }
+  .pr .fw-phone {
+    display: grid;
+  }
+  .pr .fw-tile {
+    border-radius: 13px;
+  }
+  .pr .fw-copy {
+    gap: 14px;
+  }
+  .pr .fw-title {
+    font-size: 28px;
+  }
+  .pr .fw-sub {
+    font-size: 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pr .fw-face {
+    animation: none;
+  }
+  .pr .fw-face:hover {
+    transform: none;
+  }
+}

@@ -4,6 +4,7 @@ import { useRef } from "react";
 import Link from "next/link";
 import type { PublicDirectoryCard } from "@/lib/public/data";
 import { ExpertCard } from "@/components/site/ExpertCard";
+import { FacesWall } from "@/components/site/FacesWall";
 
 const STEPS = [
   {
@@ -302,6 +303,8 @@ export function HomeClient({ experts, categories }: { experts: PublicDirectoryCa
           ) : null}
         </div>
       </section>
+
+      <FacesWall experts={experts} />
 
       <TopicsSection categories={categories} />
     </>
