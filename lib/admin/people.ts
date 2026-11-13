@@ -21,6 +21,43 @@ export async function getAdminPeople(supabase: TypedClient, kind: AdminPeopleKin
   return data ?? [];
 }
 
+export type AdminPeopleStats = {
+  clients: number;
+  experts: number;
+  liveExperts: number;
+  sessionsBooked: number;
+  upcomingSessions: number;
+};
+
+/**
+ * Headline numbers for the Clients & experts page. Sessions booked counts
+ * real sessions (confirmed or completed); holds, expired and cancelled
+ * bookings aren't counted.
+ */
+export async function getAdminPeopleStats(supabase: TypedClient): Promise<AdminPeopleStats> {
+  const nowIso = new Date().toISOString();
+  const [clients, experts, { count: sessionsBooked }, { count: upcomingSessions }] = await Promise.all([
+    getAdminPeople(supabase, "clients"),
+    getAdminPeople(supabase, "experts"),
+    supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .in("booking_status", ["confirmed", "completed"]),
+    supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("booking_status", "confirmed")
+      .gt("start_at", nowIso),
+  ]);
+  return {
+    clients: clients.length,
+    experts: experts.length,
+    liveExperts: experts.filter((e) => e.profile_status === "published").length,
+    sessionsBooked: sessionsBooked ?? 0,
+    upcomingSessions: upcomingSessions ?? 0,
+  };
+}
+
 export async function getAdminPerson(supabase: TypedClient, userId: string): Promise<AdminPerson | null> {
   const { data, error } = await supabase.rpc("admin_person", { p_user_id: userId });
   if (error) return null;
