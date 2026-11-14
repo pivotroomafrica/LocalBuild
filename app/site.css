@@ -4803,3 +4803,47 @@
   flex-basis: 100%;
   margin: 0;
 }
+
+/* "Continue with LinkedIn" and the "or" line under it. */
+.pr .oauth-btn {
+  width: 100%;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding-inline: 20px;
+  border: 1px solid var(--pr-line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--pr-ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 180ms var(--pr-ease),
+    box-shadow 220ms var(--pr-ease);
+}
+.pr .oauth-btn:hover {
+  border-color: #0a66c2;
+  box-shadow: 0 6px 16px rgba(10, 102, 194, 0.16);
+}
+.pr .oauth-btn:focus-visible {
+  outline: 3px solid rgba(10, 102, 194, 0.35);
+  outline-offset: 2px;
+}
+.pr .or-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--pr-slate);
+}
+.pr .or-divider::before,
+.pr .or-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--pr-line);
+}

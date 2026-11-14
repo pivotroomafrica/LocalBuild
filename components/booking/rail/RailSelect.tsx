@@ -17,7 +17,8 @@ import {
 import { ADDIS, cityOf, countryOfZone, sameClock, zoneChoices } from "@/lib/geo/clientZone";
 import { CountrySelect, Flag, findCountry } from "@/components/ui/CountrySelect";
 import type { Country } from "@/lib/geo/countries";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { LinkedInButton, OrDivider } from "@/components/auth/LinkedInButton";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import { SelectField } from "@/components/ui/SelectField";
@@ -52,6 +53,8 @@ type Props = {
   onlineEnabled: boolean;
   inPersonEnabled: boolean;
   isLoggedIn: boolean;
+  /** Show "Continue with LinkedIn" in the sign-in step. */
+  linkedinEnabled?: boolean;
   profileComplete: boolean;
   customerProfile: CustomerProfile | null;
   industries: Industry[];
@@ -146,12 +149,14 @@ export function RailSelect({
   onlineEnabled,
   inPersonEnabled,
   isLoggedIn,
+  linkedinEnabled = false,
   profileComplete,
   customerProfile,
   industries,
   onHoldCreated,
 }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const availableFormats: SessionFormat[] = [
     ...(onlineEnabled ? (["online"] as const) : []),
     ...(inPersonEnabled ? (["in_person"] as const) : []),
@@ -798,6 +803,13 @@ export function RailSelect({
               Create account
             </button>
           </div>
+
+          {linkedinEnabled ? (
+            <div className="mb-3 flex flex-col gap-3">
+              <LinkedInButton next={pathname} />
+              <OrDivider />
+            </div>
+          ) : null}
 
           {authTab === "login" ? (
             <form action={signInFormAction} className="flex flex-col gap-3">

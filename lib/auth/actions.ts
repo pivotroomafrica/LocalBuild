@@ -248,3 +248,50 @@ export async function updatePasswordAction(
 
   redirect("/auth/login?reset=success");
 }
+
+
+/**
+ * "Continue with LinkedIn": sends the visitor to LinkedIn via Supabase.
+ * They come back to /auth/callback, which signs them in and, on a first
+ * visit, asks for the details LinkedIn doesn't share (phone, country, city).
+ */
+export async function oauthSignInAction(formData: FormData) {
+  const provider = formData.get("provider");
+  if (provider !== "linkedin_oidc") redirect("/auth/login");
+  const next = safeNext(formData.get("next"));
+  const origin = await siteOrigin();
+  const callback = `${origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ""}`;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "linkedin_oidc",
+    options: { redirectTo: callback },
+  });
+  if (error || !data.url) redirect("/auth/login?error=oauth");
+  redirect(data.url);
+}
+
+/** First sign-in with LinkedIn: save the details LinkedIn doesn't share. */
+export async function completeProfileAction(_prev: AuthActionState, formData: FormData): Promise<AuthActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/auth/login");
+
+  const fullNameResult = validateFullName(String(formData.get("full_name") ?? ""));
+  if (!fullNameResult.valid) return { error: fullNameResult.error };
+  const phoneResult = validatePhone(String(formData.get("phone") ?? ""));
+  if (!phoneResult.valid) return { error: phoneResult.error };
+  const placeResult = readPlace(formData);
+  if ("error" in placeResult) return { error: placeResult.error };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ full_name: fullNameResult.value, phone: phoneResult.value, ...placeResult })
+    .eq("id", user.id);
+  if (error) return { error: "We couldn't save your details. Please try again." };
+
+  revalidatePath("/", "layout");
+  redirect(safeNext(formData.get("next")) ?? (await homePathFor(supabase, user.id)));
+}

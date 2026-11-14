@@ -7,6 +7,7 @@ import { getPaymentByProviderTxRef } from "@/lib/payment/data";
 import { verifyAndFinalizeChapaTransaction } from "@/lib/chapa/verify";
 import { ExpertDetailView } from "@/components/site/ExpertDetailView";
 import type { CustomerProfile } from "@/types/profile";
+import { getOAuthProviders } from "@/lib/auth/providers";
 
 /**
  * Phase 12 (critical architecture change): this route is now also where
@@ -94,6 +95,7 @@ export default async function PublicExpertProfilePage({
         profileComplete,
         customerProfile: customerProfile ?? null,
         industries: industries ?? [],
+        linkedinEnabled: (await getOAuthProviders()).linkedin,
       }}
       railSnapshot={railSnapshot}
     />

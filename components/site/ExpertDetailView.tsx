@@ -16,6 +16,7 @@ type Props = {
     profileComplete: boolean;
     customerProfile: CustomerProfile | null;
     industries: Industry[];
+    linkedinEnabled?: boolean;
   };
   railSnapshot?: RailBookingSnapshot | null;
 };
@@ -290,6 +291,7 @@ export function ExpertDetailView({ profile, railAuth, railSnapshot }: Props) {
             profileComplete={railAuth.profileComplete}
             customerProfile={railAuth.customerProfile}
             industries={railAuth.industries}
+            linkedinEnabled={railAuth.linkedinEnabled ?? false}
             snapshot={railSnapshot ?? null}
           />
         ) : (

@@ -22,6 +22,7 @@ type Props = {
   customerProfile: CustomerProfile | null;
   industries: Industry[];
   snapshot: RailBookingSnapshot | null;
+  linkedinEnabled?: boolean;
 };
 
 type Stage = "select" | "intake_review" | "payment" | "confirmed" | "hold_expired";
@@ -188,6 +189,7 @@ export function BookingRail(props: Props) {
             profileComplete={props.profileComplete}
             customerProfile={props.customerProfile}
             industries={props.industries}
+            linkedinEnabled={props.linkedinEnabled ?? false}
             onHoldCreated={handleHoldCreated}
           />
         );
