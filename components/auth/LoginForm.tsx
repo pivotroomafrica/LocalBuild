@@ -7,6 +7,7 @@ import { signInAction, type AuthActionState } from "@/lib/auth/actions";
 import { TextField } from "@/components/ui/TextField";
 import { Button } from "@/components/ui/Button";
 import { FormMessage } from "@/components/ui/FormMessage";
+import { AuthDivider, GoogleButton } from "@/components/auth/GoogleButton";
 
 const initialState: AuthActionState = {};
 
@@ -23,6 +24,9 @@ export function LoginForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      <GoogleButton next={next || undefined} />
+      <AuthDivider />
+
       {justReset ? (
         <FormMessage variant="success">Your password has been updated. Log in below.</FormMessage>
       ) : null}

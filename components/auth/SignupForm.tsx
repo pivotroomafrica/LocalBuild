@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/Button";
 import { FormMessage } from "@/components/ui/FormMessage";
 import { CountryCityFields } from "@/components/ui/CountryCityFields";
 import { PhoneField } from "@/components/ui/PhoneField";
+import { NameFields } from "@/components/auth/NameFields";
+import { TermsField } from "@/components/auth/TermsField";
+import { AuthDivider, GoogleButton, GoogleTermsNote } from "@/components/auth/GoogleButton";
 
 const initialState: AuthActionState = {};
 
@@ -31,18 +34,15 @@ export function SignupForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      <GoogleButton next={next || undefined} label="Sign up with Google" />
+      <GoogleTermsNote />
+      <AuthDivider />
+
       {state.error ? <FormMessage variant="error">{state.error}</FormMessage> : null}
 
       <input type="hidden" name="next" value={next} />
 
-      <TextField
-        label="Full Name"
-        name="full_name"
-        type="text"
-        autoComplete="name"
-        maxLength={100}
-        required
-      />
+      <NameFields />
       <TextField
         label="Email"
         name="email"
@@ -60,6 +60,8 @@ export function SignupForm() {
         minLength={8}
         required
       />
+
+      <TermsField />
 
       <Button type="submit" isLoading={isPending} loadingText="Creating account...">
         Sign Up

@@ -16,6 +16,9 @@ import {
 } from "@/lib/booking/timeStyle";
 import { ADDIS, cityOf, countryOfZone, sameClock, zoneChoices } from "@/lib/geo/clientZone";
 import { CountrySelect, Flag, findCountry } from "@/components/ui/CountrySelect";
+import { NameFields } from "@/components/auth/NameFields";
+import { TermsField } from "@/components/auth/TermsField";
+import { AuthDivider, GoogleButton } from "@/components/auth/GoogleButton";
 import type { Country } from "@/lib/geo/countries";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
@@ -173,12 +176,17 @@ export function RailSelect({
   const timeStyle: TimeStyle = abroad ? "12h" : "ethiopian";
   const [placeOpen, setPlaceOpen] = useState(false);
   const [pane, setPane] = useState<"session" | "day" | "time">("session");
-  const [signupPart, setSignupPart] = useState<1 | 2>(1);
-  const signupPartOneRef = useRef<HTMLDivElement>(null);
-  const goToSignupPartTwo = () => {
-    const fields = signupPartOneRef.current?.querySelectorAll("input") ?? [];
+  // Create account in three short screens (name; email and password; how
+  // to reach you) so the card never needs scrolling. One form underneath.
+  const [signupPart, setSignupPart] = useState<1 | 2 | 3>(1);
+  const signupNameRef = useRef<HTMLDivElement>(null);
+  const signupAccountRef = useRef<HTMLDivElement>(null);
+  const nextSignupPart = () => {
+    if (signupPart === 3) return;
+    const part = signupPart === 1 ? signupNameRef.current : signupAccountRef.current;
+    const fields = part?.querySelectorAll("input") ?? [];
     for (const field of fields) if (!field.reportValidity()) return;
-    setSignupPart(2);
+    setSignupPart((signupPart + 1) as 2 | 3);
   };
   const chooseZone = (zone: string, close = false) => {
     setCustomerTimezone(zone);
@@ -395,8 +403,8 @@ export function RailSelect({
       ? summary
       : [duration ? `${duration} min` : null, formatLabel, pane === "time" ? dayLabel : null].filter(Boolean).join(" · ");
   const goBack = () => {
-    if (gate === "auth" && authTab === "signup" && signupPart === 2) {
-      setSignupPart(1);
+    if (gate === "auth" && authTab === "signup" && signupPart > 1) {
+      setSignupPart((signupPart - 1) as 1 | 2);
       return;
     }
     if (gate !== "none") {
@@ -799,6 +807,16 @@ export function RailSelect({
             </button>
           </div>
 
+          {/* Google brings them back to this expert's page signed in; the
+              picked time can't survive the trip to Google, so it's picked
+              again there. */}
+          {authTab === "login" || signupPart === 1 ? (
+            <div className="mb-3 flex flex-col gap-3">
+              <GoogleButton next={`/experts/${expertSlug}`} />
+              <AuthDivider />
+            </div>
+          ) : null}
+
           {authTab === "login" ? (
             <form action={signInFormAction} className="flex flex-col gap-3">
               {signInState.error ? <FormMessage variant="error">{signInState.error}</FormMessage> : null}
@@ -813,10 +831,10 @@ export function RailSelect({
               action={signUpFormAction}
               className="flex flex-col gap-3"
               onSubmit={(event) => {
-                // Enter on the first screen means Next, not "send".
-                if (signupPart === 1) {
+                // Enter before the last screen means Next, not "send".
+                if (signupPart < 3) {
                   event.preventDefault();
-                  goToSignupPartTwo();
+                  nextSignupPart();
                 }
               }}
             >
@@ -828,22 +846,30 @@ export function RailSelect({
                 </FormMessage>
               ) : (
                 <>
-                  {/* Two short screens so the card never needs scrolling; one
-                      form underneath, sent once at the end. */}
                   <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-                    {signupPart === 1 ? "1 of 2 · Your account" : "2 of 2 · How to reach you"}
+                    {signupPart === 1
+                      ? "1 of 3 · Your name"
+                      : signupPart === 2
+                        ? "2 of 3 · Your account"
+                        : "3 of 3 · How to reach you"}
                   </p>
-                  <div ref={signupPartOneRef} className="flex flex-col gap-3" hidden={signupPart !== 1}>
-                    <TextField label="Full name" name="full_name" required />
-                    <TextField label="Email" name="email" type="email" required />
-                    <TextField label="Password" name="password" type="password" required />
-                    <Button type="button" onClick={goToSignupPartTwo}>
+                  <div ref={signupNameRef} className="flex flex-col gap-3" hidden={signupPart !== 1}>
+                    <NameFields stacked />
+                    <Button type="button" onClick={nextSignupPart}>
                       Next
                     </Button>
                   </div>
-                  <div className="flex flex-col gap-3" hidden={signupPart !== 2}>
-                    <PhoneField label="Phone" required={signupPart === 2} />
-                    <CountryCityFields required={signupPart === 2} />
+                  <div ref={signupAccountRef} className="flex flex-col gap-3" hidden={signupPart !== 2}>
+                    <TextField label="Email" name="email" type="email" required={signupPart === 2} />
+                    <TextField label="Password" name="password" type="password" minLength={8} required={signupPart === 2} />
+                    <Button type="button" onClick={nextSignupPart}>
+                      Next
+                    </Button>
+                  </div>
+                  <div className="flex flex-col gap-3" hidden={signupPart !== 3}>
+                    <PhoneField label="Phone" required={signupPart === 3} />
+                    <CountryCityFields required={signupPart === 3} />
+                    {signupPart === 3 ? <TermsField /> : null}
                     <Button type="submit" isLoading={signUpPending} loadingText="Creating account…">
                       Create account and continue
                     </Button>

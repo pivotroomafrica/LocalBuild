@@ -28,6 +28,28 @@ async function siteOrigin() {
   return originHeader ?? "http://localhost:3000";
 }
 
+type Names = { first_name: string; middle_name: string | null; last_name: string; full_name: string };
+
+/** First and last name required, middle optional; full_name is built from
+ * them (it's the one name the rest of the app shows). */
+function readNames(formData: FormData): Names | { error: string } {
+  const clean = (key: string) => String(formData.get(key) ?? "").trim().replace(/\s+/g, " ");
+  const first = clean("first_name");
+  const middle = clean("middle_name");
+  const last = clean("last_name");
+  if (!first) return { error: "Enter your first name." };
+  if (!last) return { error: "Enter your last name." };
+  if (first.length > 50 || middle.length > 50 || last.length > 50) {
+    return { error: "Each name must be 50 characters or fewer." };
+  }
+  const full = validateFullName([first, middle, last].filter(Boolean).join(" "));
+  if (!full.valid) return { error: full.error };
+  return { first_name: first, middle_name: middle || null, last_name: last, full_name: full.value };
+}
+
+/** The Terms and Privacy Policy box must be ticked to create an account. */
+const acceptedTerms = (formData: FormData) => formData.get("accept_terms") === "on";
+
 /** Country and city from CountryCityFields; both required at sign-up. */
 function readPlace(formData: FormData): { country: string; city: string } | { error: string } {
   const country = String(formData.get("country") ?? "").trim().slice(0, 100);
@@ -41,8 +63,9 @@ export async function signUpAction(
   _prevState: AuthActionState,
   formData: FormData,
 ): Promise<AuthActionState> {
-  const fullNameResult = validateFullName(String(formData.get("full_name") ?? ""));
-  if (!fullNameResult.valid) return { error: fullNameResult.error };
+  const names = readNames(formData);
+  if ("error" in names) return { error: names.error };
+  if (!acceptedTerms(formData)) return { error: "Please agree to the Terms and Privacy Policy to create your account." };
 
   const phoneResult = validatePhone(String(formData.get("phone") ?? ""));
   if (!phoneResult.valid) return { error: phoneResult.error };
@@ -68,7 +91,7 @@ export async function signUpAction(
     options: {
       // Read by the handle_new_user() database trigger to populate the
       // new profiles row (see supabase/migrations/001_profiles.sql).
-      data: { full_name: fullNameResult.value, phone: phoneResult.value, ...placeResult },
+      data: { ...names, phone: phoneResult.value, ...placeResult, terms_accepted: true },
       // Preserves the intended destination (e.g. /expert/application when
       // signup was reached via /become-an-expert) through the email
       // confirmation round-trip -- see app/auth/callback/route.ts.
@@ -154,8 +177,9 @@ export async function signUpForRailAction(
   _prevState: RailAuthActionState,
   formData: FormData,
 ): Promise<RailAuthActionState> {
-  const fullNameResult = validateFullName(String(formData.get("full_name") ?? ""));
-  if (!fullNameResult.valid) return { error: fullNameResult.error };
+  const names = readNames(formData);
+  if ("error" in names) return { error: names.error };
+  if (!acceptedTerms(formData)) return { error: "Please agree to the Terms and Privacy Policy to create your account." };
 
   const phoneResult = validatePhone(String(formData.get("phone") ?? ""));
   if (!phoneResult.valid) return { error: phoneResult.error };
@@ -186,7 +210,7 @@ export async function signUpForRailAction(
     email,
     password,
     options: {
-      data: { full_name: fullNameResult.value, phone: phoneResult.value, ...placeResult },
+      data: { ...names, phone: phoneResult.value, ...placeResult, terms_accepted: true },
       emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
     },
   });
@@ -195,6 +219,42 @@ export async function signUpForRailAction(
 
   if (!data.session) return { status: "check-email" };
   return { success: true };
+}
+
+/**
+ * "Finish your profile": the details Google doesn't give us (phone,
+ * country, city), a check of their name split into parts, and the Terms.
+ * Shown once after a first Google sign-in.
+ */
+export async function completeProfileAction(
+  _prevState: AuthActionState,
+  formData: FormData,
+): Promise<AuthActionState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/auth/login");
+
+  const names = readNames(formData);
+  if ("error" in names) return { error: names.error };
+  const phoneResult = validatePhone(String(formData.get("phone") ?? ""));
+  if (!phoneResult.valid) return { error: phoneResult.error };
+  const placeResult = readPlace(formData);
+  if ("error" in placeResult) return { error: placeResult.error };
+  if (!acceptedTerms(formData)) return { error: "Please agree to the Terms and Privacy Policy to continue." };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ ...names, phone: phoneResult.value, ...placeResult })
+    .eq("id", user.id);
+  if (error) return { error: "We couldn't save your details. Please try again." };
+
+  const { error: termsError } = await supabase.rpc("accept_platform_terms");
+  if (termsError) return { error: "We couldn't save your details. Please try again." };
+
+  revalidatePath("/", "layout");
+  redirect(safeNext(formData.get("next")) ?? (await homePathFor(supabase, user.id)));
 }
 
 /** Signs out and goes to the home page. */

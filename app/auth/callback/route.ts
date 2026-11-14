@@ -19,6 +19,20 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // First time with Google: Google doesn't give us a phone number,
+      // country or city, and they haven't ticked the terms yet, so ask
+      // once before going on. (Password-reset links go straight through.)
+      if (next !== "/auth/reset-password") {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("phone, country, city, terms_accepted_at")
+          .eq("id", data.user.id)
+          .maybeSingle();
+        if (profile && (!profile.phone || !profile.country || !profile.city || !profile.terms_accepted_at)) {
+          const finish = next ? `/auth/complete-profile?next=${encodeURIComponent(next)}` : "/auth/complete-profile";
+          return NextResponse.redirect(`${origin}${finish}`);
+        }
+      }
       return NextResponse.redirect(`${origin}${next ?? (await homePathFor(supabase, data.user.id))}`);
     }
   }
