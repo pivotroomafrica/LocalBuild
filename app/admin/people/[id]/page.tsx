@@ -2,16 +2,44 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminPerson, getAdminPersonBookings } from "@/lib/admin/people";
+import { requireAdminPage } from "@/lib/admin/data";
 import { ContactCard } from "@/components/admin/ContactCard";
 import { BOOKING_STATUS_LABELS, type BookingStatus } from "@/types/booking";
+import { DeletePersonPanel } from "@/components/admin/DeletePersonPanel";
+import { getDeletionImpact } from "@/lib/admin/deletePerson";
+import { createServiceRoleClient } from "@/lib/supabase/service";
 
 export default async function AdminPersonPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
+  // Checked here too, not only in the layout: this page reads with the
+  // service role below.
+  await requireAdminPage(supabase);
 
   const person = await getAdminPerson(supabase, id);
   if (!person) notFound();
-  const bookings = await getAdminPersonBookings(supabase, person);
+  const [bookings, admin] = await Promise.all([
+    getAdminPersonBookings(supabase, person),
+    supabase.auth.getUser().then(({ data }) => data.user?.id ?? null),
+  ]);
+  // What deleting would remove (admin-only page; the delete action itself
+  // re-checks everything). Not offered for admins or yourself.
+  const canDelete = person.role !== "admin" && person.user_id !== admin;
+  const fullImpact = canDelete
+    ? await getDeletionImpact(createServiceRoleClient(), person.user_id, person.expert_profile_id)
+    : null;
+  // File paths stay on the server; the panel only needs the counts.
+  const impact = fullImpact
+    ? {
+        bookingsAsClient: fullImpact.bookingsAsClient,
+        bookingsAsExpert: fullImpact.bookingsAsExpert,
+        paidSessions: fullImpact.paidSessions,
+        payments: fullImpact.payments,
+        reviews: fullImpact.reviews,
+        files: fullImpact.files,
+        upcoming: fullImpact.upcoming,
+      }
+    : null;
   const isExpert = Boolean(person.expert_profile_id);
   const linkedin = person.expert_linkedin ?? person.client_linkedin;
 
@@ -106,6 +134,15 @@ export default async function AdminPersonPage({ params }: { params: Promise<{ id
           </ul>
         )}
       </section>
+
+      {impact ? (
+        <DeletePersonPanel
+          userId={person.user_id}
+          fullName={person.full_name ?? ""}
+          isExpert={isExpert}
+          impact={impact}
+        />
+      ) : null}
     </div>
   );
 }

@@ -4,9 +4,8 @@ import { publicOrigin } from "@/lib/utils/publicOrigin";
 import { homePathFor, safeNext } from "@/lib/auth/home";
 
 /**
- * Supabase email links (signup confirmation, password recovery) and
- * "Continue with LinkedIn" redirect here with a `code` param instead of an
- * active session. Exchanging it is
+ * Supabase email links (signup confirmation, password recovery) redirect
+ * here with a `code` param instead of an active session. Exchanging it is
  * what actually sets the auth cookies -- landing on a page directly with
  * the code still attached would leave the visitor unauthenticated.
  */
@@ -20,22 +19,25 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      const target = next ?? (await homePathFor(supabase, data.user.id));
-      // Sign-in with LinkedIn shares no phone, country or city: ask once.
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("phone, country, city")
-        .eq("id", data.user.id)
-        .maybeSingle();
-      const viaLinkedIn = (data.user.app_metadata?.providers as string[] | undefined)?.includes("linkedin_oidc");
-      if (viaLinkedIn && profile && (!profile.phone || !profile.country || !profile.city)) {
-        return NextResponse.redirect(`${origin}/auth/complete-profile?next=${encodeURIComponent(target)}`);
+      // First time with Google: Google doesn't give us a phone number,
+      // country or city, and they haven't ticked the terms yet, so ask
+      // once before going on. (Password-reset links go straight through.)
+      if (next !== "/auth/reset-password") {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("phone, country, city, terms_accepted_at")
+          .eq("id", data.user.id)
+          .maybeSingle();
+        if (profile && (!profile.phone || !profile.country || !profile.city || !profile.terms_accepted_at)) {
+          const finish = next ? `/auth/complete-profile?next=${encodeURIComponent(next)}` : "/auth/complete-profile";
+          return NextResponse.redirect(`${origin}${finish}`);
+        }
       }
-      return NextResponse.redirect(`${origin}${target}`);
+      return NextResponse.redirect(`${origin}${next ?? (await homePathFor(supabase, data.user.id))}`);
     }
   }
 
-  // A cancelled or failed "Continue with LinkedIn" comes back with ?error=.
+  // A cancelled or failed Google/LinkedIn sign-in comes back with ?error=.
   const failed = searchParams.get("error") ? "?error=oauth" : "";
   return NextResponse.redirect(`${origin}/auth/login${failed}`);
 }

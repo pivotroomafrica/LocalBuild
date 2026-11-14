@@ -1242,7 +1242,11 @@ export type Database = {
           city: string | null
           country: string | null
           created_at: string
+          first_name: string | null
           full_name: string
+          last_name: string | null
+          middle_name: string | null
+          terms_accepted_at: string | null
           id: string
           phone: string | null
           role: string
@@ -1253,7 +1257,11 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          first_name?: string | null
           full_name: string
+          last_name?: string | null
+          middle_name?: string | null
+          terms_accepted_at?: string | null
           id: string
           phone?: string | null
           role?: string
@@ -1264,7 +1272,11 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          first_name?: string | null
           full_name?: string
+          last_name?: string | null
+          middle_name?: string | null
+          terms_accepted_at?: string | null
           id?: string
           phone?: string | null
           role?: string
@@ -1341,6 +1353,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_platform_terms: { Args: never; Returns: undefined }
       add_expert_monthly_rule: {
         Args: {
           p_day_of_month: number

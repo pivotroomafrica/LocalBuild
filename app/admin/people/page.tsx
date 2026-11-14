@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getAdminPeople, type AdminPeopleKind } from "@/lib/admin/people";
+import { getAdminPeople, getAdminPeopleStats, type AdminPeopleKind } from "@/lib/admin/people";
 
 const TABS: { kind: AdminPeopleKind; label: string }[] = [
   { kind: "clients", label: "Clients" },
@@ -18,14 +18,20 @@ const APPLICATION_LABELS: Record<string, string> = {
 export default async function AdminPeoplePage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; q?: string }>;
+  searchParams: Promise<{ tab?: string; q?: string; deleted?: string }>;
 }) {
   const params = await searchParams;
   const kind: AdminPeopleKind = params.tab === "experts" ? "experts" : "clients";
   const query = (params.q ?? "").trim().toLowerCase();
 
   const supabase = await createClient();
-  const all = await getAdminPeople(supabase, kind);
+  const [all, stats] = await Promise.all([getAdminPeople(supabase, kind), getAdminPeopleStats(supabase)]);
+  const statCards = [
+    { label: "Clients", value: stats.clients, note: "can book sessions" },
+    { label: "Experts", value: stats.experts, note: `${stats.liveExperts} live on the site` },
+    { label: "Sessions booked", value: stats.sessionsBooked, note: "confirmed or completed" },
+    { label: "Upcoming", value: stats.upcomingSessions, note: "confirmed sessions ahead" },
+  ];
   const rows = query
     ? all.filter((row) =>
         [row.full_name, row.email, row.phone, row.city, row.country]
@@ -44,6 +50,29 @@ export default async function AdminPeoplePage({
           Everyone with an account, with their phone and email. Open someone to see their sessions.
         </p>
       </div>
+
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-label="At a glance">
+        {statCards.map((card) => (
+          <div
+            key={card.label}
+            className="flex flex-col gap-1 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
+          >
+            <span className="text-xs font-medium uppercase tracking-[0.06em] text-[var(--color-text-muted)]">
+              {card.label}
+            </span>
+            <span className="num text-[28px] font-extrabold leading-none tracking-[-0.02em] text-[var(--color-text)]">
+              {card.value.toLocaleString()}
+            </span>
+            <span className="text-xs text-[var(--color-text-muted)]">{card.note}</span>
+          </div>
+        ))}
+      </section>
+
+      {params.deleted === "1" ? (
+        <p className="notice" role="status" style={{ margin: 0 }}>
+          Account deleted, with everything tied to it.
+        </p>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-3">
         <nav className="no-scrollbar flex w-fit max-w-full gap-1 overflow-x-auto rounded-full border border-[var(--color-border)] bg-[var(--color-mist)] p-1">

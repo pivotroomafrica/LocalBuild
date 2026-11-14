@@ -7,10 +7,13 @@ import { signInAction, type AuthActionState } from "@/lib/auth/actions";
 import { TextField } from "@/components/ui/TextField";
 import { Button } from "@/components/ui/Button";
 import { FormMessage } from "@/components/ui/FormMessage";
+import { AuthDivider, GoogleButton } from "@/components/auth/GoogleButton";
+import { LinkedInButton } from "@/components/auth/LinkedInButton";
 
 const initialState: AuthActionState = {};
 
-export function LoginForm() {
+/** `linkedin`: show "Continue with LinkedIn" (when switched on in Supabase). */
+export function LoginForm({ linkedin = false }: { linkedin?: boolean }) {
   const searchParams = useSearchParams();
   // Empty = go to the person's own dashboard after signing in.
   const next = searchParams.get("next") ?? "";
@@ -23,6 +26,10 @@ export function LoginForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      <GoogleButton next={next || undefined} />
+      {linkedin ? <LinkedInButton next={next || undefined} /> : null}
+      <AuthDivider />
+
       {justReset ? (
         <FormMessage variant="success">Your password has been updated. Log in below.</FormMessage>
       ) : null}

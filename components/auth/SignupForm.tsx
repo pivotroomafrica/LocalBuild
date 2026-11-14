@@ -9,10 +9,15 @@ import { Button } from "@/components/ui/Button";
 import { FormMessage } from "@/components/ui/FormMessage";
 import { CountryCityFields } from "@/components/ui/CountryCityFields";
 import { PhoneField } from "@/components/ui/PhoneField";
+import { NameFields } from "@/components/auth/NameFields";
+import { TermsField } from "@/components/auth/TermsField";
+import { AuthDivider, GoogleButton, GoogleTermsNote } from "@/components/auth/GoogleButton";
+import { LinkedInButton } from "@/components/auth/LinkedInButton";
 
 const initialState: AuthActionState = {};
 
-export function SignupForm() {
+/** `linkedin`: show "Sign up with LinkedIn" (when switched on in Supabase). */
+export function SignupForm({ linkedin = false }: { linkedin?: boolean }) {
   const searchParams = useSearchParams();
   // Empty = go to the person's own dashboard after signing up.
   const next = searchParams.get("next") ?? "";
@@ -31,18 +36,16 @@ export function SignupForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      <GoogleButton next={next || undefined} label="Sign up with Google" />
+      {linkedin ? <LinkedInButton next={next || undefined} label="Sign up with LinkedIn" /> : null}
+      <GoogleTermsNote />
+      <AuthDivider />
+
       {state.error ? <FormMessage variant="error">{state.error}</FormMessage> : null}
 
       <input type="hidden" name="next" value={next} />
 
-      <TextField
-        label="Full Name"
-        name="full_name"
-        type="text"
-        autoComplete="name"
-        maxLength={100}
-        required
-      />
+      <NameFields />
       <TextField
         label="Email"
         name="email"
@@ -60,6 +63,8 @@ export function SignupForm() {
         minLength={8}
         required
       />
+
+      <TermsField />
 
       <Button type="submit" isLoading={isPending} loadingText="Creating account...">
         Sign Up
