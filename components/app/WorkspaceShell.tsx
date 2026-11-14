@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { signOutAction } from "@/lib/auth/actions";
 import { SignOutIconButton } from "@/components/site/SignOutIconButton";
 import { AccountMenu, MainNav, SiteLogo } from "@/components/site/SiteChrome";
+import { MobileMenu, MobileTabBar } from "@/components/site/MobileNav";
 import { initialsOf } from "@/components/site/format";
 import { WorkspaceSidebarNav, type SidebarItem } from "@/components/app/WorkspaceSidebarNav";
 
@@ -124,7 +125,7 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
     area === "expert" && expert?.profile_status === "published" ? `/experts/${expert.slug}` : null;
 
   return (
-    <div className={`pr ws ${dark ? "ws-dark" : ""}`}>
+    <div className={`pr ws ${dark ? "ws-dark" : "has-tabbar"}`}>
       <header className="pr-head ws-head">
         <div className="ws-bar">
           <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
@@ -147,6 +148,10 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
             {area !== "admin" ? <AccountMenu isApprovedExpert={isApprovedExpert} isAdmin={isAdmin} /> : null}
             <SignOutIconButton />
           </span>
+          <MobileMenu
+            who={{ isLoggedIn: true, isApprovedExpert, isAdmin }}
+            areaItems={items.map(({ href, label, icon }) => ({ href, label, icon }))}
+          />
         </div>
       </header>
       <div className="ws-body">
@@ -172,6 +177,7 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
         </aside>
         <main className="ws-main">{children}</main>
       </div>
+      {area !== "admin" ? <MobileTabBar isLoggedIn isApprovedExpert={isApprovedExpert} isAdmin={isAdmin} /> : null}
     </div>
   );
 }

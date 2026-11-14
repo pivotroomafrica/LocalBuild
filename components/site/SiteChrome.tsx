@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOutAction } from "@/lib/auth/actions";
 import { SignOutIconButton } from "@/components/site/SignOutIconButton";
+import { MobileMenu, MobileTabBar } from "@/components/site/MobileNav";
 
 type Props = {
   isLoggedIn: boolean;
@@ -122,23 +123,6 @@ export function SiteChrome({ isLoggedIn, isApprovedExpert, isAdmin }: Props) {
 
   // Where "My dashboard" goes for this person.
   const homeHref = isAdmin ? "/admin" : isApprovedExpert ? "/expert/dashboard" : "/dashboard";
-  const tabs = [
-    { href: "/", icon: "home", label: "Home" },
-    { href: "/experts", icon: "search", label: "Find" },
-    ...(isLoggedIn
-      ? [
-          {
-            href: homeHref,
-            icon: "space_dashboard",
-            label: "Dashboard",
-          },
-        ]
-      : []),
-    { href: "/become-an-expert", icon: "work", label: "For experts" },
-  ];
-
-  const isCurrent = (href: string) => isCurrentPath(pathname, href);
-
   const showTabbar = !/^\/experts\/[^/]+/.test(pathname);
 
   return (
@@ -149,7 +133,7 @@ export function SiteChrome({ isLoggedIn, isApprovedExpert, isAdmin }: Props) {
             <SiteLogo />
           </Link>
           <MainNav isApprovedExpert={isApprovedExpert} />
-          <div className="acts">
+          <div className="acts acts-desk">
             {isLoggedIn ? (
               <>
                 <AccountMenu isApprovedExpert={isApprovedExpert} isAdmin={isAdmin} />
@@ -167,27 +151,12 @@ export function SiteChrome({ isLoggedIn, isApprovedExpert, isAdmin }: Props) {
               </span>
             </Link>
           </div>
+          <MobileMenu who={{ isLoggedIn, isApprovedExpert, isAdmin }} />
         </div>
       </header>
 
       {showTabbar ? (
-        <nav className="pr-tabbar" aria-label="Main">
-          <div className="items">
-            {tabs.map((tab) => (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className={isCurrent(tab.href) ? "tab on" : "tab"}
-                aria-current={isCurrent(tab.href) ? "page" : undefined}
-              >
-                <span className="ms" aria-hidden="true">
-                  {tab.icon}
-                </span>
-                <span className="tl">{tab.label}</span>
-              </Link>
-            ))}
-          </div>
-        </nav>
+        <MobileTabBar isLoggedIn={isLoggedIn} isApprovedExpert={isApprovedExpert} isAdmin={isAdmin} />
       ) : null}
     </>
   );
