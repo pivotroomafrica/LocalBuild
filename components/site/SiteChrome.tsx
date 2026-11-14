@@ -26,7 +26,8 @@ export function SiteLogo({ tone = "ink" }: { tone?: "ink" | "white" }) {
   );
 }
 
-function AccountMenu({ isApprovedExpert, isAdmin }: { isApprovedExpert: boolean; isAdmin: boolean }) {
+/** The round account button and its menu (also used in the dashboards' header). */
+export function AccountMenu({ isApprovedExpert, isAdmin }: { isApprovedExpert: boolean; isAdmin: boolean }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -91,9 +92,13 @@ function AccountMenu({ isApprovedExpert, isAdmin }: { isApprovedExpert: boolean;
  * current visitor's real auth state; the expert profile page hides the tab
  * bar because its booking bar sits in the same place.
  */
-export function SiteChrome({ isLoggedIn, isApprovedExpert, isAdmin }: Props) {
-  const pathname = usePathname();
+function isCurrentPath(pathname: string, href: string) {
+  return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+}
 
+/** The site's main menu (public header and the client/expert dashboards). */
+export function MainNav({ isApprovedExpert }: { isApprovedExpert: boolean }) {
+  const pathname = usePathname();
   const nav = [
     { href: "/experts", label: "Find an expert" },
     isApprovedExpert
@@ -101,6 +106,19 @@ export function SiteChrome({ isLoggedIn, isApprovedExpert, isAdmin }: Props) {
       : { href: "/become-an-expert", label: "Become an expert" },
     { href: "/about", label: "About" },
   ];
+  return (
+    <nav aria-label="Main">
+      {nav.map((link) => (
+        <Link key={link.href} href={link.href} aria-current={isCurrentPath(pathname, link.href) ? "page" : undefined}>
+          {link.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+export function SiteChrome({ isLoggedIn, isApprovedExpert, isAdmin }: Props) {
+  const pathname = usePathname();
 
   // Where "My dashboard" goes for this person.
   const homeHref = isAdmin ? "/admin" : isApprovedExpert ? "/expert/dashboard" : "/dashboard";
@@ -119,9 +137,7 @@ export function SiteChrome({ isLoggedIn, isApprovedExpert, isAdmin }: Props) {
     { href: "/become-an-expert", icon: "work", label: "For experts" },
   ];
 
-  function isCurrent(href: string) {
-    return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
-  }
+  const isCurrent = (href: string) => isCurrentPath(pathname, href);
 
   const showTabbar = !/^\/experts\/[^/]+/.test(pathname);
 
@@ -132,13 +148,7 @@ export function SiteChrome({ isLoggedIn, isApprovedExpert, isAdmin }: Props) {
           <Link href="/" className="logo" aria-label="Pivotroom home">
             <SiteLogo />
           </Link>
-          <nav aria-label="Main">
-            {nav.map((link) => (
-              <Link key={link.href} href={link.href} aria-current={isCurrent(link.href) ? "page" : undefined}>
-                {link.label}
-              </Link>
-            ))}
-          </nav>
+          <MainNav isApprovedExpert={isApprovedExpert} />
           <div className="acts">
             {isLoggedIn ? (
               <>
