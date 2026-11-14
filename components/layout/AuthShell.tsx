@@ -66,11 +66,11 @@ export async function AuthShell({ title, subtitle, tab, query = "", children, fo
             <Link href="/become-an-expert" className="auth-corner">
               Are you an expert?
             </Link>
-            <div className="stack w-full" style={{ maxWidth: 400, gap: 28 }}>
+            <div className="stack w-full auth-stack" style={{ maxWidth: 400 }}>
               <div className="stack" style={{ gap: 8 }}>
                 <h1 className="d auth-title">{title}</h1>
                 {subtitle ? (
-                  <p className="muted" style={{ margin: 0, fontSize: 16 }}>
+                  <p className="muted auth-sub" style={{ margin: 0, fontSize: 16 }}>
                     {subtitle}
                   </p>
                 ) : null}

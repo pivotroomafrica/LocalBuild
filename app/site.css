@@ -4974,28 +4974,50 @@
 
 
 /* ---------- Sign-in screens ----------
-   Phones: header + one column. Desktop (960px+): one card split into a
-   branded gradient panel and the form, no site header. */
+   Phones (<640): header + one plain column.
+   Tablets (640-959): header + the form in a centred card.
+   Laptops (960-1199) and large screens (1200+): one card split into a
+   branded panel and the form, no site header. Short screens get tighter
+   spacing; the card centres when it fits and scrolls when it doesn't. */
 .pr .auth-main {
   flex: 1;
   display: flex;
-  justify-content: center;
-  padding: clamp(40px, 8vh, 96px) 20px 80px;
+  flex-direction: column;
+  padding: 32px 20px 64px;
+}
+.pr .auth-card {
+  width: 100%;
+  margin: 0 auto;
 }
 .pr .auth-art,
 .pr .auth-corner {
   display: none;
 }
 .pr .auth-form {
-  width: 100%;
   display: flex;
   justify-content: center;
 }
 .pr .auth-title {
   margin: 0;
-  font-size: clamp(32px, 3.2vw, 40px);
-  line-height: 1.05;
+  font-size: clamp(28px, 7vw, 40px);
+  line-height: 1.08;
   letter-spacing: -0.025em;
+}
+@media (min-width: 640px) {
+  .pr.auth-page {
+    background: #f4f5fb;
+  }
+  .pr .auth-main {
+    padding: 48px 24px 72px;
+  }
+  .pr .auth-card {
+    max-width: 520px;
+    margin-block: auto;
+    padding: 40px 44px;
+    border-radius: 24px;
+    background: #ffffff;
+    box-shadow: 0 20px 60px rgba(43, 52, 120, 0.1);
+  }
 }
 @media (min-width: 960px) {
   .pr.auth-page {
@@ -5008,18 +5030,15 @@
     display: none;
   }
   .pr .auth-main {
-    align-items: center;
-    padding: 40px 24px;
+    padding: 32px 24px;
   }
   .pr .auth-card {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-    width: 100%;
-    max-width: 1080px;
-    min-height: 640px;
-    padding: 12px;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
+    max-width: 980px;
+    min-height: min(640px, calc(100vh - 64px));
+    padding: 10px;
     border-radius: 28px;
-    background: #ffffff;
     box-shadow:
       0 30px 80px rgba(43, 52, 120, 0.14),
       0 2px 8px rgba(13, 15, 18, 0.04);
@@ -5030,7 +5049,7 @@
     flex-direction: column;
     justify-content: space-between;
     overflow: hidden;
-    padding: 32px;
+    padding: 28px;
     border-radius: 20px;
     background: linear-gradient(160deg, #0b1a6b 0%, #2b4fe0 48%, #9db4ff 100%);
     color: #ffffff;
@@ -5080,16 +5099,16 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    max-width: 420px;
+    max-width: 400px;
   }
   .pr .auth-faces {
     display: flex;
     align-items: center;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
   }
   .pr .auth-faces img {
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
     margin-inline-end: -10px;
     border: 2px solid rgba(255, 255, 255, 0.9);
     border-radius: 50%;
@@ -5110,32 +5129,124 @@
   .pr .auth-art-title {
     margin: 0;
     font-family: var(--pr-display);
-    font-size: clamp(28px, 2.6vw, 36px);
+    font-size: clamp(26px, 2.5vw, 34px);
     font-weight: 700;
     line-height: 1.15;
     letter-spacing: -0.02em;
   }
   .pr .auth-art-sub {
     margin: 0;
-    font-size: 16px;
+    font-size: 15px;
     line-height: 1.5;
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(255, 255, 255, 0.82);
   }
   .pr .auth-form {
     position: relative;
     align-items: center;
-    padding: 56px clamp(32px, 5vw, 72px);
+    padding: 56px clamp(28px, 4vw, 64px) 40px;
   }
   .pr .auth-corner {
     display: block;
     position: absolute;
-    top: 24px;
-    right: 28px;
+    top: 22px;
+    right: 26px;
     font-size: 14px;
+  }
+  .pr .auth-title {
+    font-size: clamp(30px, 2.8vw, 38px);
+  }
+}
+@media (min-width: 1200px) {
+  .pr .auth-card {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    max-width: 1080px;
+    padding: 12px;
+  }
+  .pr .auth-art {
+    padding: 32px;
+  }
+}
+.pr .auth-stack {
+  gap: 28px;
+}
+/* Short laptop screens: less air so the card fits. */
+@media (min-width: 960px) and (max-height: 760px) {
+  .pr .auth-main {
+    padding-block: 12px;
+  }
+  .pr .auth-card {
+    min-height: calc(100vh - 24px);
+  }
+  .pr .auth-form {
+    padding-block: 40px 20px;
+  }
+  .pr .auth-stack {
+    gap: 18px;
+  }
+  .pr .auth-sub,
+  .pr .auth-faces {
+    display: none;
+  }
+  .pr .auth-title {
+    font-size: 30px;
+  }
+  .pr .auth-stack .su-fieldset,
+  .pr .auth-stack form {
+    gap: 12px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .pr .auth-blob {
     animation: none;
   }
+}
+
+/* Create account steps. */
+.pr .su-fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.pr .su-fieldset[hidden] {
+  display: none;
+}
+.pr .su-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pr .su-bars {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.pr .su-bars span {
+  height: 4px;
+  border-radius: 4px;
+  background: var(--pr-line);
+  transition: background-color 300ms var(--pr-ease);
+}
+.pr .su-bars span.on {
+  background: var(--pr-blue);
+}
+.pr .su-step {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--pr-slate);
+}
+.pr .su-actions {
+  display: flex;
+  gap: 10px;
+}
+.pr .su-actions > button:last-child {
+  flex: 1;
+}
+.pr .su-back {
+  flex: none;
+  gap: 6px;
 }
