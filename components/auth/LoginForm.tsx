@@ -49,7 +49,7 @@ export function LoginForm({ linkedin = false }: { linkedin?: boolean }) {
       <div className="-mt-2 text-right">
         <Link
           href="/auth/forgot-password"
-          className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-accent)] hover:underline"
+          className="text-sm text-[var(--color-accent)] hover:underline"
         >
           Forgot password?
         </Link>

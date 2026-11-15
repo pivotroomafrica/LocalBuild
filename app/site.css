@@ -35,12 +35,18 @@
 .pr *::after {
   box-sizing: border-box;
 }
-.pr a {
-  color: var(--pr-blue);
-  text-decoration: none;
-}
-.pr a:hover {
-  color: var(--pr-blue-hover);
+/* Plain links are blue. Kept in Tailwind's base layer so a link that sets
+   its own colour (a Tailwind text-* class, e.g. white text on a dark
+   button) always wins; unlayered rules would override those and leave
+   blue text on black. */
+@layer base {
+  .pr a {
+    color: var(--pr-blue);
+    text-decoration: none;
+  }
+  .pr a:hover {
+    color: var(--pr-blue-hover);
+  }
 }
 .pr :focus-visible {
   outline: 2px solid var(--pr-blue);
