@@ -21,7 +21,7 @@ export const HOW_PAGES: HowPage[] = [
     slug: "expert-calls",
     title: "Expert calls",
     lead: "A one-to-one video call on Google Meet with someone who has already done what you're about to do.",
-    image: "/images/how-2.svg",
+    image: "/images/how-1.svg",
     facts: [
       { value: "15–90", label: "minutes, you choose" },
       { value: "1:1", label: "just you and the expert" },
@@ -50,7 +50,7 @@ export const HOW_PAGES: HowPage[] = [
     slug: "in-person-meetings",
     title: "In-person meetings",
     lead: "Some conversations go better across a table. Many experts also meet clients face to face.",
-    image: "/images/how-3.svg",
+    image: "/images/how-4.svg",
     facts: [
       { value: "15–90", label: "minutes, you choose" },
       { value: "Same", label: "prices and booking as calls" },
@@ -79,7 +79,7 @@ export const HOW_PAGES: HowPage[] = [
     slug: "finding-the-right-expert",
     title: "Finding the right expert",
     lead: "Every expert on Pivotroom has been reviewed by our team. Here's how to find the one who has solved your problem.",
-    image: "/images/how-1.svg",
+    image: "/images/how-2.svg",
     facts: [
       { value: "Vetted", label: "every expert is reviewed" },
       { value: "Up front", label: "prices on every card" },
@@ -108,7 +108,7 @@ export const HOW_PAGES: HowPage[] = [
     slug: "pricing-and-payments",
     title: "Pricing and payments",
     lead: "The price on the profile is the price you pay. Here's how paying, receipts and refunds work.",
-    image: "/images/how-4.svg",
+    image: "/images/how-3.svg",
     facts: [
       { value: "15%", label: "VAT included in every price" },
       { value: "No", label: "extra fees" },

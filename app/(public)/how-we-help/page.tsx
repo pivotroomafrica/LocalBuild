@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { HOW_PAGES } from "@/lib/site/howWeHelp";
+import { HowShowcase } from "@/components/site/HowShowcase";
+import { getCategoryNamesForRequest, getDirectoryForRequest } from "@/lib/public/cached";
 
 export const metadata = {
   title: "How we help — Pivotroom",
@@ -14,7 +15,13 @@ const STEPS = [
 ];
 
 /** "How we help": the ways Pivotroom helps, each with its own page. */
-export default function HowWeHelpPage() {
+export default async function HowWeHelpPage() {
+  const [experts, topics] = await Promise.all([getDirectoryForRequest(), getCategoryNamesForRequest()]);
+  const faces = experts
+    .filter((expert) => expert.photoUrl)
+    .slice(0, 4)
+    .map((expert) => ({ name: expert.fullName, photoUrl: expert.photoUrl! }));
+
   return (
     <>
       <section className="hw-hero">
@@ -39,30 +46,7 @@ export default function HowWeHelpPage() {
         </div>
       </section>
 
-      <section style={{ background: "#ffffff" }}>
-        <div className="wrap section stack" style={{ gap: 32 }}>
-          <h2 className="h2">Ways we help</h2>
-          <div className="hw-grid">
-            {HOW_PAGES.map((page) => (
-              <Link key={page.slug} href={`/how-we-help/${page.slug}`} className="hw-tile">
-                <span className="hw-tile-art">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- static illustration */}
-                  <img src={page.image} alt="" />
-                </span>
-                <span className="hw-tile-title">
-                  {page.title}
-                  <span className="nav-arrowbox" aria-hidden="true">
-                    <span className="ms">arrow_outward</span>
-                  </span>
-                </span>
-                <span className="muted" style={{ fontSize: 15, lineHeight: 1.5 }}>
-                  {page.lead}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      <HowShowcase faces={faces} topics={topics} />
 
       <section style={{ background: "#f4f5f7" }}>
         <div className="wrap section split">

@@ -29,8 +29,8 @@ export function siteNav({ topics, isApprovedExpert }: { topics: string[]; isAppr
       href: "/how-we-help",
       links: HOW_WE_HELP_PAGES.map((page) => ({ href: `/how-we-help/${page.slug}`, label: page.label })),
       cards: [
-        { href: "/how-we-help/expert-calls", label: "Expert calls", image: "/images/how-2.svg" },
-        { href: "/how-we-help/in-person-meetings", label: "In-person meetings", image: "/images/how-3.svg" },
+        { href: "/how-we-help/expert-calls", label: "Expert calls", image: "/images/how-1.svg" },
+        { href: "/how-we-help/in-person-meetings", label: "In-person meetings", image: "/images/how-4.svg" },
       ],
     },
     {
@@ -42,8 +42,8 @@ export function siteNav({ topics, isApprovedExpert }: { topics: string[]; isAppr
         ...topics.slice(0, 6).map((topic) => ({ href: `/experts?category=${encodeURIComponent(topic)}`, label: topic })),
       ],
       cards: [
-        { href: "/experts", label: "Browse every expert", image: "/images/how-1.svg" },
-        { href: "/how-we-help/finding-the-right-expert", label: "How to choose well", image: "/images/how-4.svg" },
+        { href: "/experts", label: "Browse every expert", image: "/images/how-2.svg" },
+        { href: "/how-we-help/finding-the-right-expert", label: "How to choose well", image: "/images/how-1.svg" },
       ],
     },
     {
