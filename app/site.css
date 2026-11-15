@@ -916,33 +916,33 @@
   border-top: 1px solid var(--pr-line);
 }
 
-/* Menu arrows: our black circle with a diagonal arrow (as on the home CTA).
-   Turns to an upright arrow and goes blue when its link is hovered. */
+/* Menu arrows: our diagonal arrow on its own, no background. It turns
+   blue and points right when its link is hovered. */
 .pr .nav-arrowbox {
   flex: none;
   display: inline-grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  background: var(--pr-ink);
-  color: #ffffff;
+  width: 24px;
+  height: 24px;
+  background: none;
+  color: var(--pr-ink);
   transition:
     transform 220ms var(--pr-ease),
-    background-color 220ms var(--pr-ease);
+    color 220ms var(--pr-ease);
 }
 .pr .nav-arrowbox .ms {
-  font-size: 16px;
+  font-size: 22px;
 }
 .pr .nav-arrowbox.lg {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
 }
 .pr .nav-arrowbox.lg .ms {
-  font-size: 24px;
+  font-size: 36px;
 }
-.pr a:hover .nav-arrowbox {
-  background: var(--pr-blue);
+.pr a:hover .nav-arrowbox,
+.pr a.hws-card.active .nav-arrowbox {
+  color: var(--pr-blue);
   transform: rotate(45deg);
 }
 
