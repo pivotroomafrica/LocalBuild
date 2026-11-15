@@ -194,15 +194,10 @@ export function HomeClient({ experts, categories }: { experts: PublicDirectoryCa
     <>
       <section className="hero2" aria-labelledby="hero-title">
         <div className="hp">
-          <div className="hp-flow" aria-hidden="true">
-            <span className="w1" />
-            <span className="w2" />
-            <span className="w3" />
-            <span className="w4" />
-          </div>
           <div className="hp-orb" aria-hidden="true">
-            <span className="g1" />
-            <span className="g2" />
+            <span className="grain" />
+            <span className="disc big" />
+            <span className="disc small" />
           </div>
           <div className="hp-top">
             <span className="hp-meta">

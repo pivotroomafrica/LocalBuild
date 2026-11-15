@@ -6743,195 +6743,104 @@ a.hws-card:hover,
   font-weight: 500;
 }
 
-/* ---------- Home hero: flowing gradient band ----------
-   Soft brand-blue and violet ribbons sweep across the top and right of the
-   hero and drift slowly. The lower left, where the headline sits, stays
-   light so the dark text keeps full contrast. */
+/* ---------- Home hero: grainy "turned profile" ----------
+   After the reference: a flat pale hero; on the right a cloud of crisp,
+   sparse grain with two clean circles sitting in it -- a large one on the
+   left and a smaller one inside -- so the grain is densest in the curved
+   band between them and thins out to nothing at the edge. Grain is SVG
+   noise thresholded into dots, in a muted brand indigo. The circles are
+   filled with the hero colour, so they read as clean cut-outs. */
 .pr .hp {
-  background: linear-gradient(180deg, #f7f8fc 0%, #f3f4fa 100%);
+  --hp-bg: #f5f6fb;
+  background: var(--hp-bg);
   isolation: isolate;
 }
-.pr .hp > *:not(.hp-flow):not(.hp-orb) {
+.pr .hp > *:not(.hp-orb) {
   position: relative;
   z-index: 1;
-}
-.pr .hp-flow {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-.pr .hp-flow span {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(48px);
-  will-change: transform;
-}
-/* The main ribbon: a wide, tilted band from upper left to right edge. */
-.pr .hp-flow .w1 {
-  width: 120%;
-  height: 46%;
-  top: 2%;
-  left: 12%;
-  background: linear-gradient(100deg, rgba(123, 140, 255, 0) 0%, rgba(123, 140, 255, 0.55) 35%, rgba(43, 79, 224, 0.45) 70%, rgba(43, 79, 224, 0.2) 100%);
-  transform: rotate(-10deg);
-  animation: hp-wave-a 22s ease-in-out infinite;
-}
-/* A violet swell under the ribbon on the right. */
-.pr .hp-flow .w2 {
-  width: 62%;
-  height: 58%;
-  top: 22%;
-  right: -16%;
-  background: radial-gradient(closest-side, rgba(150, 120, 255, 0.55), rgba(150, 120, 255, 0));
-  animation: hp-wave-b 26s ease-in-out infinite;
-}
-/* A sky-blue glint along the ribbon's top edge. */
-.pr .hp-flow .w3 {
-  width: 48%;
-  height: 32%;
-  top: -6%;
-  left: 30%;
-  background: radial-gradient(closest-side, rgba(111, 211, 255, 0.45), rgba(111, 211, 255, 0));
-  animation: hp-wave-c 30s ease-in-out infinite;
-}
-/* A deeper blue core that gives the band depth. */
-.pr .hp-flow .w4 {
-  width: 40%;
-  height: 30%;
-  top: 18%;
-  right: 4%;
-  background: radial-gradient(closest-side, rgba(43, 79, 224, 0.45), rgba(43, 79, 224, 0));
-  animation: hp-wave-d 20s ease-in-out infinite;
-}
-@keyframes hp-wave-a {
-  0%,
-  100% {
-    transform: translate(0, 0) rotate(-10deg) scaleY(1);
-  }
-  50% {
-    transform: translate(-6%, 8%) rotate(-4deg) scaleY(1.2);
-  }
-}
-@keyframes hp-wave-b {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  50% {
-    transform: translate(-12%, -10%) scale(1.15);
-  }
-}
-@keyframes hp-wave-c {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  50% {
-    transform: translate(18%, 14%) scale(1.2);
-  }
-}
-@keyframes hp-wave-d {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  50% {
-    transform: translate(-16%, 12%) scale(0.9);
-  }
-}
-@media (max-width: 640px) {
-  .pr .hp-flow .w1 {
-    width: 170%;
-    height: 34%;
-    left: -10%;
-    top: 4%;
-  }
-  .pr .hp-flow .w2 {
-    width: 90%;
-    height: 40%;
-    top: 14%;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .pr .hp-flow span {
-    animation: none;
-  }
-}
-
-/* ---------- Home hero: grainy "turned profile" orb ----------
-   A stippled halo (blue grain, with a violet grain layer) whose left side is
-   cut away by a clean circle, so it reads as a head turned to the side.
-   Grain is SVG noise coloured in the brand blue; the halo shape and the cut
-   come from masks. It breathes and turns very slowly. */
-.pr .hp-flow {
-  opacity: 0.4;
 }
 .pr .hp-orb {
   position: absolute;
   z-index: 0;
   top: 50%;
-  right: -7%;
-  width: min(54vw, 780px);
+  right: 0;
+  width: min(54vw, 760px);
   aspect-ratio: 1;
   pointer-events: none;
   transform: translateY(-50%);
-  animation: hp-orb-turn 28s ease-in-out infinite;
 }
-.pr .hp-orb span {
+.pr .hp-orb .grain {
   position: absolute;
   inset: 0;
-  /* Halo: empty core, densest just outside it, fading out. Minus a clean
-     circle on the left: the crescent "profile". */
-  -webkit-mask-image:
-    radial-gradient(circle at 50% 50%, transparent 0 29%, #000 30.5%, rgba(0, 0, 0, 0.75) 40%, rgba(0, 0, 0, 0.3) 56%, transparent 71%),
-    radial-gradient(circle at 6% 50%, #000 0 37%, transparent 37.6%);
-  -webkit-mask-composite: source-out;
-  mask-image:
-    radial-gradient(circle at 50% 50%, transparent 0 29%, #000 30.5%, rgba(0, 0, 0, 0.75) 40%, rgba(0, 0, 0, 0.3) 56%, transparent 71%),
-    radial-gradient(circle at 6% 50%, #000 0 37%, transparent 37.6%);
-  mask-composite: subtract;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='1' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.25 0 0 0 0 0.29 0 0 0 0 0.62 0 0 0 16 -7.6'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 240px 240px;
+  /* Densest around the small circle, fading out toward the rim. */
+  -webkit-mask-image: radial-gradient(circle at 50% 49%, #000 0 27%, rgba(0, 0, 0, 0.75) 35%, rgba(0, 0, 0, 0.4) 44%, rgba(0, 0, 0, 0.12) 52%, transparent 58%);
+  mask-image: radial-gradient(circle at 50% 49%, #000 0 27%, rgba(0, 0, 0, 0.75) 35%, rgba(0, 0, 0, 0.4) 44%, rgba(0, 0, 0, 0.12) 52%, transparent 58%);
+  animation: hp-grain-breathe 14s ease-in-out infinite;
 }
-/* Brand-blue grain */
-.pr .hp-orb .g1 {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.17 0 0 0 0 0.31 0 0 0 0 0.88 0 0 0 7 -3.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 180px 180px;
-  animation: hp-grain 9s steps(6) infinite;
+.pr .hp-orb .disc {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--hp-bg);
 }
-/* Violet grain, offset so the two blend into a soft blue-violet */
-.pr .hp-orb .g2 {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.45 0 0 0 0 0.98 0 0 0 7 -3.4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 220px 220px;
-  transform: scale(1.04);
-  animation: hp-grain 12s steps(8) infinite reverse;
+/* The large clean circle on the left (the "profile"). */
+.pr .hp-orb .disc.big {
+  width: 64%;
+  height: 64%;
+  left: -23%;
+  top: 21%;
+  animation: hp-disc-big 18s ease-in-out infinite;
 }
-@keyframes hp-orb-turn {
+/* The smaller clean circle inside the grain. */
+.pr .hp-orb .disc.small {
+  width: 35%;
+  height: 35%;
+  left: 40.5%;
+  top: 31.5%;
+  animation: hp-disc-small 18s ease-in-out infinite;
+}
+@keyframes hp-grain-breathe {
   0%,
   100% {
-    transform: translateY(-50%) rotate(0deg) scale(1);
+    transform: scale(1);
+    opacity: 1;
   }
   50% {
-    transform: translateY(-52%) rotate(-7deg) scale(1.04);
+    transform: scale(1.04);
+    opacity: 0.85;
   }
 }
-/* The grain shimmers slightly, like film grain. */
-@keyframes hp-grain {
-  to {
-    background-position: 180px 120px;
+@keyframes hp-disc-big {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(3%, -2%);
+  }
+}
+@keyframes hp-disc-small {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-4%, 3%) scale(1.05);
   }
 }
 @media (max-width: 900px) {
   .pr .hp-orb {
-    top: 34%;
-    right: -30%;
-    width: 110vw;
-    opacity: 0.5;
+    top: 2%;
+    right: -26%;
+    width: 92vw;
+    transform: none;
+    opacity: 0.55;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pr .hp-orb,
-  .pr .hp-orb span {
+  .pr .hp-orb .grain,
+  .pr .hp-orb .disc {
     animation: none;
   }
 }
