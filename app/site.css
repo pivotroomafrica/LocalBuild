@@ -6755,7 +6755,7 @@ a.hws-card:hover,
   background: var(--hp-bg);
   isolation: isolate;
 }
-.pr .hp > *:not(.hp-orb) {
+.pr .hp > *:not(.hp-orb):not(.hp-flow) {
   position: relative;
   z-index: 1;
 }
@@ -6831,16 +6831,125 @@ a.hws-card:hover,
 }
 @media (max-width: 900px) {
   .pr .hp-orb {
-    top: 2%;
-    right: -26%;
-    width: 92vw;
-    transform: none;
-    opacity: 0.55;
+    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .pr .hp-orb .grain,
   .pr .hp-orb .disc {
     animation: none;
+  }
+}
+
+/* ---------- Home hero on phones and tablets: flowing gradient band ----------
+   (Desktop shows the grainy turned-profile art instead.) Soft brand-blue and
+   violet ribbons drift slowly behind the hero. */
+.pr .hp-flow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.pr .hp-flow span {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(48px);
+  will-change: transform;
+}
+/* The main ribbon: a wide, tilted band from upper left to right edge. */
+.pr .hp-flow .w1 {
+  width: 120%;
+  height: 46%;
+  top: 2%;
+  left: 12%;
+  background: linear-gradient(100deg, rgba(123, 140, 255, 0) 0%, rgba(123, 140, 255, 0.55) 35%, rgba(43, 79, 224, 0.45) 70%, rgba(43, 79, 224, 0.2) 100%);
+  transform: rotate(-10deg);
+  animation: hp-wave-a 22s ease-in-out infinite;
+}
+/* A violet swell under the ribbon on the right. */
+.pr .hp-flow .w2 {
+  width: 62%;
+  height: 58%;
+  top: 22%;
+  right: -16%;
+  background: radial-gradient(closest-side, rgba(150, 120, 255, 0.55), rgba(150, 120, 255, 0));
+  animation: hp-wave-b 26s ease-in-out infinite;
+}
+/* A sky-blue glint along the ribbon's top edge. */
+.pr .hp-flow .w3 {
+  width: 48%;
+  height: 32%;
+  top: -6%;
+  left: 30%;
+  background: radial-gradient(closest-side, rgba(111, 211, 255, 0.45), rgba(111, 211, 255, 0));
+  animation: hp-wave-c 30s ease-in-out infinite;
+}
+/* A deeper blue core that gives the band depth. */
+.pr .hp-flow .w4 {
+  width: 40%;
+  height: 30%;
+  top: 18%;
+  right: 4%;
+  background: radial-gradient(closest-side, rgba(43, 79, 224, 0.45), rgba(43, 79, 224, 0));
+  animation: hp-wave-d 20s ease-in-out infinite;
+}
+@keyframes hp-wave-a {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(-10deg) scaleY(1);
+  }
+  50% {
+    transform: translate(-6%, 8%) rotate(-4deg) scaleY(1.2);
+  }
+}
+@keyframes hp-wave-b {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-12%, -10%) scale(1.15);
+  }
+}
+@keyframes hp-wave-c {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(18%, 14%) scale(1.2);
+  }
+}
+@keyframes hp-wave-d {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-16%, 12%) scale(0.9);
+  }
+}
+@media (max-width: 640px) {
+  .pr .hp-flow .w1 {
+    width: 170%;
+    height: 34%;
+    left: -10%;
+    top: 4%;
+  }
+  .pr .hp-flow .w2 {
+    width: 90%;
+    height: 40%;
+    top: 14%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pr .hp-flow span {
+    animation: none;
+  }
+}
+@media (min-width: 901px) {
+  .pr .hp-flow {
+    display: none;
   }
 }
