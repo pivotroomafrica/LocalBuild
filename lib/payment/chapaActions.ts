@@ -71,6 +71,16 @@ async function beginChapaCheckout(
   bookingReference: string,
   expertSlug: string,
 ): Promise<{ checkoutUrl: string } | { error: string }> {
+  // Chapa needs our address to send them back; check it before creating
+  // anything, and never crash the page over a missing setting.
+  let appUrl: string;
+  try {
+    appUrl = getAppUrl();
+  } catch (error) {
+    console.error("beginChapaCheckout: NEXT_PUBLIC_APP_URL is missing on this server", error);
+    return { error: "Paying with Chapa isn't available right now. Please pay by bank transfer instead." };
+  }
+
   const mode = getChapaMode();
   const { data: attemptRows, error: attemptError } = await supabase
     .rpc("create_chapa_payment_attempt", {
@@ -85,7 +95,6 @@ async function beginChapaCheckout(
   const { data: profile } = await supabase.from("profiles").select("full_name, phone").eq("id", user.id).maybeSingle();
   const { firstName, lastName } = splitName(profile?.full_name ?? "Pivotroom Customer");
 
-  const appUrl = getAppUrl();
   const txRef = attemptRows.provider_tx_ref;
 
   const chapa = getChapaClient();
