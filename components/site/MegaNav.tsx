@@ -5,11 +5,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { NavSection } from "@/lib/site/nav";
 
-/** Small blue square with an arrow, as in the reference menus. */
+/** Our black arrow circle (diagonal arrow), used across the menus. */
 export function ArrowBox({ large = false }: { large?: boolean }) {
   return (
     <span className={large ? "nav-arrowbox lg" : "nav-arrowbox"} aria-hidden="true">
-      <span className="ms">arrow_forward</span>
+      <span className="ms">arrow_outward</span>
     </span>
   );
 }

@@ -133,7 +133,7 @@ export default async function HowWeHelpDetailPage({ params }: PageProps<"/how-we
               <Link key={other.slug} href={`/how-we-help/${other.slug}`}>
                 <span>{other.title}</span>
                 <span className="nav-arrowbox" aria-hidden="true">
-                  <span className="ms">arrow_forward</span>
+                  <span className="ms">arrow_outward</span>
                 </span>
               </Link>
             ))}

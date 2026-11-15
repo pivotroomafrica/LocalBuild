@@ -52,7 +52,7 @@ export default function HowWeHelpPage() {
                 <span className="hw-tile-title">
                   {page.title}
                   <span className="nav-arrowbox" aria-hidden="true">
-                    <span className="ms">arrow_forward</span>
+                    <span className="ms">arrow_outward</span>
                   </span>
                 </span>
                 <span className="muted" style={{ fontSize: 15, lineHeight: 1.5 }}>

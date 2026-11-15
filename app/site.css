@@ -916,30 +916,34 @@
   border-top: 1px solid var(--pr-line);
 }
 
-/* Blue arrow squares (menus); the large one is an outlined box. */
+/* Menu arrows: our black circle with a diagonal arrow (as on the home CTA).
+   Turns to an upright arrow and goes blue when its link is hovered. */
 .pr .nav-arrowbox {
   flex: none;
   display: inline-grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 3px;
-  background: var(--pr-blue);
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--pr-ink);
   color: #ffffff;
+  transition:
+    transform 220ms var(--pr-ease),
+    background-color 220ms var(--pr-ease);
 }
 .pr .nav-arrowbox .ms {
-  font-size: 14px;
+  font-size: 16px;
 }
 .pr .nav-arrowbox.lg {
   width: 44px;
   height: 44px;
-  border: 1.5px solid var(--pr-ink);
-  border-radius: 2px;
-  background: transparent;
-  color: var(--pr-ink);
 }
 .pr .nav-arrowbox.lg .ms {
-  font-size: 28px;
+  font-size: 24px;
+}
+.pr a:hover .nav-arrowbox {
+  background: var(--pr-blue);
+  transform: rotate(45deg);
 }
 
 /* ---------- Desktop mega menu ---------- */
@@ -1014,10 +1018,6 @@
 }
 .pr .mega-title:hover {
   color: var(--pr-ink);
-}
-.pr .mega-title:hover .nav-arrowbox.lg {
-  background: var(--pr-ink);
-  color: #ffffff;
 }
 .pr .mega-body {
   display: flex;
