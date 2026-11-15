@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { HowShowcase } from "@/components/site/HowShowcase";
-import { getCategoryNamesForRequest, getDirectoryForRequest } from "@/lib/public/cached";
+import { getCategoryNamesForRequest } from "@/lib/public/cached";
+import { RevealOnScroll } from "@/components/site/RevealOnScroll";
 
 export const metadata = {
   title: "How we help — Pivotroom",
@@ -16,16 +17,13 @@ const STEPS = [
 
 /** "How we help": the ways Pivotroom helps, each with its own page. */
 export default async function HowWeHelpPage() {
-  const [experts, topics] = await Promise.all([getDirectoryForRequest(), getCategoryNamesForRequest()]);
-  const faces = experts
-    .filter((expert) => expert.photoUrl)
-    .slice(0, 4)
-    .map((expert) => ({ name: expert.fullName, photoUrl: expert.photoUrl! }));
+  const topics = await getCategoryNamesForRequest();
 
   return (
-    <>
+    <div className="hw-page">
+      <RevealOnScroll />
       <section className="hw-hero">
-        <div className="wrap stack" style={{ gap: 18 }}>
+        <div className="wrap stack hw-hero-in" style={{ gap: 18 }}>
           <span className="hw-kicker">How we help</span>
           <h1 className="hw-h1">Answers from people who have already solved it.</h1>
           <p className="hw-lead">
@@ -46,11 +44,11 @@ export default async function HowWeHelpPage() {
         </div>
       </section>
 
-      <HowShowcase faces={faces} topics={topics} />
+      <HowShowcase topics={topics} />
 
       <section style={{ background: "#f4f5f7" }}>
         <div className="wrap section split">
-          <div className="stack" style={{ gap: 12 }}>
+          <div className="stack" style={{ gap: 12 }} data-reveal="">
             <h2 className="h2">How a session works</h2>
             <p className="muted" style={{ margin: 0, maxWidth: "44ch" }}>
               The same four steps for every expert, whether you meet online or in person.
@@ -58,7 +56,7 @@ export default async function HowWeHelpPage() {
           </div>
           <ol className="steplist">
             {STEPS.map((step, index) => (
-              <li key={step.title}>
+              <li key={step.title} data-reveal="" style={{ "--d": index } as React.CSSProperties}>
                 <span className="muted num" style={{ fontSize: 14, fontWeight: 500 }}>
                   {String(index + 1).padStart(2, "0")}
                 </span>
@@ -75,6 +73,6 @@ export default async function HowWeHelpPage() {
           </ol>
         </div>
       </section>
-    </>
+    </div>
   );
 }

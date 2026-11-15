@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-export type ShowcaseFace = { name: string; photoUrl: string };
-
 type Scene = "call" | "inperson" | "match";
 
 const CALL_CARDS: { scene: Scene; href: string; icon: string; title: string; body: string }[] = [
@@ -67,9 +65,6 @@ const EVENT_ITEMS = [
   },
 ];
 
-function firstName(name: string) {
-  return name.trim().split(/\s+/)[0] ?? name;
-}
 
 /** Counts up from 00:00:00 while the call scene is showing. */
 function CallTimer() {
@@ -87,38 +82,38 @@ function CallTimer() {
   );
 }
 
-function CallScene({ faces }: { faces: ShowcaseFace[] }) {
-  const [main, ...rest] = faces;
-  if (!main) {
-    return (
-      <div className="hws-art tint">
-        {/* eslint-disable-next-line @next/next/no-img-element -- static illustration */}
-        <img src="/images/how-1.svg" alt="" className="hws-illo" />
-      </div>
-    );
-  }
+/** A drawn call screen: no real people, just the shape of a call. */
+function CallScene() {
   return (
     <div className="hws-art call">
-      {/* eslint-disable-next-line @next/next/no-img-element -- signed storage URL */}
-      <img src={main.photoUrl} alt="" className="hws-main" />
+      <div className="hws-stage">
+        <span className="hws-avatar lg">
+          <span className="ms">person</span>
+        </span>
+        <span className="hws-speaking">
+          <i />
+          <i />
+          <i />
+          <i />
+        </span>
+      </div>
       <div className="hws-top">
         <span className="hws-pill round">
           <span className="ms">volume_up</span>
         </span>
         <CallTimer />
       </div>
-      <span className="hws-name">{firstName(main.name)}</span>
-      {rest.length > 0 ? (
-        <div className="hws-strip">
-          {rest.slice(0, 3).map((face, index) => (
-            <span key={index} className="hws-tile">
-              {/* eslint-disable-next-line @next/next/no-img-element -- signed storage URL */}
-              <img src={face.photoUrl} alt="" />
-              <span>{firstName(face.name)}</span>
-            </span>
-          ))}
-        </div>
-      ) : null}
+      <span className="hws-name">Your expert</span>
+      <div className="hws-strip">
+        <span className="hws-tile t1">
+          <span className="ms">person</span>
+          <span>You</span>
+        </span>
+        <span className="hws-tile t2">
+          <span className="ms">description</span>
+          <span>Your notes</span>
+        </span>
+      </div>
       <div className="hws-controls">
         <span className="ms">mic</span>
         <span className="ms">videocam</span>
@@ -199,7 +194,7 @@ function ContentArt() {
   );
 }
 
-function EventsArt({ faces }: { faces: ShowcaseFace[] }) {
+function EventsArt() {
   return (
     <div className="hws-art warm">
       <span className="hws-soon">Coming soon</span>
@@ -215,9 +210,10 @@ function EventsArt({ faces }: { faces: ShowcaseFace[] }) {
           In person and online
         </span>
         <span className="hws-seats">
-          {faces.slice(0, 4).map((face, index) => (
-            // eslint-disable-next-line @next/next/no-img-element -- signed storage URL
-            <img key={index} src={face.photoUrl} alt="" />
+          {["person", "person", "person", "person"].map((icon, index) => (
+            <span key={index} className={`hws-seat s${index + 1}`}>
+              <span className="ms">{icon}</span>
+            </span>
           ))}
           <span className="hws-seat-open">
             <span className="ms">add</span>
@@ -246,14 +242,14 @@ function SoonCard({ icon, title, body }: { icon: string; title: string; body: st
  * other. In the calls section, hovering or focusing a card changes the
  * picture; each card opens its own page.
  */
-export function HowShowcase({ faces, topics }: { faces: ShowcaseFace[]; topics: string[] }) {
+export function HowShowcase({ topics }: { topics: string[] }) {
   const [scene, setScene] = useState<Scene>("call");
 
   return (
     <>
       <section className="hws-sec" style={{ background: "#f6f6f4" }}>
         <div className="wrap hws-grid">
-          <div className="hws-text">
+          <div className="hws-text" data-reveal="">
             <h2 className="hws-h2">Expert calls &amp; meetings</h2>
             <p className="hws-lead">
               Talk to an expert online or in person to test your plan, check your numbers and get straight answers from
@@ -285,8 +281,8 @@ export function HowShowcase({ faces, topics }: { faces: ShowcaseFace[]; topics: 
               ))}
             </div>
           </div>
-          <div className="hws-visual" aria-hidden="true">
-            {scene === "call" ? <CallScene faces={faces} /> : null}
+          <div className="hws-visual" aria-hidden="true" data-reveal="">
+            {scene === "call" ? <CallScene /> : null}
             {scene === "inperson" ? <InPersonScene /> : null}
             {scene === "match" ? <MatchScene topics={topics} /> : null}
           </div>
@@ -295,10 +291,10 @@ export function HowShowcase({ faces, topics }: { faces: ShowcaseFace[]; topics: 
 
       <section className="hws-sec" style={{ background: "#ffffff" }}>
         <div className="wrap hws-grid hws-flip">
-          <div className="hws-visual" aria-hidden="true">
+          <div className="hws-visual" aria-hidden="true" data-reveal="">
             <ContentArt />
           </div>
-          <div className="hws-text">
+          <div className="hws-text" data-reveal="">
             <h2 className="hws-h2">
               Expert content <span className="hws-badge lg">Coming soon</span>
             </h2>
@@ -317,7 +313,7 @@ export function HowShowcase({ faces, topics }: { faces: ShowcaseFace[]; topics: 
 
       <section className="hws-sec" style={{ background: "#f6f6f4" }}>
         <div className="wrap hws-grid">
-          <div className="hws-text">
+          <div className="hws-text" data-reveal="">
             <h2 className="hws-h2">
               Events <span className="hws-badge lg">Coming soon</span>
             </h2>
@@ -337,8 +333,8 @@ export function HowShowcase({ faces, topics }: { faces: ShowcaseFace[]; topics: 
               .
             </p>
           </div>
-          <div className="hws-visual" aria-hidden="true">
-            <EventsArt faces={faces} />
+          <div className="hws-visual" aria-hidden="true" data-reveal="">
+            <EventsArt />
           </div>
         </div>
       </section>

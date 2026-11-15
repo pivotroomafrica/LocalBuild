@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { HOW_PAGES, getHowPage } from "@/lib/site/howWeHelp";
+import { RevealOnScroll } from "@/components/site/RevealOnScroll";
 
 export function generateStaticParams() {
   return HOW_PAGES.map((page) => ({ slug: page.slug }));
@@ -18,10 +19,11 @@ export default async function HowWeHelpDetailPage({ params }: PageProps<"/how-we
   const others = HOW_PAGES.filter((other) => other.slug !== page.slug);
 
   return (
-    <>
+    <div className="hw-page">
+      <RevealOnScroll />
       <section className="hw-hero">
         <div className="wrap hw-hero-grid">
-          <div className="stack" style={{ gap: 18 }}>
+          <div className="stack hw-hero-in" style={{ gap: 18 }}>
             <Link href="/how-we-help" className="hw-back">
               <span className="ms" aria-hidden="true">
                 chevron_left
@@ -39,15 +41,15 @@ export default async function HowWeHelpDetailPage({ params }: PageProps<"/how-we
               </Link>
             </div>
           </div>
-          <div className="hw-hero-art" aria-hidden="true">
+          <div className="hw-hero-art hw-hero-in d2" aria-hidden="true">
             {/* eslint-disable-next-line @next/next/no-img-element -- static illustration */}
             <img src={page.image} alt="" />
           </div>
         </div>
         <div className="wrap">
           <dl className="hw-facts">
-            {page.facts.map((fact) => (
-              <div key={fact.label}>
+            {page.facts.map((fact, index) => (
+              <div key={fact.label} data-reveal="" style={{ "--d": index } as React.CSSProperties}>
                 <dt className="num">{fact.value}</dt>
                 <dd>{fact.label}</dd>
               </div>
@@ -60,8 +62,8 @@ export default async function HowWeHelpDetailPage({ params }: PageProps<"/how-we
         <div className="wrap section stack" style={{ gap: 32 }}>
           <h2 className="h2">What you get</h2>
           <ul className="hw-points">
-            {page.points.map((point) => (
-              <li key={point.title}>
+            {page.points.map((point, index) => (
+              <li key={point.title} data-reveal="" style={{ "--d": index } as React.CSSProperties}>
                 <span className="ms" aria-hidden="true">
                   {point.icon}
                 </span>
@@ -82,7 +84,7 @@ export default async function HowWeHelpDetailPage({ params }: PageProps<"/how-we
           <h2 className="h2">How it works</h2>
           <ol className="steplist">
             {page.steps.map((step, index) => (
-              <li key={step.title}>
+              <li key={step.title} data-reveal="" style={{ "--d": index } as React.CSSProperties}>
                 <span className="muted num" style={{ fontSize: 14, fontWeight: 500 }}>
                   {String(index + 1).padStart(2, "0")}
                 </span>
@@ -103,7 +105,7 @@ export default async function HowWeHelpDetailPage({ params }: PageProps<"/how-we
       <section style={{ background: "#ffffff" }}>
         <div className="wrap section stack" style={{ maxWidth: 880, gap: 24 }}>
           <h2 className="h2">Questions</h2>
-          <div className="faqs">
+          <div className="faqs" data-reveal="">
             {page.faqs.map((faq) => (
               <details key={faq.q} className="faq">
                 <summary>
@@ -128,7 +130,7 @@ export default async function HowWeHelpDetailPage({ params }: PageProps<"/how-we
       <section style={{ background: "#f4f5f7" }}>
         <div className="wrap section stack" style={{ gap: 24 }}>
           <h2 className="h2">More ways we help</h2>
-          <div className="hw-more">
+          <div className="hw-more" data-reveal="">
             {others.map((other) => (
               <Link key={other.slug} href={`/how-we-help/${other.slug}`}>
                 <span>{other.title}</span>
@@ -140,6 +142,6 @@ export default async function HowWeHelpDetailPage({ params }: PageProps<"/how-we
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }
