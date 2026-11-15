@@ -6759,15 +6759,17 @@ a.hws-card:hover,
   position: relative;
   z-index: 1;
 }
+/* Turned upright (a quarter turn): the large clean circle sits on top and
+   the smaller one below it, like a face looking straight ahead. */
 .pr .hp-orb {
   position: absolute;
   z-index: 0;
   top: 50%;
-  right: 0;
-  width: min(54vw, 760px);
+  right: max(-5%, calc((100% - 1440px) / 2 - 40px));
+  width: min(42vw, 640px);
   aspect-ratio: 1;
   pointer-events: none;
-  transform: translateY(-50%);
+  transform: translateY(-50%) rotate(90deg);
 }
 .pr .hp-orb .grain {
   position: absolute;
