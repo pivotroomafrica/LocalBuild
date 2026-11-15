@@ -6759,8 +6759,8 @@ a.hws-card:hover,
   position: relative;
   z-index: 1;
 }
-/* Turned upright (a quarter turn): the large clean circle sits on top and
-   the smaller one below it, like a face looking straight ahead. */
+/* Turned upright (a quarter turn): the smaller clean circle sits on top
+   and the large one below it, like a head and shoulders facing ahead. */
 .pr .hp-orb {
   position: absolute;
   z-index: 0;
@@ -6769,7 +6769,7 @@ a.hws-card:hover,
   width: min(42vw, 640px);
   aspect-ratio: 1;
   pointer-events: none;
-  transform: translateY(-50%) rotate(90deg);
+  transform: translateY(-50%) rotate(-90deg);
 }
 .pr .hp-orb .grain {
   position: absolute;
