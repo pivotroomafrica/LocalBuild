@@ -6953,3 +6953,15 @@ a.hws-card:hover,
     display: none;
   }
 }
+
+/* City suggestions under the city field */
+.pr .cc-city-pop {
+  min-width: 0;
+  padding: 6px;
+}
+.pr .cc-city-pop .cc-list {
+  max-height: 260px;
+}
+.pr .cc-city-pop .cc-opt {
+  min-height: 44px;
+}

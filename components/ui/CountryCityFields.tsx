@@ -8,7 +8,8 @@ const cityCache = new Map<string, string[]>();
 
 /**
  * Country (searchable list with flags) and city (suggestions for the chosen
- * country, any value allowed). Posts the country NAME as `country` and the
+ * country, any value allowed). The city suggestions are our own dropdown, not
+ * a <datalist>, which many phone browsers don't show. Posts the country NAME as `country` and the
  * city as `city`, the same text columns as before.
  */
 export function CountryCityFields({
@@ -48,6 +49,50 @@ export function CountryCityFields({
     };
   }, [cityCode]);
 
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+
+  // Best matches first: names that start with what was typed, then names
+  // that contain it. With nothing typed, the largest cities.
+  const matches = (() => {
+    const query = city.trim().toLowerCase();
+    if (!query) return cities.slice(0, 8);
+    const starts: string[] = [];
+    const contains: string[] = [];
+    for (const name of cities) {
+      const lower = name.toLowerCase();
+      if (lower === query) continue;
+      if (lower.startsWith(query)) starts.push(name);
+      else if (lower.includes(query)) contains.push(name);
+      if (starts.length >= 8) break;
+    }
+    return [...starts, ...contains].slice(0, 8);
+  })();
+
+  const showList = open && matches.length > 0;
+
+  function choose(name: string) {
+    setCity(name);
+    setOpen(false);
+    setActive(-1);
+  }
+
+  function onKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setOpen(true);
+      setActive((index) => Math.min(index + 1, matches.length - 1));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActive((index) => Math.max(index - 1, -1));
+    } else if (event.key === "Enter" && showList && active >= 0) {
+      event.preventDefault();
+      choose(matches[active]);
+    } else if (event.key === "Escape") {
+      setOpen(false);
+    }
+  }
+
   function pick(next: Country) {
     if (next.code !== country?.code) setCity("");
     setCountry(next);
@@ -72,23 +117,61 @@ export function CountryCityFields({
         <label className="label" htmlFor={`${id}-city`}>
           {cityLabel}
         </label>
-        <input
-          id={`${id}-city`}
-          className="input"
-          name="city"
-          list={`${id}-cities`}
-          autoComplete="off"
-          required={required}
-          maxLength={100}
-          value={city}
-          onChange={(event) => setCity(event.target.value)}
-          placeholder={cities.length > 0 ? `Start typing, e.g. ${cities[0]}` : "Your city or town"}
-        />
-        <datalist id={`${id}-cities`}>
-          {cities.map((name) => (
-            <option key={name} value={name} />
-          ))}
-        </datalist>
+        <div className="cc-box">
+          <input
+            id={`${id}-city`}
+            className="input"
+            name="city"
+            role="combobox"
+            aria-expanded={showList}
+            aria-controls={`${id}-cities`}
+            aria-autocomplete="list"
+            aria-activedescendant={showList && active >= 0 ? `${id}-city-${active}` : undefined}
+            autoComplete="off"
+            required={required}
+            maxLength={100}
+            value={city}
+            onChange={(event) => {
+              setCity(event.target.value);
+              setOpen(true);
+              setActive(-1);
+            }}
+            onFocus={() => setOpen(true)}
+            onClick={() => setOpen(true)}
+            onBlur={() => setOpen(false)}
+            onKeyDown={onKeyDown}
+            placeholder={cities.length > 0 ? `Start typing, e.g. ${cities[0]}` : "Your city or town"}
+          />
+          {showList ? (
+            <div className="cc-pop cc-city-pop">
+              <ul className="cc-list" role="listbox" id={`${id}-cities`} aria-label={cityLabel}>
+                {matches.map((name, index) => (
+                  <li key={name} role="presentation">
+                    <button
+                      type="button"
+                      id={`${id}-city-${index}`}
+                      role="option"
+                      aria-selected={index === active}
+                      tabIndex={-1}
+                      className={index === active ? "cc-opt on" : "cc-opt"}
+                      // Pick before the input loses focus (works for taps too).
+                      onPointerDown={(event) => {
+                        event.preventDefault();
+                        choose(name);
+                      }}
+                      onClick={() => choose(name)}
+                    >
+                      <span className="ms" aria-hidden="true" style={{ fontSize: 18, color: "var(--pr-slate)" }}>
+                        location_on
+                      </span>
+                      {name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );
