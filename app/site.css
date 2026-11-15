@@ -5230,17 +5230,129 @@
 }
 
 
-/* ---------- Sign-in screens ----------
-   Phones (<640): header + one plain column.
-   Tablets (640-959): header + the form in a centred card.
-   Laptops (960-1199) and large screens (1200+): one card split into a
-   branded panel and the form, no site header. Short screens get tighter
-   spacing; the card centres when it fits and scrolls when it doesn't. */
+/* Sign-in / create-account screens.
+   A slowly moving gradient fills the whole page behind everything; the form
+   always sits on a solid white card so it keeps full contrast for every
+   visitor, whatever colour is drifting behind it.
+   Phones: header + the card. Tablets (640-959): a narrower centred card.
+   Laptops (960+): no site header; the brand message sits on the gradient on
+   the left and the form card on the right. */
+.pr.auth-page {
+  position: relative;
+  background: #0b1a6b;
+}
+.pr .auth-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: linear-gradient(150deg, #0b1a6b 0%, #2b4fe0 30%, #7b6cf0 55%, #2b4fe0 75%, #9db4ff 100%);
+  background-size: 220% 220%;
+  animation: auth-flow 18s ease-in-out infinite alternate;
+  isolation: isolate;
+}
+/* Darkens the gradient where white text sits so it stays readable. */
+.pr .auth-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(7, 16, 74, 0.55) 0%, rgba(7, 16, 74, 0.2) 50%, transparent 75%),
+    linear-gradient(180deg, transparent 50%, rgba(7, 16, 74, 0.35) 100%);
+}
+@keyframes auth-flow {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 60%;
+  }
+  100% {
+    background-position: 40% 100%;
+  }
+}
+.pr .auth-blob {
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.8;
+  will-change: transform;
+  animation: auth-drift-a 22s ease-in-out infinite;
+}
+.pr .auth-blob.b1 {
+  width: 46vmax;
+  height: 46vmax;
+  top: -14vmax;
+  left: -12vmax;
+  background: #07104a;
+}
+.pr .auth-blob.b2 {
+  width: 40vmax;
+  height: 40vmax;
+  top: 20%;
+  right: -14vmax;
+  background: #b78cff;
+  animation-name: auth-drift-b;
+  animation-duration: 26s;
+}
+.pr .auth-blob.b3 {
+  width: 34vmax;
+  height: 34vmax;
+  bottom: -14vmax;
+  left: 30%;
+  background: #6fd3ff;
+  opacity: 0.6;
+  animation-name: auth-drift-c;
+  animation-duration: 30s;
+}
+@keyframes auth-drift-a {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(12vw, 10vh) scale(1.15);
+  }
+  66% {
+    transform: translate(4vw, 24vh) scale(0.92);
+  }
+}
+@keyframes auth-drift-b {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(-16vw, -14vh) scale(1.12);
+  }
+  66% {
+    transform: translate(-8vw, 16vh) scale(0.9);
+  }
+}
+@keyframes auth-drift-c {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(14vw, -18vh) scale(1.2);
+  }
+  66% {
+    transform: translate(-8vw, -6vh) scale(1);
+  }
+}
+.pr .auth-head,
+.pr .auth-main {
+  position: relative;
+  z-index: 1;
+}
 .pr .auth-main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 32px 20px 64px;
+  padding: 20px 16px 48px;
 }
 .pr .auth-card {
   width: 100%;
@@ -5253,6 +5365,10 @@
 .pr .auth-form {
   display: flex;
   justify-content: center;
+  padding: 28px 22px 32px;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(7, 16, 74, 0.3);
 }
 .pr .auth-title {
   margin: 0;
@@ -5260,154 +5376,46 @@
   line-height: 1.08;
   letter-spacing: -0.025em;
 }
+.pr .auth-stack {
+  gap: 28px;
+}
 @media (min-width: 640px) {
-  .pr.auth-page {
-    background: #f4f5fb;
-  }
   .pr .auth-main {
     padding: 48px 24px 72px;
   }
   .pr .auth-card {
     max-width: 520px;
     margin-block: auto;
+  }
+  .pr .auth-form {
     padding: 40px 44px;
     border-radius: 24px;
-    background: #ffffff;
-    box-shadow: 0 20px 60px rgba(43, 52, 120, 0.1);
   }
 }
-/* Laptops and up: full-bleed split screen. The branded panel fills the
-   left half top to bottom (and stays put while the form scrolls). */
 @media (min-width: 960px) {
-  .pr.auth-page {
-    background: #ffffff;
-  }
   .pr .auth-head {
     display: none;
   }
   .pr .auth-main {
-    padding: 0;
+    padding: clamp(24px, 4vh, 48px) clamp(24px, 4vw, 64px);
   }
   .pr .auth-card {
     display: grid;
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr);
-    max-width: none;
-    min-height: 100vh;
-    min-height: 100dvh;
-    margin: 0;
-    padding: 0;
-    border-radius: 0;
-    box-shadow: none;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 500px);
+    gap: clamp(40px, 6vw, 112px);
+    align-items: center;
+    max-width: 1280px;
+    min-height: calc(100vh - 2 * clamp(24px, 4vh, 48px));
+    min-height: calc(100dvh - 2 * clamp(24px, 4vh, 48px));
   }
   .pr .auth-art {
-    position: sticky;
-    top: 0;
-    height: 100vh;
-    height: 100dvh;
+    align-self: stretch;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    overflow: hidden;
-    padding: clamp(32px, 4vw, 56px);
-    border-radius: 0;
-    background: linear-gradient(160deg, #0b1a6b 0%, #2b4fe0 30%, #7b6cf0 55%, #2b4fe0 75%, #9db4ff 100%);
-    background-size: 220% 220%;
-    animation: auth-flow 16s ease-in-out infinite alternate;
+    gap: 32px;
+    padding-block: 8px;
     color: #ffffff;
-    isolation: isolate;
-  }
-  /* Keeps the white text readable whatever colour drifts behind it. */
-  .pr .auth-art::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background: linear-gradient(180deg, rgba(7, 16, 74, 0.25) 0%, transparent 25%, transparent 50%, rgba(7, 16, 74, 0.55) 100%);
-  }
-  /* The base gradient slowly sweeps; three soft colour blobs drift over it
-     on different loops, so the movement never visibly repeats. */
-  @keyframes auth-flow {
-    0% {
-      background-position: 0% 0%;
-    }
-    50% {
-      background-position: 100% 60%;
-    }
-    100% {
-      background-position: 40% 100%;
-    }
-  }
-  .pr .auth-blob {
-    position: absolute;
-    z-index: -1;
-    border-radius: 50%;
-    filter: blur(70px);
-    opacity: 0.85;
-    will-change: transform;
-    animation: auth-drift-a 20s ease-in-out infinite;
-  }
-  .pr .auth-blob.b1 {
-    width: 520px;
-    height: 520px;
-    top: -140px;
-    left: -160px;
-    background: #07104a;
-  }
-  .pr .auth-blob.b2 {
-    width: 440px;
-    height: 440px;
-    top: 28%;
-    right: -180px;
-    background: #b78cff;
-    animation-name: auth-drift-b;
-    animation-duration: 24s;
-  }
-  .pr .auth-blob.b3 {
-    width: 380px;
-    height: 380px;
-    bottom: -140px;
-    left: 15%;
-    background: #6fd3ff;
-    opacity: 0.6;
-    animation-name: auth-drift-c;
-    animation-duration: 28s;
-  }
-  @keyframes auth-drift-a {
-    0%,
-    100% {
-      transform: translate(0, 0) scale(1);
-    }
-    33% {
-      transform: translate(140px, 90px) scale(1.15);
-    }
-    66% {
-      transform: translate(40px, 200px) scale(0.92);
-    }
-  }
-  @keyframes auth-drift-b {
-    0%,
-    100% {
-      transform: translate(0, 0) scale(1);
-    }
-    33% {
-      transform: translate(-180px, -120px) scale(1.12);
-    }
-    66% {
-      transform: translate(-90px, 140px) scale(0.9);
-    }
-  }
-  @keyframes auth-drift-c {
-    0%,
-    100% {
-      transform: translate(0, 0) scale(1);
-    }
-    33% {
-      transform: translate(160px, -160px) scale(1.2);
-    }
-    66% {
-      transform: translate(-80px, -60px) scale(1);
-    }
   }
   .pr .auth-art-logo {
     align-self: flex-start;
@@ -5415,8 +5423,9 @@
   .pr .auth-art-copy {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    max-width: 400px;
+    gap: 12px;
+    max-width: 560px;
+    text-shadow: 0 1px 12px rgba(7, 16, 74, 0.35);
   }
   .pr .auth-faces {
     display: flex;
@@ -5424,8 +5433,8 @@
     margin-bottom: 16px;
   }
   .pr .auth-faces img {
-    width: 38px;
-    height: 38px;
+    width: 40px;
+    height: 40px;
     margin-inline-end: -10px;
     border: 2px solid rgba(255, 255, 255, 0.9);
     border-radius: 50%;
@@ -5433,67 +5442,57 @@
   }
   .pr .auth-faces span {
     margin-inline-start: 22px;
-    font-size: 14px;
-    color: rgba(255, 255, 255, 0.85);
+    font-size: 15px;
+    color: #ffffff;
   }
   .pr .auth-art-kicker {
     margin: 0;
     font-size: 14px;
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    color: rgba(255, 255, 255, 0.75);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.9);
   }
   .pr .auth-art-title {
     margin: 0;
     font-family: var(--pr-display);
-    font-size: clamp(26px, 2.5vw, 34px);
+    font-size: clamp(32px, 3.4vw, 52px);
     font-weight: 700;
-    line-height: 1.15;
+    line-height: 1.1;
     letter-spacing: -0.02em;
+    text-wrap: balance;
   }
   .pr .auth-art-sub {
     margin: 0;
-    font-size: 15px;
-    line-height: 1.5;
-    color: rgba(255, 255, 255, 0.82);
+    max-width: 46ch;
+    font-size: 17px;
+    line-height: 1.55;
+    color: #ffffff;
   }
   .pr .auth-form {
     position: relative;
     align-items: center;
-    padding: 72px clamp(32px, 6vw, 96px) 48px;
+    padding: 56px clamp(32px, 3.5vw, 48px) 40px;
+    border-radius: 28px;
+    box-shadow:
+      0 40px 100px rgba(7, 16, 74, 0.35),
+      0 2px 8px rgba(7, 16, 74, 0.08);
   }
   .pr .auth-corner {
     display: block;
     position: absolute;
-    top: 28px;
-    right: clamp(24px, 3vw, 48px);
+    top: 20px;
+    right: 24px;
     font-size: 14px;
   }
   .pr .auth-title {
-    font-size: clamp(30px, 2.8vw, 38px);
+    font-size: clamp(30px, 2.6vw, 36px);
   }
-}
-@media (min-width: 1200px) {
-  .pr .auth-card {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-  .pr .auth-art-title {
-    font-size: clamp(34px, 3vw, 48px);
-  }
-  .pr .auth-art-copy {
-    max-width: 600px;
-  }
-  .pr .auth-art-title {
-    text-wrap: balance;
-  }
-}
-.pr .auth-stack {
-  gap: 28px;
 }
 /* Short laptop screens: less air so the card fits. */
 @media (min-width: 960px) and (max-height: 760px) {
   .pr .auth-form {
-    padding-block: 56px 24px;
+    padding-block: 44px 24px;
   }
   .pr .auth-stack {
     gap: 18px;
@@ -5511,8 +5510,8 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pr .auth-blob,
-  .pr .auth-art {
+  .pr .auth-bg,
+  .pr .auth-blob {
     animation: none;
   }
 }

@@ -15,8 +15,9 @@ type Props = {
 
 /**
  * Auth screens (sign in, create account, password reset, finish profile).
- * Desktop: one card split into a branded panel (live expert faces) and the
- * form. Phones: the plain header and a single centred column.
+ * A moving gradient fills the page; the form sits on a solid white card.
+ * Laptops and up: the brand message (live expert faces) on the gradient to
+ * the left, the form card on the right. Phones: header plus the card.
  */
 export async function AuthShell({ title, subtitle, tab, query = "", children, footer }: Props) {
   const experts = await getDirectoryForRequest();
@@ -24,6 +25,11 @@ export async function AuthShell({ title, subtitle, tab, query = "", children, fo
 
   return (
     <div className="pr auth-page flex min-h-screen flex-col">
+      <div className="auth-bg" aria-hidden="true">
+        <span className="auth-blob b1" />
+        <span className="auth-blob b2" />
+        <span className="auth-blob b3" />
+      </div>
       <header className="pr-head auth-head">
         <div className="wrap bar">
           <Link href="/" className="logo" aria-label="Pivotroom home">
@@ -38,9 +44,6 @@ export async function AuthShell({ title, subtitle, tab, query = "", children, fo
       <main className="auth-main">
         <div className="auth-card">
           <aside className="auth-art" aria-hidden="true">
-            <span className="auth-blob b1" />
-            <span className="auth-blob b2" />
-            <span className="auth-blob b3" />
             <Link href="/" className="auth-art-logo" tabIndex={-1}>
               <SiteLogo tone="white" />
             </Link>
