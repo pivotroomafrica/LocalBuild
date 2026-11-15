@@ -22,6 +22,14 @@ const ADMIN_PREFIX = "/admin";
  * app must not rely on client-only React state to decide access.
  */
 export async function updateSession(request: NextRequest) {
+  // The OAuth / email-link callback exchanges its one-time code itself. Don't
+  // touch the session here: with a stale or partial session cookie the
+  // client would tear the session down, and that also deletes the pending
+  // PKCE code verifier the callback needs (sign-in then silently fails).
+  if (request.nextUrl.pathname === "/auth/callback") {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
