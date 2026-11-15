@@ -1,10 +1,23 @@
 import type { MetadataRoute } from "next";
 import { getDirectoryForRequest } from "@/lib/public/cached";
 import { isProductionSite, siteUrl } from "@/lib/site";
+import { HOW_PAGES } from "@/lib/site/howWeHelp";
 
 export const revalidate = 3600;
 
-const PAGES = ["", "/experts", "/become-an-expert", "/about", "/help", "/contact", "/terms", "/privacy", "/expert-terms"];
+const PAGES = [
+  "",
+  "/experts",
+  "/how-we-help",
+  ...HOW_PAGES.map((page) => `/how-we-help/${page.slug}`),
+  "/become-an-expert",
+  "/about",
+  "/help",
+  "/contact",
+  "/terms",
+  "/privacy",
+  "/expert-terms",
+];
 
 /** Public pages plus every published expert profile (production only). */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

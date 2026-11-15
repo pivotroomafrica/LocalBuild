@@ -6,11 +6,15 @@ import { usePathname } from "next/navigation";
 import { signOutAction } from "@/lib/auth/actions";
 import { SignOutIconButton } from "@/components/site/SignOutIconButton";
 import { MobileMenu, MobileTabBar } from "@/components/site/MobileNav";
+import { MegaNav } from "@/components/site/MegaNav";
+import { siteNav } from "@/lib/site/nav";
 
 type Props = {
   isLoggedIn: boolean;
   isApprovedExpert: boolean;
   isAdmin: boolean;
+  /** Live expert topics for the Find an expert menu. */
+  topics?: string[];
 };
 
 /** The wordmark lockup from the website design (fixed brand asset). */
@@ -93,36 +97,12 @@ export function AccountMenu({ isApprovedExpert, isAdmin }: { isApprovedExpert: b
  * current visitor's real auth state; the expert profile page hides the tab
  * bar because its booking bar sits in the same place.
  */
-function isCurrentPath(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
-}
-
-/** The site's main menu (public header and the client/expert dashboards). */
-export function MainNav({ isApprovedExpert }: { isApprovedExpert: boolean }) {
-  const pathname = usePathname();
-  const nav = [
-    { href: "/experts", label: "Find an expert" },
-    isApprovedExpert
-      ? { href: "/expert/dashboard", label: "Expert dashboard" }
-      : { href: "/become-an-expert", label: "Become an expert" },
-    { href: "/about", label: "About" },
-  ];
-  return (
-    <nav aria-label="Main">
-      {nav.map((link) => (
-        <Link key={link.href} href={link.href} aria-current={isCurrentPath(pathname, link.href) ? "page" : undefined}>
-          {link.label}
-        </Link>
-      ))}
-    </nav>
-  );
-}
-
-export function SiteChrome({ isLoggedIn, isApprovedExpert, isAdmin }: Props) {
+export function SiteChrome({ isLoggedIn, isApprovedExpert, isAdmin, topics = [] }: Props) {
   const pathname = usePathname();
 
   // Where "My dashboard" goes for this person.
   const homeHref = isAdmin ? "/admin" : isApprovedExpert ? "/expert/dashboard" : "/dashboard";
+  const sections = siteNav({ topics, isApprovedExpert });
   const showTabbar = !/^\/experts\/[^/]+/.test(pathname);
 
   return (
@@ -132,7 +112,7 @@ export function SiteChrome({ isLoggedIn, isApprovedExpert, isAdmin }: Props) {
           <Link href="/" className="logo" aria-label="Pivotroom home">
             <SiteLogo />
           </Link>
-          <MainNav isApprovedExpert={isApprovedExpert} />
+          <MegaNav sections={sections} />
           <div className="acts acts-desk">
             {isLoggedIn ? (
               <>
@@ -151,7 +131,7 @@ export function SiteChrome({ isLoggedIn, isApprovedExpert, isAdmin }: Props) {
               </span>
             </Link>
           </div>
-          <MobileMenu who={{ isLoggedIn, isApprovedExpert, isAdmin }} />
+          <MobileMenu who={{ isLoggedIn, isApprovedExpert, isAdmin }} sections={sections} />
         </div>
       </header>
 

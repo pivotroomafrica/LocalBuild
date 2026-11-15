@@ -2,7 +2,10 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { signOutAction } from "@/lib/auth/actions";
 import { SignOutIconButton } from "@/components/site/SignOutIconButton";
-import { AccountMenu, MainNav, SiteLogo } from "@/components/site/SiteChrome";
+import { AccountMenu, SiteLogo } from "@/components/site/SiteChrome";
+import { MegaNav } from "@/components/site/MegaNav";
+import { siteNav } from "@/lib/site/nav";
+import { getCategoryNamesForRequest } from "@/lib/public/cached";
 import { MobileMenu, MobileTabBar } from "@/components/site/MobileNav";
 import { initialsOf } from "@/components/site/format";
 import { WorkspaceSidebarNav, type SidebarItem } from "@/components/app/WorkspaceSidebarNav";
@@ -69,6 +72,7 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
   }
 
   const isApprovedExpert = expert?.application_status === "approved";
+  const sections = siteNav({ topics: await getCategoryNamesForRequest(), isApprovedExpert });
 
   let items: SidebarItem[];
   let subtitle: string | null;
@@ -135,7 +139,7 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
             {area !== "client" ? <span className="ws-badge">{area === "admin" ? "Admin" : "Expert"}</span> : null}
           </span>
           {/* Clients and experts get the same main menu as the public site. */}
-          {area !== "admin" ? <MainNav isApprovedExpert={isApprovedExpert} /> : null}
+          {area !== "admin" ? <MegaNav sections={sections} /> : null}
           <span className="ws-acts">
             {publicProfileHref ? (
               <Link href={publicProfileHref} className="btn btn-line even">
@@ -150,6 +154,7 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
           </span>
           <MobileMenu
             who={{ isLoggedIn: true, isApprovedExpert, isAdmin }}
+            sections={sections}
             areaItems={items.map(({ href, label, icon }) => ({ href, label, icon }))}
           />
         </div>

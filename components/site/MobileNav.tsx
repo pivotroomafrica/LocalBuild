@@ -5,16 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOutAction } from "@/lib/auth/actions";
 import { SiteLogo } from "@/components/site/SiteChrome";
+import { ArrowBox } from "@/components/site/MegaNav";
+import type { NavSection } from "@/lib/site/nav";
 
 type Who = { isLoggedIn: boolean; isApprovedExpert: boolean; isAdmin: boolean };
 type NavLink = { href: string; label: string; icon: string };
 
 function dashboardHref({ isAdmin, isApprovedExpert }: Who) {
   return isAdmin ? "/admin" : isApprovedExpert ? "/expert/dashboard" : "/dashboard";
-}
-
-function sessionsHref({ isAdmin, isApprovedExpert }: Who) {
-  return isAdmin ? "/admin/bookings" : isApprovedExpert ? "/expert/sessions" : "/dashboard/sessions";
 }
 
 const PROFILE = "/dashboard/profile";
@@ -35,21 +33,12 @@ function activeHref(pathname: string, hrefs: string[]) {
  */
 export function MobileTabBar(who: Who) {
   const pathname = usePathname();
-  const side: NavLink[] = who.isLoggedIn
-    ? [
-        { href: "/", label: "Home", icon: "home" },
-        { href: dashboardHref(who), label: "Dashboard", icon: "space_dashboard" },
-        { href: sessionsHref(who), label: "Sessions", icon: "event" },
-        { href: PROFILE, label: "Profile", icon: "person" },
-      ]
-    : [
-        { href: "/", label: "Home", icon: "home" },
-        { href: "/about", label: "About", icon: "info" },
-        { href: "/help", label: "Help", icon: "help" },
-        { href: `/auth/login?next=${encodeURIComponent(PROFILE)}`, label: "Profile", icon: "person" },
-      ];
+  const home: NavLink = { href: "/", label: "Home", icon: "home" };
+  const profile: NavLink = who.isLoggedIn
+    ? { href: PROFILE, label: "Profile", icon: "person" }
+    : { href: `/auth/login?next=${encodeURIComponent(PROFILE)}`, label: "Profile", icon: "person" };
   const signInPage = !who.isLoggedIn && pathname.startsWith("/auth/");
-  const current = activeHref(pathname, [...side.map((tab) => tab.href.split("?")[0]), "/experts"]);
+  const current = activeHref(pathname, ["/", PROFILE, "/experts"]);
   const isOn = (href: string) =>
     href.startsWith("/auth/login") ? signInPage : current === href.split("?")[0];
 
@@ -69,8 +58,7 @@ export function MobileTabBar(who: Who) {
 
   return (
     <nav className="mtabbar" aria-label="Main">
-      {tab(side[0])}
-      {tab(side[1])}
+      {tab(home)}
       <Link
         href="/experts"
         className={current === "/experts" ? "mt-center on" : "mt-center"}
@@ -83,18 +71,28 @@ export function MobileTabBar(who: Who) {
           </span>
         </span>
       </Link>
-      {tab(side[2])}
-      {tab(side[3])}
+      {tab(profile)}
     </nav>
   );
 }
 
 /**
- * ☰ button for phones, opening a side menu with every link: the site's
- * pages, this dashboard's sections (when given) and the account.
+ * ☰ button for phones, opening a full-screen menu that drills down: the
+ * sections (How we help, Find an expert, For experts, About us), then a
+ * section's sub-pages with a Back button. In dashboards it also lists the
+ * dashboard's own sections.
  */
-export function MobileMenu({ who, areaItems }: { who: Who; areaItems?: NavLink[] }) {
+export function MobileMenu({
+  who,
+  sections,
+  areaItems,
+}: {
+  who: Who;
+  sections: NavSection[];
+  areaItems?: NavLink[];
+}) {
   const [open, setOpen] = useState(false);
+  const [sectionKey, setSectionKey] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -102,7 +100,6 @@ export function MobileMenu({ who, areaItems }: { who: Who; areaItems?: NavLink[]
     if (!open) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    panelRef.current?.querySelector<HTMLElement>("a, button")?.focus();
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
     };
@@ -115,39 +112,23 @@ export function MobileMenu({ who, areaItems }: { who: Who; areaItems?: NavLink[]
     };
   }, [open]);
 
-  const close = () => setOpen(false);
-  const site: NavLink[] = [
-    { href: "/", label: "Home", icon: "home" },
-    { href: "/experts", label: "Find an expert", icon: "search" },
-    who.isApprovedExpert
-      ? { href: "/expert/dashboard", label: "Expert dashboard", icon: "work" }
-      : { href: "/become-an-expert", label: "Become an expert", icon: "work" },
-    { href: "/about", label: "About", icon: "info" },
-    { href: "/help", label: "Help and FAQ", icon: "help" },
-    { href: "/contact", label: "Contact", icon: "mail" },
-  ];
+  // Move focus into the panel whenever it opens or changes level.
+  useEffect(() => {
+    if (open) panelRef.current?.querySelector<HTMLElement>(".mm-level a, .mm-level button")?.focus();
+  }, [open, sectionKey]);
+
+  const close = () => {
+    setOpen(false);
+    setSectionKey(null);
+  };
+  const section = sections.find((item) => item.key === sectionKey) ?? null;
   const account: NavLink[] = who.isLoggedIn
     ? [
         ...(who.isAdmin ? [{ href: "/admin", label: "Admin dashboard", icon: "admin_panel_settings" }] : []),
-        { href: "/dashboard", label: "My dashboard", icon: "space_dashboard" },
+        { href: dashboardHref(who), label: "My dashboard", icon: "space_dashboard" },
         { href: PROFILE, label: "Profile and name", icon: "person" },
       ]
     : [];
-
-  const list = (links: NavLink[]) => (
-    <ul className="mm-list">
-      {links.map((link) => (
-        <li key={link.href + link.label}>
-          <Link href={link.href} onClick={close}>
-            <span className="ms" aria-hidden="true">
-              {link.icon}
-            </span>
-            {link.label}
-          </Link>
-        </li>
-      ))}
-    </ul>
-  );
 
   return (
     <>
@@ -165,51 +146,121 @@ export function MobileMenu({ who, areaItems }: { who: Who; areaItems?: NavLink[]
         </span>
       </button>
       {open ? (
-        <div className="mm-root">
-          <button type="button" className="mm-backdrop" aria-label="Close menu" tabIndex={-1} onClick={close} />
-          <div id="mobile-menu" ref={panelRef} className="mm-panel" role="dialog" aria-modal="true" aria-label="Menu">
-            <div className="mm-head">
-              <Link href="/" onClick={close} aria-label="Pivotroom home">
-                <SiteLogo />
-              </Link>
+        <div id="mobile-menu" ref={panelRef} className="mm-sheet" role="dialog" aria-modal="true" aria-label="Menu">
+          <div className="mm-top">
+            <Link href="/" onClick={close} aria-label="Pivotroom home">
+              <SiteLogo />
+            </Link>
+            <span className="mm-top-acts">
+              {who.isLoggedIn ? null : (
+                <Link href="/auth/login" onClick={close} className="mm-login">
+                  <span className="ms" aria-hidden="true">
+                    person
+                  </span>
+                  Sign in
+                </Link>
+              )}
               <button type="button" className="mm-close" aria-label="Close menu" onClick={close}>
                 <span className="ms" aria-hidden="true">
                   close
                 </span>
               </button>
+            </span>
+          </div>
+
+          {section ? (
+            <div className="mm-level" key={section.key}>
+              <button type="button" className="mm-back" onClick={() => setSectionKey(null)}>
+                <span className="ms" aria-hidden="true">
+                  chevron_left
+                </span>
+                Back
+              </button>
+              <Link href={section.href} className="mm-section-title" onClick={close}>
+                {section.label}
+                <ArrowBox large />
+              </Link>
+              <ul className="mm-sub">
+                {section.links.map((link) => (
+                  <li key={link.href + link.label}>
+                    <Link href={link.href} onClick={close}>
+                      <span>{link.label}</span>
+                      <ArrowBox />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <Link href="/experts" className="btn btn-ink md block" onClick={close}>
+                Find an expert
+              </Link>
             </div>
-            {areaItems && areaItems.length > 0 ? (
-              <>
-                <p className="mm-title">This dashboard</p>
-                {list(areaItems)}
-              </>
-            ) : null}
-            <p className="mm-title">Pivotroom</p>
-            {list(site)}
-            {who.isLoggedIn ? (
-              <>
-                <p className="mm-title">Your account</p>
-                {list(account)}
-                <form action={signOutAction} className="mm-signout">
-                  <button type="submit">
-                    <span className="ms" aria-hidden="true">
-                      logout
-                    </span>
-                    Sign out
-                  </button>
-                </form>
-              </>
-            ) : (
-              <div className="mm-auth">
-                <Link href="/auth/login" className="btn btn-ink md block" onClick={close}>
-                  Sign in
-                </Link>
+          ) : (
+            <div className="mm-level" key="root">
+              <ul className="mm-sections">
+                {sections.map((item) => (
+                  <li key={item.key}>
+                    <button type="button" onClick={() => setSectionKey(item.key)}>
+                      <span>{item.label}</span>
+                      <span className="ms" aria-hidden="true">
+                        chevron_right
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <Link href="/experts" className="btn btn-ink md block" onClick={close}>
+                Find an expert
+              </Link>
+
+              {areaItems && areaItems.length > 0 ? (
+                <>
+                  <p className="mm-title">This dashboard</p>
+                  <ul className="mm-list">
+                    {areaItems.map((link) => (
+                      <li key={link.href}>
+                        <Link href={link.href} onClick={close}>
+                          <span className="ms" aria-hidden="true">
+                            {link.icon}
+                          </span>
+                          {link.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
+
+              {who.isLoggedIn ? (
+                <>
+                  <p className="mm-title">Your account</p>
+                  <ul className="mm-list">
+                    {account.map((link) => (
+                      <li key={link.href}>
+                        <Link href={link.href} onClick={close}>
+                          <span className="ms" aria-hidden="true">
+                            {link.icon}
+                          </span>
+                          {link.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  <form action={signOutAction} className="mm-signout">
+                    <button type="submit">
+                      <span className="ms" aria-hidden="true">
+                        logout
+                      </span>
+                      Sign out
+                    </button>
+                  </form>
+                </>
+              ) : (
                 <Link href="/auth/signup" className="btn btn-line md block" onClick={close}>
                   Create account
                 </Link>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
       ) : null}
     </>
