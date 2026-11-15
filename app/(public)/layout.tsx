@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { SiteChrome } from "@/components/site/SiteChrome";
 import { SiteFooter } from "@/components/site/SiteFooter";
-import { getCategoryNamesForRequest } from "@/lib/public/cached";
 
 /**
  * Route group -- (public) is stripped from the URL, so this wraps the
@@ -26,11 +25,9 @@ export default async function PublicLayout({ children }: { children: React.React
     isAdmin = profile?.role === "admin";
   }
 
-  const topics = await getCategoryNamesForRequest();
-
   return (
     <div className="pr has-tabbar flex min-h-screen flex-col">
-      <SiteChrome isLoggedIn={Boolean(user)} isApprovedExpert={isApprovedExpert} isAdmin={isAdmin} topics={topics} />
+      <SiteChrome isLoggedIn={Boolean(user)} isApprovedExpert={isApprovedExpert} isAdmin={isAdmin} />
       <main className="flex-1">{children}</main>
       <SiteFooter />
     </div>

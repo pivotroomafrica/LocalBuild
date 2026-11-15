@@ -91,10 +91,17 @@ export function MegaNav({ sections }: { sections: NavSection[] }) {
               <ul className="mega-links">
                 {open.links.map((link) => (
                   <li key={link.href + link.label}>
-                    <Link href={link.href} onClick={() => setOpenKey(null)}>
-                      <span>{link.label}</span>
-                      <ArrowBox />
-                    </Link>
+                    {link.soon ? (
+                      <span className="nav-soon" aria-disabled="true">
+                        <span>{link.label}</span>
+                        <span className="nav-soon-badge">Coming soon</span>
+                      </span>
+                    ) : (
+                      <Link href={link.href} onClick={() => setOpenKey(null)}>
+                        <span>{link.label}</span>
+                        <ArrowBox />
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>

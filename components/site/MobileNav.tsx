@@ -183,10 +183,17 @@ export function MobileMenu({
               <ul className="mm-sub">
                 {section.links.map((link) => (
                   <li key={link.href + link.label}>
-                    <Link href={link.href} onClick={close}>
-                      <span>{link.label}</span>
-                      <ArrowBox />
-                    </Link>
+                    {link.soon ? (
+                      <span className="nav-soon" aria-disabled="true">
+                        <span>{link.label}</span>
+                        <span className="nav-soon-badge">Coming soon</span>
+                      </span>
+                    ) : (
+                      <Link href={link.href} onClick={close}>
+                        <span>{link.label}</span>
+                        <ArrowBox />
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>

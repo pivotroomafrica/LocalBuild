@@ -13,8 +13,6 @@ type Props = {
   isLoggedIn: boolean;
   isApprovedExpert: boolean;
   isAdmin: boolean;
-  /** Live expert topics for the Find an expert menu. */
-  topics?: string[];
 };
 
 /** The wordmark lockup from the website design (fixed brand asset). */
@@ -97,12 +95,12 @@ export function AccountMenu({ isApprovedExpert, isAdmin }: { isApprovedExpert: b
  * current visitor's real auth state; the expert profile page hides the tab
  * bar because its booking bar sits in the same place.
  */
-export function SiteChrome({ isLoggedIn, isApprovedExpert, isAdmin, topics = [] }: Props) {
+export function SiteChrome({ isLoggedIn, isApprovedExpert, isAdmin }: Props) {
   const pathname = usePathname();
 
   // Where "My dashboard" goes for this person.
   const homeHref = isAdmin ? "/admin" : isApprovedExpert ? "/expert/dashboard" : "/dashboard";
-  const sections = siteNav({ topics, isApprovedExpert });
+  const sections = siteNav({ isApprovedExpert });
   const showTabbar = !/^\/experts\/[^/]+/.test(pathname);
 
   return (

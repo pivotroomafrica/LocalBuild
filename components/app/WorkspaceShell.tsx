@@ -5,7 +5,6 @@ import { SignOutIconButton } from "@/components/site/SignOutIconButton";
 import { AccountMenu, SiteLogo } from "@/components/site/SiteChrome";
 import { MegaNav } from "@/components/site/MegaNav";
 import { siteNav } from "@/lib/site/nav";
-import { getCategoryNamesForRequest } from "@/lib/public/cached";
 import { MobileMenu, MobileTabBar } from "@/components/site/MobileNav";
 import { initialsOf } from "@/components/site/format";
 import { WorkspaceSidebarNav, type SidebarItem } from "@/components/app/WorkspaceSidebarNav";
@@ -72,7 +71,7 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
   }
 
   const isApprovedExpert = expert?.application_status === "approved";
-  const sections = siteNav({ topics: await getCategoryNamesForRequest(), isApprovedExpert });
+  const sections = siteNav({ isApprovedExpert });
 
   let items: SidebarItem[];
   let subtitle: string | null;

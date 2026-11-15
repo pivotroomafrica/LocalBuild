@@ -19,7 +19,14 @@ type Props = {
  * Laptops and up: the brand message (live expert faces) on the gradient to
  * the left, the form card on the right. Phones: header plus the card.
  */
+/** Sign-up that continues straight into the expert application. */
+const EXPERT_SIGNUP = `/auth/signup?next=${encodeURIComponent("/expert/onboarding")}`;
+
 export async function AuthShell({ title, subtitle, tab, query = "", children, footer }: Props) {
+  // Arrived from "Become an expert" (or the link below): say so on the form.
+  const expertIntent = decodeURIComponent(query).includes("next=/expert/");
+  const shownSubtitle =
+    tab === "signup" && expertIntent ? "Share what you know and get paid for your time." : subtitle;
   const experts = await getDirectoryForRequest();
   const faces = experts.filter((expert) => expert.photoUrl).slice(0, 4);
 
@@ -34,9 +41,6 @@ export async function AuthShell({ title, subtitle, tab, query = "", children, fo
         <div className="wrap bar">
           <Link href="/" className="logo" aria-label="Pivotroom home">
             <SiteLogo />
-          </Link>
-          <Link href="/become-an-expert" style={{ fontSize: 15 }}>
-            Are you an expert?
           </Link>
         </div>
       </header>
@@ -66,15 +70,12 @@ export async function AuthShell({ title, subtitle, tab, query = "", children, fo
           </aside>
 
           <div className="auth-form">
-            <Link href="/become-an-expert" className="auth-corner">
-              Are you an expert?
-            </Link>
             <div className="stack w-full auth-stack" style={{ maxWidth: 400 }}>
               <div className="stack" style={{ gap: 8 }}>
                 <h1 className="d auth-title">{title}</h1>
-                {subtitle ? (
+                {shownSubtitle ? (
                   <p className="muted auth-sub" style={{ margin: 0, fontSize: 16 }}>
-                    {subtitle}
+                    {shownSubtitle}
                   </p>
                 ) : null}
               </div>
@@ -88,11 +89,43 @@ export async function AuthShell({ title, subtitle, tab, query = "", children, fo
                   </Link>
                 </nav>
               ) : null}
+              {tab === "signup" && expertIntent ? (
+                <div className="auth-note">
+                  <span className="ms" aria-hidden="true">
+                    workspace_premium
+                  </span>
+                  <span>
+                    <strong>You&apos;re joining as an expert.</strong> Create your account first, then you&apos;ll set up
+                    your expert profile.{" "}
+                    <Link href="/auth/signup">Just booking? Create a client account</Link>
+                  </span>
+                </div>
+              ) : null}
               <div>{children}</div>
               {footer ? (
                 <div className="muted" style={{ textAlign: "center", fontSize: 15 }}>
                   {footer}
                 </div>
+              ) : null}
+              {tab === "signup" && !expertIntent ? (
+                <Link href={EXPERT_SIGNUP} className="auth-expert">
+                  <span className="ms" aria-hidden="true">
+                    workspace_premium
+                  </span>
+                  <span>
+                    <strong>Are you an expert?</strong>
+                    <span>Sign up as an expert and set up your profile</span>
+                  </span>
+                  <span className="ms af" aria-hidden="true">
+                    arrow_forward
+                  </span>
+                </Link>
+              ) : null}
+              {tab === "login" ? (
+                <p className="auth-expert-line">
+                  Experts sign in here too, with the same account. New expert?{" "}
+                  <Link href={EXPERT_SIGNUP}>Apply to join</Link>
+                </p>
               ) : null}
             </div>
           </div>

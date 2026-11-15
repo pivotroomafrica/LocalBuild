@@ -862,7 +862,8 @@
   padding: 0;
   list-style: none;
 }
-.pr .mm-sub a {
+.pr .mm-sub a,
+.pr .mm-sub .nav-soon {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1033,7 +1034,8 @@
   padding: 0;
   list-style: none;
 }
-.pr .mega-links a {
+.pr .mega-links a,
+.pr .mega-links .nav-soon {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -6575,4 +6577,168 @@ a.hws-card:hover,
     padding: 6px 10px;
     font-size: 12px;
   }
+}
+
+/* Menu items that are not live yet */
+.pr .nav-soon {
+  color: var(--pr-slate) !important;
+  cursor: default;
+}
+.pr .nav-soon-badge {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--pr-blue-tint);
+  color: var(--pr-blue);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ---------- Expert cards: hover motion ----------
+   The card lifts, the photo eases in, and a "View profile" pill rises. */
+.pr .xcard {
+  transition: transform 320ms var(--pr-ease);
+}
+.pr .xcard:hover,
+.pr .xcard:focus-visible {
+  transform: translateY(-6px);
+}
+.pr .xcard .pf {
+  transition:
+    background-color 160ms var(--pr-ease),
+    box-shadow 320ms var(--pr-ease);
+}
+.pr .xcard:hover .pf,
+.pr .xcard:focus-visible .pf {
+  box-shadow: 0 18px 40px rgba(13, 15, 18, 0.16);
+}
+.pr .xcard .pf img {
+  transition: transform 600ms var(--pr-ease);
+}
+.pr .xcard:hover .pf img,
+.pr .xcard:focus-visible .pf img {
+  transform: scale(1.06);
+}
+.pr .xcard .pf::after {
+  content: "\2197";
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--pr-ink);
+  font-size: 18px;
+  font-weight: 600;
+  box-shadow: 0 6px 16px rgba(13, 15, 18, 0.18);
+  opacity: 0;
+  transform: translateY(-8px) scale(0.8);
+  transition:
+    opacity 260ms var(--pr-ease),
+    transform 320ms var(--pr-ease);
+}
+.pr .xcard:hover .pf::after,
+.pr .xcard:focus-visible .pf::after {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+@media (hover: none) {
+  .pr .xcard .pf::after {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pr .xcard,
+  .pr .xcard .pf img {
+    transition: none;
+  }
+  .pr .xcard:hover,
+  .pr .xcard:hover .pf img {
+    transform: none;
+  }
+}
+/* Room for the card lift and shadow inside the scrolling shelves. */
+.pr .hscroll {
+  padding-block: 12px 32px;
+  margin-block: -12px -24px;
+}
+
+/* Sign-in: the expert route, kept inside sign-up */
+.pr .auth-note {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--pr-blue-tint);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.pr .auth-note > .ms {
+  flex: none;
+  color: var(--pr-blue);
+  font-size: 22px;
+}
+.pr .auth-note a {
+  color: var(--pr-blue);
+  font-weight: 500;
+}
+.pr .auth-expert {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--pr-line);
+  border-radius: 14px;
+  color: var(--pr-ink);
+  transition:
+    border-color 200ms var(--pr-ease),
+    background-color 200ms var(--pr-ease);
+}
+.pr .auth-expert:hover {
+  border-color: var(--pr-blue);
+  background: #f7f8ff;
+  color: var(--pr-ink);
+}
+.pr .auth-expert > .ms:first-child {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--pr-blue-tint);
+  color: var(--pr-blue);
+  font-size: 22px;
+}
+.pr .auth-expert > span:nth-child(2) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 15px;
+}
+.pr .auth-expert > span:nth-child(2) span {
+  color: var(--pr-slate);
+  font-size: 13px;
+}
+.pr .auth-expert .af {
+  color: var(--pr-blue);
+  transition: transform 200ms var(--pr-ease);
+}
+.pr .auth-expert:hover .af {
+  transform: translateX(3px);
+}
+.pr .auth-expert-line {
+  margin: 0;
+  color: var(--pr-slate);
+  font-size: 14px;
+  text-align: center;
+}
+.pr .auth-expert-line a {
+  color: var(--pr-blue);
+  font-weight: 500;
 }

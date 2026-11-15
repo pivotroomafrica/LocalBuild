@@ -3,7 +3,8 @@
  * Each section has a landing page (`href`), its sub-pages (`links`) and up
  * to two picture cards shown on the right of the desktop panel.
  */
-export type NavLink = { href: string; label: string };
+/** `soon`: shown as "Coming soon" and not clickable yet. */
+export type NavLink = { href: string; label: string; soon?: boolean };
 export type NavCard = { href: string; label: string; image: string };
 export type NavSection = {
   key: string;
@@ -20,8 +21,7 @@ export const HOW_WE_HELP_PAGES = [
   { slug: "pricing-and-payments", label: "Pricing and payments" },
 ] as const;
 
-/** `topics`: live expert categories, shown under Find an expert. */
-export function siteNav({ topics, isApprovedExpert }: { topics: string[]; isApprovedExpert: boolean }): NavSection[] {
+export function siteNav({ isApprovedExpert }: { isApprovedExpert: boolean }): NavSection[] {
   return [
     {
       key: "how",
@@ -39,7 +39,7 @@ export function siteNav({ topics, isApprovedExpert }: { topics: string[]; isAppr
       href: "/experts",
       links: [
         { href: "/experts", label: "All experts" },
-        ...topics.slice(0, 6).map((topic) => ({ href: `/experts?category=${encodeURIComponent(topic)}`, label: topic })),
+        { href: "/experts", label: "AI-based matching", soon: true },
       ],
       cards: [
         { href: "/experts", label: "Browse every expert", image: "/images/how-2.svg" },
