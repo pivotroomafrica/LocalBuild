@@ -5239,9 +5239,11 @@
    the left and the form card on the right. */
 .pr.auth-page {
   position: relative;
-  background: #0b1a6b;
+  background: #ffffff;
 }
+/* Phones and tablets stay plain; the gradient is for laptops and up. */
 .pr .auth-bg {
+  display: none;
   position: fixed;
   inset: 0;
   z-index: 0;
@@ -5352,7 +5354,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 20px 16px 48px;
+  padding: 32px 20px 48px;
 }
 .pr .auth-card {
   width: 100%;
@@ -5365,10 +5367,7 @@
 .pr .auth-form {
   display: flex;
   justify-content: center;
-  padding: 28px 22px 32px;
-  border-radius: 20px;
   background: #ffffff;
-  box-shadow: 0 24px 60px rgba(7, 16, 74, 0.3);
 }
 .pr .auth-title {
   margin: 0;
@@ -5380,6 +5379,9 @@
   gap: 28px;
 }
 @media (min-width: 640px) {
+  .pr.auth-page {
+    background: #f4f5fb;
+  }
   .pr .auth-main {
     padding: 48px 24px 72px;
   }
@@ -5390,9 +5392,16 @@
   .pr .auth-form {
     padding: 40px 44px;
     border-radius: 24px;
+    box-shadow: 0 20px 60px rgba(43, 52, 120, 0.1);
   }
 }
 @media (min-width: 960px) {
+  .pr.auth-page {
+    background: #0b1a6b;
+  }
+  .pr .auth-bg {
+    display: block;
+  }
   .pr .auth-head {
     display: none;
   }
