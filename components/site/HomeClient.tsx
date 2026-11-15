@@ -200,6 +200,10 @@ export function HomeClient({ experts, categories }: { experts: PublicDirectoryCa
             <span className="w3" />
             <span className="w4" />
           </div>
+          <div className="hp-orb" aria-hidden="true">
+            <span className="g1" />
+            <span className="g2" />
+          </div>
           <div className="hp-top">
             <span className="hp-meta">
               Vetted founders, executives

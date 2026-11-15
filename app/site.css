@@ -6751,7 +6751,7 @@ a.hws-card:hover,
   background: linear-gradient(180deg, #f7f8fc 0%, #f3f4fa 100%);
   isolation: isolate;
 }
-.pr .hp > *:not(.hp-flow) {
+.pr .hp > *:not(.hp-flow):not(.hp-orb) {
   position: relative;
   z-index: 1;
 }
@@ -6856,6 +6856,82 @@ a.hws-card:hover,
 }
 @media (prefers-reduced-motion: reduce) {
   .pr .hp-flow span {
+    animation: none;
+  }
+}
+
+/* ---------- Home hero: grainy "turned profile" orb ----------
+   A stippled halo (blue grain, with a violet grain layer) whose left side is
+   cut away by a clean circle, so it reads as a head turned to the side.
+   Grain is SVG noise coloured in the brand blue; the halo shape and the cut
+   come from masks. It breathes and turns very slowly. */
+.pr .hp-flow {
+  opacity: 0.4;
+}
+.pr .hp-orb {
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  right: -7%;
+  width: min(54vw, 780px);
+  aspect-ratio: 1;
+  pointer-events: none;
+  transform: translateY(-50%);
+  animation: hp-orb-turn 28s ease-in-out infinite;
+}
+.pr .hp-orb span {
+  position: absolute;
+  inset: 0;
+  /* Halo: empty core, densest just outside it, fading out. Minus a clean
+     circle on the left: the crescent "profile". */
+  -webkit-mask-image:
+    radial-gradient(circle at 50% 50%, transparent 0 29%, #000 30.5%, rgba(0, 0, 0, 0.75) 40%, rgba(0, 0, 0, 0.3) 56%, transparent 71%),
+    radial-gradient(circle at 6% 50%, #000 0 37%, transparent 37.6%);
+  -webkit-mask-composite: source-out;
+  mask-image:
+    radial-gradient(circle at 50% 50%, transparent 0 29%, #000 30.5%, rgba(0, 0, 0, 0.75) 40%, rgba(0, 0, 0, 0.3) 56%, transparent 71%),
+    radial-gradient(circle at 6% 50%, #000 0 37%, transparent 37.6%);
+  mask-composite: subtract;
+}
+/* Brand-blue grain */
+.pr .hp-orb .g1 {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.17 0 0 0 0 0.31 0 0 0 0 0.88 0 0 0 7 -3.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  animation: hp-grain 9s steps(6) infinite;
+}
+/* Violet grain, offset so the two blend into a soft blue-violet */
+.pr .hp-orb .g2 {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.45 0 0 0 0 0.98 0 0 0 7 -3.4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
+  transform: scale(1.04);
+  animation: hp-grain 12s steps(8) infinite reverse;
+}
+@keyframes hp-orb-turn {
+  0%,
+  100% {
+    transform: translateY(-50%) rotate(0deg) scale(1);
+  }
+  50% {
+    transform: translateY(-52%) rotate(-7deg) scale(1.04);
+  }
+}
+/* The grain shimmers slightly, like film grain. */
+@keyframes hp-grain {
+  to {
+    background-position: 180px 120px;
+  }
+}
+@media (max-width: 900px) {
+  .pr .hp-orb {
+    top: 34%;
+    right: -30%;
+    width: 110vw;
+    opacity: 0.5;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pr .hp-orb,
+  .pr .hp-orb span {
     animation: none;
   }
 }
