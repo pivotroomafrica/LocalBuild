@@ -32,6 +32,15 @@ export async function checkChapaPaymentAction(bookingReference: string): Promise
     .maybeSingle();
   if (!payment?.provider_tx_ref) return { status: "none" };
 
-  const outcome = await verifyAndFinalizeChapaTransaction(payment.provider_tx_ref);
-  return { status: outcome.finalPaymentStatus };
+  try {
+    const outcome = await verifyAndFinalizeChapaTransaction(payment.provider_tx_ref);
+    // "Not paid yet" and network trouble both land here; log the reason so
+    // it shows in the server log rather than vanishing.
+    if (outcome.error) console.error(`checkChapaPaymentAction: ${outcome.error}`);
+    return { status: outcome.finalPaymentStatus };
+  } catch (error) {
+    // e.g. SUPABASE_SERVICE_ROLE_KEY missing on this server.
+    console.error("checkChapaPaymentAction: could not verify", error);
+    return { status: "initiated" };
+  }
 }

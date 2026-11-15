@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { checkChapaPaymentAction } from "@/lib/chapa/checkAction";
+import { leaveChapaAttemptAction, type LeaveChapaState } from "@/lib/payment/chapaActions";
 import { Button } from "@/components/ui/Button";
 import { FormMessage } from "@/components/ui/FormMessage";
 import { HoldCountdown } from "@/components/booking/HoldCountdown";
@@ -99,11 +100,14 @@ export function RailPayment({
   }
 
   if (activeChapaAttempt) {
-    return <ChapaProcessing booking={booking} />;
+    return <ChapaProcessing booking={booking} expertSlug={expertSlug} chapaAvailable={chapaAvailable} />;
   }
 
   const rejected = latestPayment?.payment_status === "rejected" ? latestPayment : null;
-  const failedChapaAttempt = latestPayment?.payment_method === "chapa" && latestPayment.payment_status === "failed";
+  const lastChapa = latestPayment?.payment_method === "chapa" && latestPayment.payment_status === "failed" ? latestPayment : null;
+  // Left on purpose ("Pay by bank transfer instead") is not an error.
+  const leftChapa = lastChapa?.provider_status === "abandoned_by_customer";
+  const failedChapaAttempt = lastChapa !== null && !leftChapa;
 
   return (
     <section className="flex flex-col gap-4">
@@ -210,21 +214,34 @@ export function RailPayment({
         <ManualPaymentForm bookingReference={booking.booking_reference} />
       </div>
 
-      <FormMessage variant="success">
-        This is a development preview. No automatic bank verification occurs -- an admin reviews
-        every submission manually.
-      </FormMessage>
+      <p className="text-xs text-[var(--color-text-muted)]">
+        Our team checks every bank transfer by hand and then confirms your booking.
+      </p>
     </section>
   );
 }
 
+const leaveInitial: LeaveChapaState = {};
+
 /** Asks Chapa about the payment every few seconds (for about two
- * minutes), and on demand, until it's confirmed or failed. */
-function ChapaProcessing({ booking }: { booking: Booking }) {
+ * minutes), and on demand, until it's confirmed or failed -- and, because
+ * a checkout opened but not finished stays "not paid yet" at Chapa for
+ * ever, always offers the way on: back to Chapa, or bank transfer. */
+function ChapaProcessing({
+  booking,
+  expertSlug,
+  chapaAvailable,
+}: {
+  booking: Booking;
+  expertSlug: string;
+  chapaAvailable: boolean;
+}) {
   const router = useRouter();
   const [isChecking, startCheck] = useTransition();
   const [checks, setChecks] = useState(0);
   const [lastStatus, setLastStatus] = useState<string | null>(null);
+  const [leaveState, leaveAction, leaving] = useActionState(leaveChapaAttemptAction, leaveInitial);
+  const [intent, setIntent] = useState<"chapa" | "bank" | null>(null);
 
   function check() {
     startCheck(async () => {
@@ -242,24 +259,68 @@ function ChapaProcessing({ booking }: { booking: Booking }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-arm only after each finished check
   }, [checks]);
 
+  // Paid after all, or the attempt was closed: show the fresh state.
+  useEffect(() => {
+    if (leaveState.done) router.refresh();
+  }, [leaveState.done, router]);
+
   return (
-    <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 text-center">
+    <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-xl font-extrabold tracking-[-0.02em] text-[var(--color-text)]">Payment processing</h2>
+        <h2 className="text-xl font-extrabold tracking-[-0.02em] text-[var(--color-text)]">Waiting for Chapa</h2>
         <ReleaseTimeButton bookingId={booking.id} bookingReference={booking.booking_reference} />
       </div>
       <p className="mb-3 text-sm text-[var(--color-text-muted)]">
-        We&apos;re confirming your payment with Chapa. This page updates by itself.
+        If you paid on Chapa, this confirms by itself in a moment. If you didn&apos;t finish paying there, you can
+        go back to Chapa or pay by bank transfer instead.
       </p>
       {booking.hold_expires_at ? <HoldCountdown holdExpiresAt={booking.hold_expires_at} /> : null}
       {checks >= 24 && lastStatus === "initiated" ? (
-        <p className="mt-3 text-sm text-[var(--color-text-muted)]">
-          Chapa hasn&apos;t confirmed this payment yet. If you completed it, check again in a minute.
-        </p>
+        <p className="mt-3 text-sm text-[var(--color-text-muted)]">Chapa hasn&apos;t confirmed a payment yet.</p>
       ) : null}
-      <Button type="button" className="mt-3" isLoading={isChecking} loadingText="Checking..." onClick={check}>
-        Check payment status
-      </Button>
+      {leaveState.error ? (
+        <div className="mt-3">
+          <FormMessage variant="error">{leaveState.error}</FormMessage>
+        </div>
+      ) : null}
+
+      <form action={leaveAction} className="mt-4 flex flex-col gap-2">
+        <input type="hidden" name="booking_reference" value={booking.booking_reference} />
+        <input type="hidden" name="expert_slug" value={expertSlug} />
+        {chapaAvailable ? (
+          <Button
+            type="submit"
+            name="intent"
+            value="chapa"
+            onClick={() => setIntent("chapa")}
+            isLoading={leaving && intent === "chapa"}
+            loadingText="Opening Chapa..."
+            disabled={leaving}
+          >
+            Continue to Chapa
+          </Button>
+        ) : null}
+        <Button
+          type="submit"
+          name="intent"
+          value="bank"
+          variant="secondary"
+          onClick={() => setIntent("bank")}
+          isLoading={leaving && intent === "bank"}
+          loadingText="One moment..."
+          disabled={leaving}
+        >
+          Pay by bank transfer instead
+        </Button>
+      </form>
+      <button
+        type="button"
+        className="mt-3 w-full text-center text-sm font-medium text-[var(--color-accent)] disabled:opacity-60"
+        onClick={check}
+        disabled={isChecking || leaving}
+      >
+        {isChecking ? "Checking with Chapa..." : "I've paid, check now"}
+      </button>
     </section>
   );
 }

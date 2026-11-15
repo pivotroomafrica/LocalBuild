@@ -36,7 +36,7 @@ export function HoldCountdown({ holdExpiresAt }: { holdExpiresAt: string }) {
   if (remaining === null) {
     return (
       <p className="text-sm text-[var(--color-text)]">
-        Your session time is being held while you correct the payment.
+        We&apos;re holding this time for you.
       </p>
     );
   }
@@ -44,16 +44,15 @@ export function HoldCountdown({ holdExpiresAt }: { holdExpiresAt: string }) {
   if (remaining <= 0) {
     return (
       <p className="text-sm text-[var(--color-text-muted)]">
-        Your hold on this time has ended. Refresh to see its current status.
+        The time we held for you has run out. Refresh the page to pick a time again.
       </p>
     );
   }
 
   return (
     <p className="text-sm text-[var(--color-text)]">
-      Your session time is being held for another{" "}
-      <span className="font-semibold">{formatRemaining(remaining)}</span> while you correct the
-      payment.
+      We&apos;re holding this time for you for another{" "}
+      <span className="font-semibold">{formatRemaining(remaining)}</span>.
     </p>
   );
 }

@@ -296,6 +296,65 @@ export function RailSelect({
     setStripEdges((prev) => (prev.start === start && prev.end === end ? prev : { start, end }));
   };
 
+  // --- Keep the picked time across a Google / LinkedIn sign-in ---------
+  // Those sign-ins leave the page, so the pick is parked in this tab's
+  // sessionStorage just before going, and restored when they come back
+  // signed in (if that time is still free).
+  const pickKey = `pr-pick:${expertSlug}`;
+  const savePickForSignIn = () => {
+    if (!duration || !format || !selectedSlot) return;
+    try {
+      sessionStorage.setItem(
+        pickKey,
+        JSON.stringify({ duration, format, startAt: selectedSlot.startAt, savedAt: Date.now() }),
+      );
+    } catch {
+      // Storage blocked: they'll simply pick the time again.
+    }
+  };
+  const [pendingPick, setPendingPick] = useState<{ startAt: string } | null>(null);
+  const [pickGone, setPickGone] = useState(false);
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    let saved: { duration?: unknown; format?: unknown; startAt?: unknown; savedAt?: unknown } | null = null;
+    try {
+      const raw = sessionStorage.getItem(pickKey);
+      sessionStorage.removeItem(pickKey);
+      saved = raw ? JSON.parse(raw) : null;
+    } catch {
+      saved = null;
+    }
+    if (!saved || typeof saved.startAt !== "string") return;
+    if (typeof saved.savedAt !== "number" || Date.now() - saved.savedAt > 60 * 60 * 1000) return;
+    const offering = sessionOfferings.find((o) => o.durationMinutes === saved.duration);
+    const savedFormat = saved.format as SessionFormat;
+    if (!offering || !availableFormats.includes(savedFormat)) return;
+    const startAt = saved.startAt;
+    // Applied from a callback: storage is outside React, read once here.
+    queueMicrotask(() => {
+      setDuration(offering.durationMinutes);
+      setFormat(savedFormat);
+      setPendingPick({ startAt });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on arriving signed in
+  }, [isLoggedIn]);
+  // Once that length's times have loaded, put them back on the same time.
+  if (pendingPick && loadKey && slotsResult?.key === loadKey) {
+    const slot = slotsResult.slots.find((candidate) => candidate.startAt === pendingPick.startAt) ?? null;
+    setPendingPick(null);
+    if (slot) {
+      const dateKey = toDateKey(slot.startAt, displayZone);
+      setChosenMonth(dateKey.slice(0, 7));
+      setSelectedDate(dateKey);
+      setSelectedSlot(slot);
+      setPane("time");
+      setGate(profileComplete ? "none" : "profile");
+    } else {
+      setPickGone(true);
+      setPane("day");
+    }
+  }
+
   // --- Hold creation -------------------------------------------------
   const [holdState, holdFormAction, holdPending] = useActionState(
     createBookingHoldAction,
@@ -512,6 +571,11 @@ export function RailSelect({
       {pane === "day" && duration && format ? (
         <fieldset data-testid="rail-date-time">
           <legend>Pick a day</legend>
+          {pickGone ? (
+            <p role="status" className="notice" style={{ margin: "0 0 12px" }}>
+              You&apos;re signed in. The time you picked was taken in the meantime, so please choose another.
+            </p>
+          ) : null}
 
           {/* Where they are sets their clock: a country, and a city only
               for the few countries with several clocks. */}
@@ -812,10 +876,10 @@ export function RailSelect({
           </div>
 
           {/* Google or LinkedIn bring them back to this expert's page signed
-              in; the picked time can't survive the trip, so it's picked again
-              there. */}
+              in; the picked time is parked first (savePickForSignIn) and put
+              back when they return. */}
           {authTab === "login" || signupPart === 1 ? (
-            <div className="mb-3 flex flex-col gap-3">
+            <div className="mb-3 flex flex-col gap-3" onClickCapture={savePickForSignIn}>
               <GoogleButton next={`/experts/${expertSlug}`} />
               {linkedinEnabled ? <LinkedInButton next={`/experts/${expertSlug}`} /> : null}
               <AuthDivider />

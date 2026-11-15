@@ -64,7 +64,14 @@ export default async function PublicExpertProfilePage({
     if (booking && booking.customer_id === user.id) {
       const payment = await getPaymentByProviderTxRef(supabase, txRef);
       if (payment && payment.booking_id === booking.id) {
-        await verifyAndFinalizeChapaTransaction(txRef);
+        // Never let a Chapa/verification hiccup take the page down: the
+        // booking card keeps checking, and offers a way on, by itself.
+        try {
+          const outcome = await verifyAndFinalizeChapaTransaction(txRef);
+          if (outcome.error) console.error(`Chapa return: ${outcome.error}`);
+        } catch (error) {
+          console.error("Chapa return: could not verify", error);
+        }
       }
     }
   }
