@@ -5310,45 +5310,103 @@
     overflow: hidden;
     padding: clamp(32px, 4vw, 56px);
     border-radius: 0;
-    background: linear-gradient(160deg, #0b1a6b 0%, #2b4fe0 48%, #9db4ff 100%);
+    background: linear-gradient(160deg, #0b1a6b 0%, #2b4fe0 30%, #7b6cf0 55%, #2b4fe0 75%, #9db4ff 100%);
+    background-size: 220% 220%;
+    animation: auth-flow 16s ease-in-out infinite alternate;
     color: #ffffff;
     isolation: isolate;
+  }
+  /* Keeps the white text readable whatever colour drifts behind it. */
+  .pr .auth-art::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(7, 16, 74, 0.25) 0%, transparent 25%, transparent 50%, rgba(7, 16, 74, 0.55) 100%);
+  }
+  /* The base gradient slowly sweeps; three soft colour blobs drift over it
+     on different loops, so the movement never visibly repeats. */
+  @keyframes auth-flow {
+    0% {
+      background-position: 0% 0%;
+    }
+    50% {
+      background-position: 100% 60%;
+    }
+    100% {
+      background-position: 40% 100%;
+    }
   }
   .pr .auth-blob {
     position: absolute;
     z-index: -1;
     border-radius: 50%;
-    filter: blur(60px);
+    filter: blur(70px);
     opacity: 0.85;
-    animation: auth-drift 18s ease-in-out infinite alternate;
+    will-change: transform;
+    animation: auth-drift-a 20s ease-in-out infinite;
   }
   .pr .auth-blob.b1 {
-    width: 420px;
-    height: 420px;
-    top: -120px;
-    left: -140px;
+    width: 520px;
+    height: 520px;
+    top: -140px;
+    left: -160px;
     background: #07104a;
   }
   .pr .auth-blob.b2 {
-    width: 360px;
-    height: 360px;
-    top: 30%;
-    right: -160px;
+    width: 440px;
+    height: 440px;
+    top: 28%;
+    right: -180px;
     background: #b78cff;
-    animation-duration: 22s;
+    animation-name: auth-drift-b;
+    animation-duration: 24s;
   }
   .pr .auth-blob.b3 {
-    width: 300px;
-    height: 300px;
-    bottom: -120px;
-    left: 20%;
+    width: 380px;
+    height: 380px;
+    bottom: -140px;
+    left: 15%;
     background: #6fd3ff;
-    opacity: 0.55;
-    animation-duration: 26s;
+    opacity: 0.6;
+    animation-name: auth-drift-c;
+    animation-duration: 28s;
   }
-  @keyframes auth-drift {
-    to {
-      transform: translate(40px, 30px) scale(1.08);
+  @keyframes auth-drift-a {
+    0%,
+    100% {
+      transform: translate(0, 0) scale(1);
+    }
+    33% {
+      transform: translate(140px, 90px) scale(1.15);
+    }
+    66% {
+      transform: translate(40px, 200px) scale(0.92);
+    }
+  }
+  @keyframes auth-drift-b {
+    0%,
+    100% {
+      transform: translate(0, 0) scale(1);
+    }
+    33% {
+      transform: translate(-180px, -120px) scale(1.12);
+    }
+    66% {
+      transform: translate(-90px, 140px) scale(0.9);
+    }
+  }
+  @keyframes auth-drift-c {
+    0%,
+    100% {
+      transform: translate(0, 0) scale(1);
+    }
+    33% {
+      transform: translate(160px, -160px) scale(1.2);
+    }
+    66% {
+      transform: translate(-80px, -60px) scale(1);
     }
   }
   .pr .auth-art-logo {
@@ -5453,7 +5511,8 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pr .auth-blob {
+  .pr .auth-blob,
+  .pr .auth-art {
     animation: none;
   }
 }
