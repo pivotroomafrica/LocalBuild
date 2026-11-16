@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { PublicDirectoryCard } from "@/lib/public/data";
+import { categoryOfTopic } from "@/lib/site/topics";
 import { ExpertCard } from "@/components/site/ExpertCard";
 
 type SortKey = "best" | "price-low" | "price-high";
@@ -28,7 +29,14 @@ function withinPrice(price: number | null, filter: PriceFilter) {
 function matchesText(expert: PublicDirectoryCard, query: string) {
   const needle = query.trim().toLowerCase();
   if (!needle) return true;
-  return [expert.fullName, expert.headline, expert.currentPosition, expert.currentCompany, ...expert.categoryNames]
+  return [
+    expert.fullName,
+    expert.headline,
+    expert.currentPosition,
+    expert.currentCompany,
+    ...expert.categoryNames,
+    ...expert.topics,
+  ]
     .filter(Boolean)
     .some((value) => value!.toLowerCase().includes(needle));
 }
@@ -76,16 +84,24 @@ export function ExpertsDirectoryClient({
   categories,
   initialQuery,
   initialCategory,
+  initialTopic = null,
 }: {
   experts: PublicDirectoryCard[];
   categories: string[];
   initialQuery: string;
   initialCategory: string | null;
+  initialTopic?: string | null;
 }) {
   const [query, setQuery] = useState(initialQuery);
+  const [topic, setTopic] = useState<string | null>(initialTopic && categoryOfTopic(initialTopic) ? initialTopic : null);
   const [category, setCategory] = useState<string | null>(
     initialCategory && categories.includes(initialCategory) ? initialCategory : null,
   );
+  // A topic nobody lists yet falls back to its area rather than an empty page.
+  const topicHasExperts = topic ? experts.some((expert) => expert.topics.includes(topic)) : false;
+  const topicFallback = topic !== null && !topicHasExperts;
+  const activeTopic = topic && topicHasExperts ? topic : null;
+  const activeCategory = topicFallback ? categoryOfTopic(topic!) : category;
   const [format, setFormat] = useState<FormatFilter>("any");
   const [price, setPrice] = useState<PriceFilter>("any");
   const [sort, setSort] = useState<SortKey>("best");
@@ -95,7 +111,8 @@ export function ExpertsDirectoryClient({
     const list = experts.filter(
       (expert) =>
         matchesText(expert, query) &&
-        (!category || expert.categoryNames.includes(category)) &&
+        (!activeTopic || expert.topics.includes(activeTopic)) &&
+        (!activeCategory || expert.categoryNames.includes(activeCategory)) &&
         (format === "any" || (format === "online" ? expert.onlineEnabled : expert.inPersonEnabled)) &&
         withinPrice(expert.startingPrice, price),
     );
@@ -104,7 +121,7 @@ export function ExpertsDirectoryClient({
     return [...list].sort(
       (a, b) => direction * ((a.startingPrice ?? Infinity) - (b.startingPrice ?? Infinity)) || a.fullName.localeCompare(b.fullName),
     );
-  }, [experts, query, category, format, price, sort]);
+  }, [experts, query, activeTopic, activeCategory, format, price, sort]);
 
   function submitSearch(event: React.FormEvent) {
     event.preventDefault();
@@ -113,11 +130,13 @@ export function ExpertsDirectoryClient({
 
   function pickCategory(name: string | null) {
     setCategory(name);
+    setTopic(null);
     setShown(PAGE_SIZE);
   }
 
   const countLabel =
-    `${results.length} ${results.length === 1 ? "expert" : "experts"}` + (category ? ` in ${category.toLowerCase()}` : "");
+    `${results.length} ${results.length === 1 ? "expert" : "experts"}` +
+    (activeTopic ? ` for \u201c${activeTopic}\u201d` : activeCategory ? ` in ${activeCategory.toLowerCase()}` : "");
 
   return (
     <>
@@ -168,7 +187,7 @@ export function ExpertsDirectoryClient({
                   key={name ?? "all"}
                   type="button"
                   className="chip"
-                  aria-pressed={category === name}
+                  aria-pressed={activeCategory === name}
                   onClick={() => pickCategory(name)}
                 >
                   {name ?? "All"}
@@ -177,9 +196,27 @@ export function ExpertsDirectoryClient({
             </div>
           ) : null}
 
+          {topicFallback ? (
+            <p className="notice" role="status" style={{ margin: 0 }}>
+              No expert lists &ldquo;{topic}&rdquo; yet. Here are our experts in {activeCategory}, who may still help.{" "}
+              <button type="button" className="textbtn" onClick={() => setTopic(null)}>
+                Show all experts
+              </button>
+            </p>
+          ) : null}
+
           <div className="filterbar">
             <span className="muted num" style={{ fontSize: 15 }}>
               {countLabel}
+              {activeTopic ? (
+                <>
+                  {" "}
+                  ·{" "}
+                  <button type="button" className="textbtn" onClick={() => setTopic(null)}>
+                    Clear topic
+                  </button>
+                </>
+              ) : null}
               {query ? (
                 <>
                   {" "}

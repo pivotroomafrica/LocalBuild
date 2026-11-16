@@ -3,9 +3,13 @@
  * ("Explore experts by topic"). Keys are the real expert_categories names;
  * a category without a list here still shows, just without chips.
  *
- * Chips open the whole category in the directory (the directory's search
- * only looks at names, headlines and categories, so a chip-as-search would
- * often find nobody even when the right expert is listed).
+ * Experts never pick topics by hand: they're worked out from each expert's
+ * own profile (lib/expert/topics.ts, AI with a word-match fallback) and
+ * stored on expert_profiles.topics (064). A chip opens the experts for that
+ * topic, or its whole category while nobody lists it yet.
+ *
+ * Renaming a topic here: experts who had the old name keep it until their
+ * topics are next worked out (any profile save).
  */
 export const CATEGORY_TOPICS: Record<string, string[]> = {
   "Starting & Building a Business": [
@@ -134,3 +138,9 @@ export const CATEGORY_TOPICS: Record<string, string[]> = {
     "Creative industries",
   ],
 };
+
+/** The category a topic belongs to (null for an unknown topic). */
+export function categoryOfTopic(topic: string): string | null {
+  for (const [category, topics] of Object.entries(CATEGORY_TOPICS)) if (topics.includes(topic)) return category;
+  return null;
+}

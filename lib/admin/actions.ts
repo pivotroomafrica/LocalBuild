@@ -1,5 +1,8 @@
 "use server";
 
+import { after } from "next/server";
+import { refreshExpertTopics } from "@/lib/expert/topics";
+
 import { revalidatePath } from "next/cache";
 import { invalidatePublicExperts } from "@/lib/public/cached";
 import { createClient } from "@/lib/supabase/server";
@@ -562,6 +565,8 @@ export async function adminSaveExpertProfileAction(
     .select("slug, user_id");
   if (error) return { error: GENERIC_ERROR };
   if (!data || data.length === 0) return { error: "Expert not found." };
+  // Topics follow the saved texts and areas (in the background).
+  after(() => refreshExpertTopics(expertProfileId));
 
   // The name lives on the expert's account profile (admin policy, 053).
   if (formData.has("full_name")) {

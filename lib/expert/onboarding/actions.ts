@@ -1,6 +1,8 @@
 "use server";
 
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { refreshExpertTopics } from "@/lib/expert/topics";
 import { createServiceRoleClient } from "@/lib/supabase/service";
 import { openAIJson, type OpenAIJsonResult } from "@/lib/ai/openai";
 import { parseExpertiseFields, parseIdentityFields } from "@/lib/expert/profileFields";
@@ -356,6 +358,15 @@ export async function saveOnboardingAction(
     if (!expertise.ok) return { error: expertise.error };
     const { error } = await supabase.from("expert_profiles").update(expertise.update).eq("user_id", userId);
     if (error) return { error: GENERIC_ERROR };
+
+    // Topics (the home page chips) come from what they already told us --
+    // never an extra step. Worked out after the response is sent, so the
+    // expert doesn't wait; a failure just leaves the previous topics.
+    after(async () => {
+      const allowAI = aiConfigured() && (await underCap(userId, "draft"));
+      const ai = await refreshExpertTopics(profile.id, allowAI);
+      if (ai) await logUsage(userId, "draft", ai);
+    });
   }
 
   if (part === "pricing") {

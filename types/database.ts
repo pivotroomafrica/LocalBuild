@@ -14,42 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      ai_onboarding_requests: {
-        Row: {
-          created_at: string
-          estimated_cost_usd: number | null
-          id: string
-          input_tokens: number | null
-          kind: string
-          model: string | null
-          outcome: string
-          output_tokens: number | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          estimated_cost_usd?: number | null
-          id?: string
-          input_tokens?: number | null
-          kind: string
-          model?: string | null
-          outcome: string
-          output_tokens?: number | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          estimated_cost_usd?: number | null
-          id?: string
-          input_tokens?: number | null
-          kind?: string
-          model?: string | null
-          outcome?: string
-          output_tokens?: number | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       ai_match_requests: {
         Row: {
           candidate_count: number
@@ -88,6 +52,42 @@ export type Database = {
           model?: string | null
           outcome?: string
           prompt_tokens?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      ai_onboarding_requests: {
+        Row: {
+          created_at: string
+          estimated_cost_usd: number | null
+          id: string
+          input_tokens: number | null
+          kind: string
+          model: string | null
+          outcome: string
+          output_tokens: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          estimated_cost_usd?: number | null
+          id?: string
+          input_tokens?: number | null
+          kind: string
+          model?: string | null
+          outcome: string
+          output_tokens?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          estimated_cost_usd?: number | null
+          id?: string
+          input_tokens?: number | null
+          kind?: string
+          model?: string | null
+          outcome?: string
+          output_tokens?: number | null
           user_id?: string | null
         }
         Relationships: []
@@ -606,33 +606,6 @@ export type Database = {
           },
         ]
       }
-      expert_weekly_availability_rules: {
-        Row: {
-          created_at: string
-          day_of_week: number
-          end_time: string
-          expert_profile_id: string
-          id: string
-          start_time: string
-        }
-        Insert: {
-          created_at?: string
-          day_of_week: number
-          end_time: string
-          expert_profile_id: string
-          id?: string
-          start_time: string
-        }
-        Update: {
-          created_at?: string
-          day_of_week?: number
-          end_time?: string
-          expert_profile_id?: string
-          id?: string
-          start_time?: string
-        }
-        Relationships: []
-      }
       expert_one_off_availability: {
         Row: {
           available_date: string
@@ -745,6 +718,7 @@ export type Database = {
           submitted_at: string | null
           supported_ngo_id: string | null
           terms_accepted_at: string | null
+          topics: string[]
           updated_at: string
           user_id: string
           who_i_help: string | null
@@ -787,6 +761,7 @@ export type Database = {
           submitted_at?: string | null
           supported_ngo_id?: string | null
           terms_accepted_at?: string | null
+          topics?: string[]
           updated_at?: string
           user_id: string
           who_i_help?: string | null
@@ -829,6 +804,7 @@ export type Database = {
           submitted_at?: string | null
           supported_ngo_id?: string | null
           terms_accepted_at?: string | null
+          topics?: string[]
           updated_at?: string
           user_id?: string
           who_i_help?: string | null
@@ -980,6 +956,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "expert_session_types_expert_profile_id_fkey"
+            columns: ["expert_profile_id"]
+            isOneToOne: false
+            referencedRelation: "expert_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expert_weekly_availability_rules: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          end_time: string
+          expert_profile_id: string
+          id: string
+          start_time: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          expert_profile_id: string
+          id?: string
+          start_time: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          expert_profile_id?: string
+          id?: string
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expert_weekly_availability_rules_expert_profile_id_fkey"
             columns: ["expert_profile_id"]
             isOneToOne: false
             referencedRelation: "expert_profiles"
@@ -1244,12 +1255,12 @@ export type Database = {
           created_at: string
           first_name: string | null
           full_name: string
+          id: string
           last_name: string | null
           middle_name: string | null
-          terms_accepted_at: string | null
-          id: string
           phone: string | null
           role: string
+          terms_accepted_at: string | null
           updated_at: string
         }
         Insert: {
@@ -1259,12 +1270,12 @@ export type Database = {
           created_at?: string
           first_name?: string | null
           full_name: string
+          id: string
           last_name?: string | null
           middle_name?: string | null
-          terms_accepted_at?: string | null
-          id: string
           phone?: string | null
           role?: string
+          terms_accepted_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -1274,12 +1285,12 @@ export type Database = {
           created_at?: string
           first_name?: string | null
           full_name?: string
+          id?: string
           last_name?: string | null
           middle_name?: string | null
-          terms_accepted_at?: string | null
-          id?: string
           phone?: string | null
           role?: string
+          terms_accepted_at?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1491,6 +1502,15 @@ export type Database = {
           end_time: string
           start_time: string
         }[]
+      }
+      expert_booked_minutes_between: {
+        Args: {
+          p_exclude_booking_id?: string
+          p_expert_profile_id: string
+          p_from: string
+          p_to: string
+        }
+        Returns: number
       }
       expert_merged_windows_for_date: {
         Args: { p_date: string; p_expert_profile_id: string }
@@ -1750,6 +1770,13 @@ export type Database = {
         Args: { p_booking_id: string }
         Returns: string
       }
+      get_expert_topics_public: {
+        Args: never
+        Returns: {
+          slug: string
+          topics: string[]
+        }[]
+      }
       get_platform_stats_public: {
         Args: never
         Returns: {
@@ -1842,12 +1869,17 @@ export type Database = {
         Returns: string
       }
       session_reminder_offsets_minutes: { Args: never; Returns: number[] }
-      set_expert_availability_timezone: {
-        Args: { p_timezone: string }
+      set_expert_availability_plan: {
+        Args: {
+          p_days: number[]
+          p_mode: string
+          p_monthly_hours: number
+          p_windows: Json
+        }
         Returns: undefined
       }
-      set_expert_availability_plan: {
-        Args: { p_monthly_hours: number; p_mode: string; p_days: number[]; p_windows: Json }
+      set_expert_availability_timezone: {
+        Args: { p_timezone: string }
         Returns: undefined
       }
       set_expert_month_override: {

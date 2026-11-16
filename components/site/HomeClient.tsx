@@ -159,8 +159,10 @@ function QuoteAndWhy() {
 /**
  * "Explore experts by topic": the real categories (in their own order),
  * each with the topics it covers (lib/site/topics.ts). The heading stays
- * put on the left while the list scrolls on wide screens. Every category
- * and chip opens that category in the directory.
+ * put on the left while the list scrolls on wide screens. A category opens
+ * its experts; a chip opens the experts who help with that topic (topics
+ * are worked out from each expert's own profile, lib/expert/topics.ts),
+ * falling back to the category while nobody lists it yet.
  */
 function TopicsSection({ categories: live }: { categories: string[] }) {
   if (live.length === 0) return null;
@@ -196,7 +198,7 @@ function TopicsSection({ categories: live }: { categories: string[] }) {
                   <ul className="tx-chips" aria-label={`Topics in ${category}`}>
                     {topics.map((topic) => (
                       <li key={topic}>
-                        <Link href={href} className="tx-chip">
+                        <Link href={`/experts?topic=${encodeURIComponent(topic)}`} className="tx-chip">
                           {topic}
                         </Link>
                       </li>
