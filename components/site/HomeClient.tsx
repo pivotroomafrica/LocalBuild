@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { PublicDirectoryCard } from "@/lib/public/data";
 import { ExpertCard } from "@/components/site/ExpertCard";
 import { FacesWall } from "@/components/site/FacesWall";
+import { CATEGORY_TOPICS } from "@/lib/site/topics";
 
 const STEPS = [
   {
@@ -155,24 +156,56 @@ function QuoteAndWhy() {
   );
 }
 
-/** Topic shortcuts into the directory, from the real category list. */
-function TopicsSection({ categories }: { categories: string[] }) {
-  if (categories.length === 0) return null;
+/**
+ * "Explore experts by topic": the real categories (in their own order),
+ * each with the topics it covers (lib/site/topics.ts). The heading stays
+ * put on the left while the list scrolls on wide screens. Every category
+ * and chip opens that category in the directory.
+ */
+function TopicsSection({ categories: live }: { categories: string[] }) {
+  if (live.length === 0) return null;
+  // The journey order of lib/site/topics.ts first, then any other live
+  // category (e.g. one added later) at the end.
+  const known = Object.keys(CATEGORY_TOPICS).filter((name) => live.includes(name));
+  const categories = [...known, ...live.filter((name) => !known.includes(name))];
   return (
     <section id="topics" style={{ background: "#ffffff" }}>
-      <div className="wrap section stack" style={{ gap: 32 }}>
-        <div className="stack" style={{ gap: 16 }}>
-          <h2 className="h2">Start from a topic</h2>
-          <p className="muted" style={{ margin: 0, maxWidth: "52ch" }}>
-            Pick what you need help with and see the experts who work on it.
+      <div className="wrap section tx">
+        <div className="tx-head">
+          <h2 className="tx-h">Explore experts by&nbsp;topic.</h2>
+          <p className="tx-sub">
+            Find experience in starting up, funding, marketing, sales, product, leadership and more.
           </p>
+          <Link href="/experts" className="hp-link">
+            See all experts{" "}
+            <span className="ms af" aria-hidden="true" style={{ fontSize: 16 }}>
+              arrow_forward
+            </span>
+          </Link>
         </div>
-        <div className="topics">
-          {categories.map((topic) => (
-            <Link key={topic} href={`/experts?category=${encodeURIComponent(topic)}`} className="topic">
-              {topic}
-            </Link>
-          ))}
+        <div className="tx-list">
+          {categories.map((category) => {
+            const href = `/experts?category=${encodeURIComponent(category)}`;
+            const topics = CATEGORY_TOPICS[category] ?? [];
+            return (
+              <div key={category} className="tx-row">
+                <Link href={href} className="tx-cat">
+                  {category}
+                </Link>
+                {topics.length > 0 ? (
+                  <ul className="tx-chips" aria-label={`Topics in ${category}`}>
+                    {topics.map((topic) => (
+                      <li key={topic}>
+                        <Link href={href} className="tx-chip">
+                          {topic}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>

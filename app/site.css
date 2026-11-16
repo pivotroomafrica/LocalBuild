@@ -6964,3 +6964,120 @@ a.hws-card:hover,
 .pr .cc-city-pop .cc-opt {
   min-height: 44px;
 }
+
+/* ---------- Home: explore experts by topic ---------- */
+.pr .tx {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: clamp(32px, 6vw, 96px);
+  align-items: start;
+}
+.pr .tx-head {
+  position: sticky;
+  top: 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.pr .tx-h {
+  margin: 0;
+  font-family: var(--pr-display);
+  font-size: clamp(40px, 5vw, 76px);
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+  color: var(--pr-ink);
+}
+.pr .tx-sub {
+  margin: 0;
+  max-width: 38ch;
+  color: var(--pr-slate);
+  font-size: 18px;
+  line-height: 1.6;
+}
+.pr .tx-head .hp-link {
+  align-self: flex-start;
+  font-size: 16px;
+  font-weight: 500;
+}
+.pr .tx-list {
+  display: flex;
+  flex-direction: column;
+}
+.pr .tx-row {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 16px 28px;
+  padding-block: 28px;
+  border-top: 1px solid var(--pr-line);
+}
+.pr .tx-row:last-child {
+  border-bottom: 1px solid var(--pr-line);
+}
+.pr .tx-cat {
+  padding-top: 10px;
+  color: var(--pr-ink);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.pr .tx-cat:hover {
+  color: var(--pr-blue);
+}
+.pr .tx-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pr .tx-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: #eef0f5;
+  color: var(--pr-ink);
+  font-size: 15px;
+  transition:
+    background-color 180ms var(--pr-ease),
+    color 180ms var(--pr-ease),
+    transform 180ms var(--pr-ease);
+}
+.pr .tx-chip:hover {
+  background: var(--pr-ink);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+@media (max-width: 1100px) {
+  .pr .tx-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .pr .tx-cat {
+    padding-top: 0;
+  }
+}
+@media (max-width: 900px) {
+  .pr .tx {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pr .tx-head {
+    position: static;
+  }
+  .pr .tx-row {
+    padding-block: 22px;
+  }
+  .pr .tx-chip {
+    min-height: 40px;
+    padding: 0 14px;
+    font-size: 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pr .tx-chip {
+    transition: none;
+  }
+}
