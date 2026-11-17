@@ -46,6 +46,7 @@ type CardId =
   | "work"
   | "field"
   | "role"
+  | "company"
   | "years"
   | "problems"
   | "who"
@@ -71,6 +72,12 @@ const CARDS: CardDef[] = [
     hint: "Pick one, or two if you hold both (like Founder & CEO).",
     save: "basics",
     chips: "role",
+  },
+  {
+    id: "company",
+    title: "Where do you work?",
+    hint: "Clients see it next to your role.",
+    save: "basics",
   },
   { id: "years", title: "How many years of experience do you have?", save: "basics" },
   { id: "problems", title: "What problems do clients bring you?", hint: "Tap the ones you're great at. Up to 6.", chips: "problems" },
@@ -395,7 +402,9 @@ export function OnboardingFlow({
       case "field":
         return a.categoryIds.length > 0;
       case "role":
-        return Boolean(a.role.trim()) && Boolean(a.company.trim());
+        return Boolean(a.role.trim());
+      case "company":
+        return Boolean(a.company.trim());
       case "years":
         return Boolean(a.years);
       case "problems":
@@ -501,7 +510,7 @@ export function OnboardingFlow({
                 ) : null}
               </p>
               <h1 id="ob-title" className="ob-title">
-                {def.title}
+                {def.id === "company" ? companyLabel(answers.workTypes).label : def.title}
               </h1>
               {def.hint ? <p className="ob-sub">{def.hint}</p> : null}
             </header>
@@ -556,21 +565,32 @@ export function OnboardingFlow({
                   </p>
                 ) : null}
                 <MoreButton chip={chips.role} onClick={() => loadChips("role", true)} />
-                <div className="field ob-field">
-                  <label className="label" htmlFor="ob-company">
-                    {companyLabel(answers.workTypes).label}
-                  </label>
-                  <input
-                    id="ob-company"
-                    className="input"
-                    maxLength={150}
-                    required
-                    value={answers.company}
-                    onChange={(e) => set({ company: e.target.value })}
-                    placeholder={companyLabel(answers.workTypes).placeholder}
-                  />
-                </div>
               </>
+            ) : null}
+
+            {def.id === "company" ? (
+              <div className="field ob-field">
+                <label className="sr-only" htmlFor="ob-company">
+                  {companyLabel(answers.workTypes).label}
+                </label>
+                <input
+                  id="ob-company"
+                  className="input"
+                  maxLength={150}
+                  required
+                  autoFocus
+                  autoComplete="organization"
+                  value={answers.company}
+                  onChange={(e) => set({ company: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void next();
+                    }
+                  }}
+                  placeholder={companyLabel(answers.workTypes).placeholder}
+                />
+              </div>
             ) : null}
 
             {def.id === "years" ? (
