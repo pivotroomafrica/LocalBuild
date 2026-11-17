@@ -154,3 +154,12 @@
     transform: none;
   }
 }
+
+/* A face on its way to another box (FacesGrid). */
+.pr .fw-face.fw-leaving {
+  opacity: 0;
+  transform: scale(0.8);
+  transition:
+    opacity 450ms var(--pr-ease),
+    transform 450ms var(--pr-ease);
+}
