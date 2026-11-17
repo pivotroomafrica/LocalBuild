@@ -5,7 +5,6 @@ import type { CustomerProfile, Industry } from "@/types/profile";
 import { BookingRail } from "@/components/booking/BookingRail";
 import { GivingBox } from "@/components/site/GivingBox";
 import { formatEtb, formatLine, initialsOf } from "@/components/site/format";
-import { companyKey } from "@/lib/expert/companyLogos";
 
 type Props = {
   profile: PublicProfileData;
@@ -103,8 +102,6 @@ export function ExpertDetailView({ profile, railAuth, railSnapshot }: Props) {
     .map((line) => line.replace(/^\s*(?:[•\-*–]|\d+[.)])\s*/, "").trim())
     .filter(Boolean);
   const role = [profile.currentPosition, profile.currentCompany].filter(Boolean).join(", ");
-  const logoFor = (company: string | null) => (company ? profile.companyLogos[companyKey(company)] : undefined);
-  const currentLogo = logoFor(profile.currentCompany);
   const location = [profile.city, profile.country].filter(Boolean).join(", ");
   const format = formatLine(profile);
   const { stats } = profile;
@@ -147,15 +144,7 @@ export function ExpertDetailView({ profile, railAuth, railSnapshot }: Props) {
                   verified
                 </span>
               </h1>
-              {role ? (
-                <p className="pv-role">
-                  {currentLogo ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- public storage URL
-                    <img className="co-logo" src={currentLogo} alt={`${profile.currentCompany} logo`} />
-                  ) : null}
-                  {role}
-                </p>
-              ) : null}
+              {role ? <p className="pv-role">{role}</p> : null}
               {stats.ratingAvg != null && stats.reviewCount > 0 ? (
                 <div className="pv-rating">
                   <Stars rating={Math.round(stats.ratingAvg)} />
@@ -264,11 +253,7 @@ export function ExpertDetailView({ profile, railAuth, railSnapshot }: Props) {
                   <div className="what">
                     <span style={{ fontWeight: 500 }}>{entry.title}</span>
                     {entry.organization ? (
-                      <span className="muted xp-org" style={{ fontSize: 15 }}>
-                        {logoFor(entry.organization) ? (
-                          // eslint-disable-next-line @next/next/no-img-element -- public storage URL
-                          <img className="co-logo sm" src={logoFor(entry.organization)} alt="" />
-                        ) : null}
+                      <span className="muted" style={{ fontSize: 15 }}>
                         {entry.organization}
                       </span>
                     ) : null}

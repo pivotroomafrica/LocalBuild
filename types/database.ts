@@ -404,33 +404,6 @@ export type Database = {
           },
         ]
       }
-      companies: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          id: string
-          logo_path: string
-          name: string
-          name_key: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          logo_path: string
-          name: string
-          name_key: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          logo_path?: string
-          name?: string
-          name_key?: string
-        }
-        Relationships: []
-      }
       customer_profiles: {
         Row: {
           company_name: string | null
@@ -715,7 +688,6 @@ export type Database = {
           base_hourly_price: number | null
           career_highlights: string | null
           city: string | null
-          company_logos: Json
           country: string | null
           created_at: string
           current_company: string | null
@@ -759,7 +731,6 @@ export type Database = {
           base_hourly_price?: number | null
           career_highlights?: string | null
           city?: string | null
-          company_logos?: Json
           country?: string | null
           created_at?: string
           current_company?: string | null
@@ -803,7 +774,6 @@ export type Database = {
           base_hourly_price?: number | null
           career_highlights?: string | null
           city?: string | null
-          company_logos?: Json
           country?: string | null
           created_at?: string
           current_company?: string | null
@@ -1655,10 +1625,6 @@ export type Database = {
           linkedin_url: string
           years_experience_range: string
         }[]
-      }
-      get_expert_company_logos_public: {
-        Args: { p_slug: string }
-        Returns: Json
       }
       get_expert_context_for_booking: {
         Args: { p_booking_id: string }

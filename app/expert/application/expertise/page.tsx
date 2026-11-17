@@ -5,9 +5,6 @@ import { ExpertApplicationNav } from "@/components/layout/ExpertApplicationNav";
 import { APPLICATION_FORM_ID, ExpertiseStepForm } from "@/components/expert/OnboardingStepForms";
 import { LiveProfilePreview } from "@/components/expert/LiveProfilePreview";
 import { previewValuesFrom } from "@/components/expert/previewValues";
-import { CompanyLogosEditor } from "@/components/expert/CompanyLogosEditor";
-import { companiesOf, companyLogoUrl, readCompanyLogos } from "@/lib/expert/companyLogos";
-import { libraryMatchesFor } from "@/lib/expert/companyLibrary";
 
 export default async function ExpertApplicationExpertisePage({
   searchParams,
@@ -42,23 +39,6 @@ export default async function ExpertApplicationExpertisePage({
             selectedCategoryIds={data?.categoryIds ?? []}
             saved={saved === "1"}
           />
-          {/* After onboarding only: logos for the companies they named. */}
-          {profile.application_status !== "draft" ? (
-            <div className="panel">
-              <CompanyLogosEditor
-                expertProfileId={profile.id}
-                ownerUserId={profile.user_id}
-                companies={companiesOf(profile.current_company, profile.experience)}
-                matches={await libraryMatchesFor(supabase, companiesOf(profile.current_company, profile.experience))}
-                logos={Object.fromEntries(
-                  Object.entries(readCompanyLogos(profile.company_logos)).map(([key, path]) => [
-                    key,
-                    companyLogoUrl(path),
-                  ]),
-                )}
-              />
-            </div>
-          ) : null}
         </div>
         <LiveProfilePreview
           formId={APPLICATION_FORM_ID}
