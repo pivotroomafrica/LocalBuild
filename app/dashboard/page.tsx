@@ -11,6 +11,33 @@ import { PendingActionCard } from "@/components/session/PendingActionCard";
 import { formatEtb, initialsOf, summaryLine } from "@/components/site/format";
 import { greeting, relativeDays, shortDate } from "@/lib/utils/greeting";
 
+/** Slugs of experts this customer has a real booking with (not just an
+ * expired or abandoned hold), plus their own expert profile if any. */
+async function expertsToLeaveOut(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+  const [{ data: bookings }, { data: own }] = await Promise.all([
+    supabase
+      .from("bookings")
+      .select("id, expert_profile_id")
+      .eq("customer_id", userId)
+      .in("booking_status", ["held", "awaiting_payment", "confirmed", "completed"]),
+    supabase.from("expert_profiles").select("slug").eq("user_id", userId).maybeSingle(),
+  ]);
+  // One booking per expert is enough to find their page.
+  const onePerExpert = new Map<string, string>();
+  for (const booking of bookings ?? []) {
+    if (!onePerExpert.has(booking.expert_profile_id)) onePerExpert.set(booking.expert_profile_id, booking.id);
+  }
+  const slugs = await Promise.all(
+    [...onePerExpert.values()].map(async (bookingId) => {
+      const { data } = await supabase.rpc("get_expert_slug_for_booking", { p_booking_id: bookingId });
+      return data ?? null;
+    }),
+  );
+  const hidden = new Set(slugs.filter((slug): slug is string => Boolean(slug)));
+  if (own?.slug) hidden.add(own.slug);
+  return hidden;
+}
+
 /** Client overview (website design): the next session, real activity
  * figures, anything that needs finishing, and published experts to book
  * next. Nothing here is invented: every figure is the customer's own. */
@@ -28,7 +55,12 @@ export default async function DashboardOverviewPage() {
   const meetingUrl = next && next.sessionFormat === "online" ? await getBookingMeetingUrl(supabase, next.bookingId) : null;
 
   const firstName = (profile?.full_name ?? "").split(/\s+/)[0];
-  const suggestions = directory.filter((expert) => expert.startingPrice != null).slice(0, 3);
+  // Suggestions leave out experts they've already booked and, for an
+  // account that is also an expert, their own profile.
+  const hidden = await expertsToLeaveOut(supabase, userId);
+  const suggestions = directory
+    .filter((expert) => expert.startingPrice != null && !hidden.has(expert.slug))
+    .slice(0, 3);
 
   const subtitle =
     activity.upcoming === 0
