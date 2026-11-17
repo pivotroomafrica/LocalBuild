@@ -22,6 +22,45 @@ type Props = {
   forAdmin?: boolean;
 };
 
+/** Raster logos are shrunk before upload, so a big source file is fine. */
+const SOURCE_MAX_BYTES = 10 * 1024 * 1024;
+const SVG_MAX_BYTES = 200 * 1024;
+/** Logos show at 22-28px; 256px keeps them sharp on any screen. */
+const LOGO_MAX_SIDE = 256;
+
+/**
+ * Resizes a PNG/JPG/WebP logo to at most 256px on its longest side and
+ * re-encodes it as WebP (PNG where the browser can't make WebP), keeping
+ * transparency. A logo is then roughly 5-20 KB. SVGs are already tiny and
+ * pass through; if shrinking fails or doesn't help, the original is used.
+ */
+async function shrinkLogo(file: File): Promise<File> {
+  if (file.type === "image/svg+xml") return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, LOGO_MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) return file;
+    context.imageSmoothingQuality = "high";
+    context.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close();
+    const toBlob = (type: string, quality?: number) =>
+      new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
+    let blob = await toBlob("image/webp", 0.86);
+    if (!blob || blob.type !== "image/webp") blob = await toBlob("image/png");
+    if (!blob || blob.size >= file.size) return file;
+    const ext = blob.type === "image/webp" ? "webp" : "png";
+    return new File([blob], `logo.${ext}`, { type: blob.type });
+  } catch {
+    return file;
+  }
+}
+
 const EXT: Record<string, string> = {
   "image/png": "png",
   "image/jpeg": "jpg",
@@ -42,14 +81,22 @@ export function CompanyLogosEditor({ expertProfileId, ownerUserId, companies, lo
   const [, startRefresh] = useTransition();
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  async function upload(company: string, file: File) {
+  async function upload(company: string, original: File) {
     setMessage(null);
-    if (!COMPANY_LOGO_TYPES.includes(file.type)) {
+    if (!COMPANY_LOGO_TYPES.includes(original.type)) {
       setMessage({ kind: "err", text: "Please choose a PNG, JPG, WebP or SVG image." });
       return;
     }
+    if (original.type === "image/svg+xml" ? original.size > SVG_MAX_BYTES : original.size > SOURCE_MAX_BYTES) {
+      setMessage({ kind: "err", text: "That image is too large. Please choose a smaller one." });
+      return;
+    }
+    setBusy(company);
+    // Shrunk in the browser before upload, so each logo stays tiny in storage.
+    const file = await shrinkLogo(original);
     if (file.size > COMPANY_LOGO_MAX_BYTES) {
-      setMessage({ kind: "err", text: "That image is over 1 MB. Please choose a smaller one." });
+      setBusy(null);
+      setMessage({ kind: "err", text: "That image is too large. Please choose a smaller one." });
       return;
     }
     setBusy(company);
@@ -95,7 +142,7 @@ export function CompanyLogosEditor({ expertProfileId, ownerUserId, companies, lo
           {forAdmin
             ? "Add a logo for each company on this expert's profile. They show next to their role and experience."
             : "Add the logo of each company you've worked at. They show next to your role and experience on your profile."}{" "}
-          PNG, JPG, WebP or SVG, up to 1 MB.
+          PNG, JPG, WebP or SVG. Logos are resized automatically, so they take up very little space.
         </p>
       </div>
 
