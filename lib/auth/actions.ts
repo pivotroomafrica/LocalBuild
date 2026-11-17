@@ -1,5 +1,6 @@
 "use server";
 
+import { checkListedCity } from "@/lib/geo/cityCheck";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -51,12 +52,14 @@ function readNames(formData: FormData): Names | { error: string } {
 const acceptedTerms = (formData: FormData) => formData.get("accept_terms") === "on";
 
 /** Country and city from CountryCityFields; both required at sign-up. */
-function readPlace(formData: FormData): { country: string; city: string } | { error: string } {
+async function readPlace(formData: FormData): Promise<{ country: string; city: string } | { error: string }> {
   const country = String(formData.get("country") ?? "").trim().slice(0, 100);
-  const city = String(formData.get("city") ?? "").trim().slice(0, 100);
+  const typed = String(formData.get("city") ?? "").trim().slice(0, 100);
   if (!country) return { error: "Choose your country." };
-  if (!city) return { error: "Enter your city." };
-  return { country, city };
+  if (!typed) return { error: "Choose your city." };
+  const listed = await checkListedCity(country, typed);
+  if ("error" in listed) return { error: listed.error };
+  return { country, city: listed.city ?? typed };
 }
 
 export async function signUpAction(
@@ -77,7 +80,7 @@ export async function signUpAction(
   const passwordResult = validatePassword(password);
   if (!passwordResult.valid) return { error: passwordResult.error };
 
-  const placeResult = readPlace(formData);
+  const placeResult = await readPlace(formData);
   if ("error" in placeResult) return { error: placeResult.error };
 
   const next = safeNext(formData.get("next")) ?? "/dashboard";
@@ -191,7 +194,7 @@ export async function signUpForRailAction(
   const passwordResult = validatePassword(password);
   if (!passwordResult.valid) return { error: passwordResult.error };
 
-  const placeResult = readPlace(formData);
+  const placeResult = await readPlace(formData);
   if ("error" in placeResult) return { error: placeResult.error };
 
   // Where Supabase's own confirmation-email link lands this customer back
@@ -240,7 +243,7 @@ export async function completeProfileAction(
   if ("error" in names) return { error: names.error };
   const phoneResult = validatePhone(String(formData.get("phone") ?? ""));
   if (!phoneResult.valid) return { error: phoneResult.error };
-  const placeResult = readPlace(formData);
+  const placeResult = await readPlace(formData);
   if ("error" in placeResult) return { error: placeResult.error };
   if (!acceptedTerms(formData)) return { error: "Please agree to the Terms and Privacy Policy to continue." };
 

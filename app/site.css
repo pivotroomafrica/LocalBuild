@@ -4297,6 +4297,19 @@
   background: var(--pr-mist);
   font-weight: 600;
 }
+.pr .cc-empty {
+  padding: 9px 10px;
+  font-size: 14px;
+  color: var(--pr-slate);
+}
+.pr .cc-err {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  color: #b42318;
+}
+.pr .cc-box .input[aria-invalid="true"] {
+  border-color: #d92d20;
+}
 .pr .cc-none {
   padding: 10px;
   font-size: 14px;

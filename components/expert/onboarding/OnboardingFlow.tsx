@@ -300,6 +300,18 @@ export function OnboardingFlow({
     return () => window.removeEventListener(PHOTO_PREVIEW_EVENT, onPhoto);
   }, []);
 
+  // Leaving the page (closing the tab, switching away) keeps the working
+  // answers too.
+  useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState === "hidden" && answersRef.current.card > 0) {
+        void saveOnboardingAction(answersRef.current, "progress").catch(() => {});
+      }
+    };
+    document.addEventListener("visibilitychange", onHide);
+    return () => document.removeEventListener("visibilitychange", onHide);
+  }, []);
+
   function go(index: number, dir: "fwd" | "back") {
     setDirection(dir);
     setError(null);
@@ -331,9 +343,11 @@ export function OnboardingFlow({
     if (def.id === "location") set(readLocation());
     if (def.id === "drafts") set({ approved: [...DRAFT_FIELDS] });
     if (def.id === "experience") set({ experience: answersRef.current.experience.filter((row) => row.title.trim()) });
-    // "Pick up where I left off" jumps to the furthest card reached.
-    const resumeAt = def.id === "welcome" && answersRef.current.card > 1 ? answersRef.current.card : card + 1;
-    const nextIndex = Math.min(resumeAt, CARDS.length - 1);
+    // Go to the next card that still needs an answer: cards already
+    // answered on an earlier visit are skipped, up to the furthest card
+    // reached. So with 3 unanswered but 4 and 5 done, 3 leads on to 6.
+    // "Pick up where I left off" (welcome) starts at the first gap.
+    const nextIndex = nextOpenCard(card);
     set({ card: Math.max(answersRef.current.card, nextIndex) });
 
     // Start fetching the next card's suggestions while this one saves.
@@ -360,9 +374,22 @@ export function OnboardingFlow({
     go(nextIndex, "fwd");
   }
 
+  function nextOpenCard(from: number): number {
+    const furthest = Math.min(answersRef.current.card, CARDS.length - 1);
+    let index = from + 1;
+    while (index < furthest && cardDone(CARDS[index].id, answersRef.current)) index += 1;
+    return Math.min(index, CARDS.length - 1);
+  }
+
   function canContinue(): boolean {
-    const a = answers;
-    switch (def.id) {
+    return cardDone(def.id, answers, true);
+  }
+
+  /** Whether a card's answer is filled in. `live` uses what's on screen
+   * (the city being typed, a draft being written); otherwise the saved
+   * answers, for deciding which cards still need doing. */
+  function cardDone(id: CardId, a: OnboardingAnswers, live = false): boolean {
+    switch (id) {
       case "work":
         return a.workTypes.length > 0;
       case "field":
@@ -382,9 +409,9 @@ export function OnboardingFlow({
             (row.start_year && (!row.end_year || Number(row.end_year) >= Number(row.start_year))),
         );
       case "location":
-        return cityFilled;
+        return live ? cityFilled : Boolean(a.city.trim() && a.country.trim());
       case "drafts":
-        return drafting === null && REQUIRED_DRAFTS.every((field) => a.drafts[field].trim());
+        return (!live || drafting === null) && REQUIRED_DRAFTS.every((field) => a.drafts[field].trim());
       case "photo":
         return Boolean(photoUrl);
       case "price":
@@ -422,7 +449,12 @@ export function OnboardingFlow({
         <button
           type="button"
           className="ob-icon-btn"
-          onClick={() => go(card - 1, "back")}
+          onClick={() => {
+            // Keep what was changed on this card (say, an option unticked),
+            // so a later visit resumes from the real gaps.
+            if (card > 0) queueSave(answersRef.current, "progress");
+            go(card - 1, "back");
+          }}
           disabled={card === 0 || saving}
           aria-label="Back"
         >
@@ -587,12 +619,13 @@ export function OnboardingFlow({
 
             {def.id === "location" ? (
               <>
-                <div
-                  ref={locationRef}
-                  className="ob-field"
-                  onInput={() => setCityFilled(Boolean(readLocation().city))}
-                >
-                  <CountryCityFields defaultCountry={answers.country || null} defaultCity={answers.city} required />
+                <div ref={locationRef} className="ob-field">
+                  <CountryCityFields
+                    defaultCountry={answers.country || null}
+                    defaultCity={answers.city}
+                    required
+                    onCityChange={(city, valid) => setCityFilled(valid && Boolean(city))}
+                  />
                 </div>
                 <p className="label ob-label">Languages you can hold a session in</p>
                 <ChipGroup

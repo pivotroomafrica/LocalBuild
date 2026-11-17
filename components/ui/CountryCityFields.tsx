@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { Country } from "@/lib/geo/countries";
 import { CountrySelect, findCountry } from "@/components/ui/CountrySelect";
 
 const cityCache = new Map<string, string[]>();
 
 /**
- * Country (searchable list with flags) and city (suggestions for the chosen
- * country, any value allowed). The city suggestions are our own dropdown, not
+ * Country (searchable list with flags) and city, which must be picked from
+ * the chosen country's list (typing filters it; a name typed out in full is
+ * matched to the list). The city suggestions are our own dropdown, not
  * a <datalist>, which many phone browsers don't show. Posts the country NAME as `country` and the
  * city as `city`, the same text columns as before.
  */
@@ -18,12 +19,16 @@ export function CountryCityFields({
   required = false,
   countryLabel = "Country",
   cityLabel = "City",
+  onCityChange,
 }: {
   defaultCountry?: string | null;
   defaultCity?: string | null;
   required?: boolean;
   countryLabel?: string;
   cityLabel?: string;
+  /** Called with the city text and whether it counts (picked from the list,
+   * or any text for a country without a list). */
+  onCityChange?: (city: string, valid: boolean) => void;
 }) {
   const id = useId();
   const [country, setCountry] = useState<Country | undefined>(() => findCountry(defaultCountry) ?? findCountry("ET"));
@@ -32,6 +37,28 @@ export function CountryCityFields({
 
   const cityCode = country?.hasCities ? country.code : null;
   const cities = (cityCode && cityCache.get(cityCode)) || [];
+  // Once the country's list is loaded, only a city from it counts.
+  const listReady = Boolean(cityCode && cityCache.has(cityCode) && cities.length > 0);
+  const listed = (name: string) => {
+    const key = name.trim().toLowerCase();
+    return key ? cities.find((c) => c.toLowerCase() === key) : undefined;
+  };
+  const typed = city.trim();
+  const cityValid = !listReady || !typed || Boolean(listed(typed));
+  const [touched, setTouched] = useState(false);
+  const cityInput = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    cityInput.current?.setCustomValidity(cityValid ? "" : "Please choose your city from the list.");
+  }, [cityValid]);
+
+  const report = useRef(onCityChange);
+  useEffect(() => {
+    report.current = onCityChange;
+  });
+  useEffect(() => {
+    report.current?.(typed, cityValid);
+  }, [typed, cityValid]);
 
   useEffect(() => {
     if (!cityCode || cityCache.has(cityCode)) return;
@@ -69,7 +96,7 @@ export function CountryCityFields({
     return [...starts, ...contains].slice(0, 8);
   })();
 
-  const showList = open && matches.length > 0;
+  const showList = open && (matches.length > 0 || (listReady && typed.length > 0 && !cityValid));
 
   function choose(name: string) {
     setCity(name);
@@ -119,6 +146,7 @@ export function CountryCityFields({
         </label>
         <div className="cc-box">
           <input
+            ref={cityInput}
             id={`${id}-city`}
             className="input"
             name="city"
@@ -138,13 +166,26 @@ export function CountryCityFields({
             }}
             onFocus={() => setOpen(true)}
             onClick={() => setOpen(true)}
-            onBlur={() => setOpen(false)}
+            onBlur={() => {
+              setOpen(false);
+              setTouched(true);
+              // A name typed out in full takes the list's spelling.
+              const exact = listed(city);
+              if (exact && exact !== city) setCity(exact);
+            }}
+            aria-invalid={touched && !cityValid ? true : undefined}
+            aria-describedby={touched && !cityValid ? `${id}-city-err` : undefined}
             onKeyDown={onKeyDown}
-            placeholder={cities.length > 0 ? `Start typing, e.g. ${cities[0]}` : "Your city or town"}
+            placeholder={cities.length > 0 ? `Start typing, then pick, e.g. ${cities[0]}` : "Your city or town"}
           />
           {showList ? (
             <div className="cc-pop cc-city-pop">
               <ul className="cc-list" role="listbox" id={`${id}-cities`} aria-label={cityLabel}>
+                {matches.length === 0 ? (
+                  <li role="presentation" className="cc-empty">
+                    No city matches “{typed}”. Try another spelling, or the nearest larger city.
+                  </li>
+                ) : null}
                 {matches.map((name, index) => (
                   <li key={name} role="presentation">
                     <button
@@ -172,6 +213,11 @@ export function CountryCityFields({
             </div>
           ) : null}
         </div>
+        {touched && !cityValid && !open ? (
+          <p id={`${id}-city-err`} className="cc-err" role="alert">
+            Please choose your city from the list.
+          </p>
+        ) : null}
       </div>
     </div>
   );

@@ -3,6 +3,36 @@ import { draftProfileAction, suggestChipsAction } from "@/lib/expert/onboarding/
 import { CHIP_STEPS, DRAFT_FIELDS, type ChipStep, type DraftField, type OnboardingAnswers } from "@/lib/expert/onboarding/answers";
 
 /**
+ * True when the browser's Origin is this site. Compared by host, not the
+ * full origin: behind cPanel's proxy the app sees itself as http://... on
+ * an internal port while the browser is on https://pivotroom.africa, so an
+ * exact match refused every request there.
+ */
+function sameSite(request: NextRequest): boolean {
+  const origin = request.headers.get("origin");
+  if (!origin) return true;
+  let originHost: string;
+  try {
+    originHost = new URL(origin).host.toLowerCase();
+  } catch {
+    return false;
+  }
+  const hosts = new Set<string>();
+  const add = (value: string | null | undefined) => {
+    for (const part of (value ?? "").split(",")) if (part.trim()) hosts.add(part.trim().toLowerCase());
+  };
+  add(request.headers.get("x-forwarded-host"));
+  add(request.headers.get("host"));
+  add(request.nextUrl.host);
+  try {
+    if (process.env.NEXT_PUBLIC_APP_URL) add(new URL(process.env.NEXT_PUBLIC_APP_URL).host);
+  } catch {
+    // ignore a malformed setting
+  }
+  return hosts.has(originHost);
+}
+
+/**
  * The guided onboarding's AI calls (answer chips and profile drafts).
  *
  * A route handler rather than server actions on purpose: Next runs a
@@ -14,8 +44,7 @@ import { CHIP_STEPS, DRAFT_FIELDS, type ChipStep, type DraftField, type Onboardi
 export async function POST(request: NextRequest) {
   // Same-origin only, like server actions: a page elsewhere can't spend an
   // expert's AI allowance.
-  const origin = request.headers.get("origin");
-  if (origin && origin !== request.nextUrl.origin) {
+  if (!sameSite(request)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

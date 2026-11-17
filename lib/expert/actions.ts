@@ -6,7 +6,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { slugify } from "@/lib/expert/slug";
 import { getExpertApplicationData, getMissingRequiredFields } from "@/lib/expert/data";
-import { parseExpertiseFields, parseIdentityFields, parseResponseTime } from "@/lib/expert/profileFields";
+import { parseIdentityFieldsChecked } from "@/lib/expert/identityFields";
+import { parseExpertiseFields, parseResponseTime } from "@/lib/expert/profileFields";
 import { syncExpertCategories } from "@/lib/expert/categorySync";
 import { validateFullName } from "@/lib/validation/profile";
 import {
@@ -112,7 +113,7 @@ export async function saveOnboardingIdentityAction(
   } = await supabase.auth.getUser();
   if (!user) return { error: "You must be logged in to do that." };
 
-  const parsed = parseIdentityFields(formData);
+  const parsed = await parseIdentityFieldsChecked(formData);
   if (!parsed.ok) return { error: parsed.error };
 
   // The name lives on the shared account profile, not the expert row.

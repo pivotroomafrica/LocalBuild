@@ -1,5 +1,6 @@
 "use server";
 
+import { checkListedCity } from "@/lib/geo/cityCheck";
 import { revalidatePath } from "next/cache";
 import { invalidatePublicExperts } from "@/lib/public/cached";
 import { createClient } from "@/lib/supabase/server";
@@ -51,6 +52,9 @@ export async function updateProfileAction(
 
   const city = validateCity(String(formData.get("city") ?? ""));
   if (!city.valid) return { error: city.error };
+  const listedCity = await checkListedCity(country.value, city.value);
+  if ("error" in listedCity) return { error: listedCity.error };
+  city.value = listedCity.city;
 
   const currentRole = validateCurrentRole(String(formData.get("current_role") ?? ""));
   if (!currentRole.valid) return { error: currentRole.error };

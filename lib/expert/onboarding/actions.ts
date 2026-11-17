@@ -3,7 +3,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/service";
 import { openAIJson, type OpenAIJsonResult } from "@/lib/ai/openai";
-import { parseExpertiseFields, parseIdentityFields } from "@/lib/expert/profileFields";
+import { parseIdentityFieldsChecked } from "@/lib/expert/identityFields";
+import { parseExpertiseFields } from "@/lib/expert/profileFields";
 import { syncExpertCategories } from "@/lib/expert/categorySync";
 import { syncSessionPricing } from "@/lib/expert/pricingSync";
 import { validateResponseTime } from "@/lib/expert/profileDetails";
@@ -59,7 +60,17 @@ async function categoryNames(supabase: Awaited<ReturnType<typeof createClient>>,
   return (data ?? []).map((row) => row.name);
 }
 
-const aiConfigured = () => Boolean(process.env.OPENAI_API_KEY?.trim());
+let warnedNoKey = false;
+/** Whether OPENAI_API_KEY is set; says so once in the server log if not
+ * (on cPanel: stderr.log), since the cards then quietly use built-in ideas. */
+const aiConfigured = () => {
+  const ok = Boolean(process.env.OPENAI_API_KEY?.trim());
+  if (!ok && !warnedNoKey) {
+    warnedNoKey = true;
+    console.error("Expert onboarding AI is off: OPENAI_API_KEY is not set on the server.");
+  }
+  return ok;
+};
 
 function serviceClient() {
   try {
@@ -73,7 +84,10 @@ function serviceClient() {
  * card just uses the built-in suggestions). */
 async function underCap(userId: string, kind: keyof typeof DAILY_CAP): Promise<boolean> {
   const service = serviceClient();
-  if (!service) return false;
+  if (!service) {
+    console.error("Expert onboarding AI is off: SUPABASE_SERVICE_ROLE_KEY is not set, so usage can't be checked.");
+    return false;
+  }
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { count, error } = await service
     .from("ai_onboarding_requests")
@@ -335,7 +349,7 @@ export async function saveOnboardingAction(
     form.set("country", answers.country);
     form.set("linkedin_url", profile.linkedin_url ?? "");
     for (const language of answers.languages) form.append("languages", language);
-    const identity = parseIdentityFields(form);
+    const identity = await parseIdentityFieldsChecked(form);
     if (!identity.ok) return { error: identity.error };
     const { error } = await supabase.from("expert_profiles").update(identity.update).eq("user_id", userId);
     if (error) return { error: GENERIC_ERROR };
