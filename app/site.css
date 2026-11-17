@@ -6965,119 +6965,110 @@ a.hws-card:hover,
   min-height: 44px;
 }
 
-/* ---------- Home: explore experts by topic ---------- */
-.pr .tx {
-  display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-  gap: clamp(32px, 6vw, 96px);
-  align-items: start;
+
+/* ---------- Home: closing call to action ---------- */
+.pr .hcta-sec {
+  padding-block: clamp(32px, 5vw, 72px) clamp(64px, 8vw, 120px);
+  background: #ffffff;
 }
-.pr .tx-head {
-  position: sticky;
-  top: 96px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-.pr .tx-h {
-  margin: 0;
-  font-family: var(--pr-display);
-  font-size: clamp(40px, 5vw, 76px);
-  font-weight: 800;
-  line-height: 0.98;
-  letter-spacing: -0.045em;
-  color: var(--pr-ink);
-}
-.pr .tx-sub {
-  margin: 0;
-  max-width: 38ch;
-  color: var(--pr-slate);
-  font-size: 18px;
-  line-height: 1.6;
-}
-.pr .tx-head .hp-link {
-  align-self: flex-start;
-  font-size: 16px;
-  font-weight: 500;
-}
-.pr .tx-list {
-  display: flex;
-  flex-direction: column;
-}
-.pr .tx-row {
-  display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
-  gap: 16px 28px;
-  padding-block: 28px;
-  border-top: 1px solid var(--pr-line);
-}
-.pr .tx-row:last-child {
-  border-bottom: 1px solid var(--pr-line);
-}
-.pr .tx-cat {
-  padding-top: 10px;
-  color: var(--pr-ink);
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1.35;
-}
-.pr .tx-cat:hover {
-  color: var(--pr-blue);
-}
-.pr .tx-chips {
+.pr .hcta {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.pr .tx-chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 0 18px;
-  border-radius: 999px;
-  background: #eef0f5;
-  color: var(--pr-ink);
-  font-size: 15px;
-  transition:
-    background-color 180ms var(--pr-ease),
-    color 180ms var(--pr-ease),
-    transform 180ms var(--pr-ease);
-}
-.pr .tx-chip:hover {
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px 48px;
+  padding: clamp(32px, 5vw, 72px);
+  border-radius: clamp(20px, 2.4vw, 32px);
   background: var(--pr-ink);
+  color: #ffffff;
+}
+.pr .hcta-glow {
+  position: absolute;
+  z-index: -1;
+  right: -10%;
+  top: -40%;
+  width: 60%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(43, 79, 224, 0.55), rgba(123, 108, 240, 0.25) 55%, transparent 75%);
+  filter: blur(20px);
+  animation: hcta-drift 16s ease-in-out infinite alternate;
+}
+@keyframes hcta-drift {
+  to {
+    transform: translate(-18%, 22%) scale(1.15);
+  }
+}
+.pr .hcta-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 720px;
+}
+.pr .hcta-kicker {
+  margin: 0;
+  color: #9db4ff;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.pr .hcta-h {
+  margin: 0;
+  font-family: var(--pr-display);
+  font-size: clamp(30px, 4vw, 56px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.pr .hcta-sub {
+  margin: 0;
+  max-width: 52ch;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 17px;
+  line-height: 1.55;
+}
+.pr .hcta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.pr a.hcta-primary {
+  min-height: 52px;
+  padding-inline: 26px;
+  background: #ffffff;
+  color: var(--pr-ink);
+}
+.pr a.hcta-primary:hover {
+  background: var(--pr-blue);
   color: #ffffff;
   transform: translateY(-1px);
 }
-@media (max-width: 1100px) {
-  .pr .tx-row {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 14px;
-  }
-  .pr .tx-cat {
-    padding-top: 0;
-  }
+.pr a.hcta-secondary {
+  min-height: 52px;
+  padding-inline: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: transparent;
+  color: #ffffff;
 }
-@media (max-width: 900px) {
-  .pr .tx {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .pr .tx-head {
-    position: static;
-  }
-  .pr .tx-row {
-    padding-block: 22px;
-  }
-  .pr .tx-chip {
-    min-height: 40px;
-    padding: 0 14px;
-    font-size: 14px;
+.pr a.hcta-secondary:hover {
+  border-color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+@media (max-width: 640px) {
+  .pr .hcta-actions,
+  .pr .hcta-actions .btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pr .tx-chip {
-    transition: none;
+  .pr .hcta-glow {
+    animation: none;
   }
 }

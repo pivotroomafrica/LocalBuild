@@ -5,7 +5,6 @@ import Link from "next/link";
 import type { PublicDirectoryCard } from "@/lib/public/data";
 import { ExpertCard } from "@/components/site/ExpertCard";
 import { FacesWall } from "@/components/site/FacesWall";
-import { CATEGORY_TOPICS } from "@/lib/site/topics";
 
 const STEPS = [
   {
@@ -156,58 +155,33 @@ function QuoteAndWhy() {
   );
 }
 
-/**
- * "Explore experts by topic": the real categories (in their own order),
- * each with the topics it covers (lib/site/topics.ts). The heading stays
- * put on the left while the list scrolls on wide screens. A category opens
- * its experts; a chip opens the experts who help with that topic (topics
- * are worked out from each expert's own profile, lib/expert/topics.ts),
- * falling back to the category while nobody lists it yet.
- */
-function TopicsSection({ categories: live }: { categories: string[] }) {
-  if (live.length === 0) return null;
-  // The journey order of lib/site/topics.ts first, then any other live
-  // category (e.g. one added later) at the end.
-  const known = Object.keys(CATEGORY_TOPICS).filter((name) => live.includes(name));
-  const categories = [...known, ...live.filter((name) => !known.includes(name))];
+/** Closing call to action: book an expert, or become one. */
+function HomeCta() {
   return (
-    <section id="topics" style={{ background: "#ffffff" }}>
-      <div className="wrap section tx">
-        <div className="tx-head">
-          <h2 className="tx-h">Explore experts by&nbsp;topic.</h2>
-          <p className="tx-sub">
-            Find experience in starting up, funding, marketing, sales, product, leadership and more.
-          </p>
-          <Link href="/experts" className="hp-link">
-            See all experts{" "}
-            <span className="ms af" aria-hidden="true" style={{ fontSize: 16 }}>
-              arrow_forward
-            </span>
-          </Link>
-        </div>
-        <div className="tx-list">
-          {categories.map((category) => {
-            const href = `/experts?category=${encodeURIComponent(category)}`;
-            const topics = CATEGORY_TOPICS[category] ?? [];
-            return (
-              <div key={category} className="tx-row">
-                <Link href={href} className="tx-cat">
-                  {category}
-                </Link>
-                {topics.length > 0 ? (
-                  <ul className="tx-chips" aria-label={`Topics in ${category}`}>
-                    {topics.map((topic) => (
-                      <li key={topic}>
-                        <Link href={`/experts?topic=${encodeURIComponent(topic)}`} className="tx-chip">
-                          {topic}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </div>
-            );
-          })}
+    <section className="hcta-sec" aria-labelledby="hcta-title">
+      <div className="wrap">
+        <div className="hcta">
+          <span className="hcta-glow" aria-hidden="true" />
+          <div className="hcta-copy">
+            <p className="hcta-kicker">Ready when you are</p>
+            <h2 id="hcta-title" className="hcta-h">
+              Your next decision deserves one hour with someone who has made it before.
+            </h2>
+            <p className="hcta-sub">
+              Pick an expert, choose a time, and talk it through online or in person. Prices are shown up front.
+            </p>
+          </div>
+          <div className="hcta-actions">
+            <Link href="/experts" className="btn hcta-primary">
+              Find an expert{" "}
+              <span className="ms af" aria-hidden="true">
+                arrow_forward
+              </span>
+            </Link>
+            <Link href="/become-an-expert" className="btn hcta-secondary">
+              Become an expert
+            </Link>
+          </div>
         </div>
       </div>
     </section>
@@ -220,7 +194,7 @@ function TopicsSection({ categories: live }: { categories: string[] }) {
  * split by the expert's own stated role. Shelves with nobody in them are
  * left out rather than padded.
  */
-export function HomeClient({ experts, categories }: { experts: PublicDirectoryCard[]; categories: string[] }) {
+export function HomeClient({ experts }: { experts: PublicDirectoryCard[] }) {
   const anyTop = experts.some((expert) => expert.stats.isTopExpert);
   const founders = experts.filter(isFounder);
   const professionals = experts.filter((expert) => !isFounder(expert));
@@ -352,7 +326,7 @@ export function HomeClient({ experts, categories }: { experts: PublicDirectoryCa
 
       <FacesWall experts={experts} />
 
-      <TopicsSection categories={categories} />
+      <HomeCta />
     </>
   );
 }

@@ -1,7 +1,5 @@
 "use server";
 
-import { after } from "next/server";
-import { refreshExpertTopics } from "@/lib/expert/topics";
 import { revalidatePath } from "next/cache";
 import { invalidatePublicExperts } from "@/lib/public/cached";
 import { redirect } from "next/navigation";
@@ -160,8 +158,6 @@ export async function saveOnboardingExpertiseAction(
 
   const { error } = await supabase.from("expert_profiles").update(parsed.update).eq("id", expertProfile.id);
   if (error) return { error: GENERIC_ERROR };
-  // Topics follow the saved texts and areas (in the background).
-  after(() => refreshExpertTopics(expertProfile.id));
 
   revalidatePath("/expert/application", "layout");
   invalidatePublicExperts();

@@ -126,8 +126,6 @@ export type PublicDirectoryCard = {
   languages: string[];
   stats: ExpertPublicStats;
   giving: ExpertGiving | null;
-  /** Topics they help with (064; worked out from their own profile). */
-  topics: string[];
 };
 
 /**
@@ -163,18 +161,14 @@ export async function getExpertCategories(supabase: TypedClient): Promise<Expert
 export async function fetchPublicExpertDirectory(supabase: TypedClient): Promise<PublicDirectoryCard[]> {
   // GET (the function is STABLE/read-only) so supabase-js retries it on a
   // dropped connection -- it only auto-retries GET/HEAD/OPTIONS requests.
-  const [{ data, error }, pricing, { data: giving, error: givingError }, { data: topicRows, error: topicsError }] =
-    await Promise.all([
-      supabase.rpc("get_expert_directory_public_v2", undefined, { get: true }),
-      fetchPlatformPricing(supabase),
-      supabase.rpc("get_expert_giving_public", {}, { get: true }),
-      supabase.rpc("get_expert_topics_public", undefined, { get: true }),
-    ]);
+  const [{ data, error }, pricing, { data: giving, error: givingError }] = await Promise.all([
+    supabase.rpc("get_expert_directory_public_v2", undefined, { get: true }),
+    fetchPlatformPricing(supabase),
+    supabase.rpc("get_expert_giving_public", {}, { get: true }),
+  ]);
   if (error) throw new Error(`failed to load get_expert_directory_public_v2: ${describeSupabaseError(error)}`);
   if (givingError) throw new Error(`failed to load get_expert_giving_public: ${describeSupabaseError(givingError)}`);
   const givingBySlug = new Map((giving ?? []).map((row) => [row.slug, toGiving(row)]));
-  if (topicsError) throw new Error(`failed to load get_expert_topics_public: ${describeSupabaseError(topicsError)}`);
-  const topicsBySlug = new Map((topicRows ?? []).map((row) => [row.slug, row.topics ?? []]));
 
   const rows = data ?? [];
   const photoUrls = await getExpertPhotoUrls(
@@ -203,7 +197,6 @@ export async function fetchPublicExpertDirectory(supabase: TypedClient): Promise
       isTopExpert: row.is_top_expert ?? false,
     },
     giving: givingBySlug.get(row.slug!) ?? null,
-    topics: topicsBySlug.get(row.slug!) ?? [],
   }));
 }
 
