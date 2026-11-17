@@ -1,5 +1,6 @@
 "use client";
 
+import { SavedToast } from "@/components/ui/SavedToast";
 import { useActionState } from "react";
 import {
   saveOnboardingExpertiseAction,
@@ -41,7 +42,12 @@ export function IdentityStepForm({
   return (
     <form id={APPLICATION_FORM_ID} action={formAction} className="oq-form">
       {state.error ? <p className="notice err" role="alert">{state.error}</p> : null}
-      {saved && !state.error ? <p className="notice" role="status">Saved. You can come back to this any time.</p> : null}
+      {saved && !state.error ? (
+        <>
+          <p className="notice saved-flash">Saved. You can come back to this any time.</p>
+          <SavedToast />
+        </>
+      ) : null}
       <IdentityQuestions profile={profile} fullName={fullName} startAt={2} />
       <StepButtons isPending={isPending} next="step 2" />
     </form>
@@ -64,7 +70,12 @@ export function ExpertiseStepForm({
   return (
     <form id={APPLICATION_FORM_ID} action={formAction} className="oq-form">
       {state.error ? <p className="notice err" role="alert">{state.error}</p> : null}
-      {saved && !state.error ? <p className="notice" role="status">Saved. You can come back to this any time.</p> : null}
+      {saved && !state.error ? (
+        <>
+          <p className="notice saved-flash">Saved. You can come back to this any time.</p>
+          <SavedToast />
+        </>
+      ) : null}
       <ExpertiseQuestions profile={profile} categories={categories} selectedCategoryIds={selectedCategoryIds} startAt={9} />
       <StepButtons isPending={isPending} next="step 3" />
     </form>

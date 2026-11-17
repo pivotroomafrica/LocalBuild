@@ -7253,3 +7253,41 @@ a.hws-card:hover,
   display: inline-flex;
   align-items: center;
 }
+
+/* Header menu labels never wrap; tighter spacing on narrow laptops. */
+.pr .mega-item,
+.pr .pr-head .bar a,
+.pr .pr-head .bar .btn {
+  white-space: nowrap;
+}
+@media (min-width: 901px) and (max-width: 1180px) {
+  .pr .mega-bar {
+    gap: 0;
+  }
+  .pr .mega-item {
+    padding: 0 6px 0 10px;
+    font-size: 14px;
+  }
+  .pr .mega-item .ms {
+    font-size: 18px;
+  }
+}
+.pr .pr-head .bar > .logo,
+.pr .pr-head .bar > a:first-child {
+  flex: none;
+}
+@media (min-width: 901px) and (max-width: 1040px) {
+  .pr .pr-head .bar {
+    gap: 12px;
+  }
+  .pr .pr-head .btn.btn-ink {
+    padding-inline: 16px;
+    font-size: 14px;
+  }
+  .pr .pr-head .btn.btn-ink .af {
+    display: none;
+  }
+  .pr .mega-item {
+    padding: 0 4px 0 8px;
+  }
+}

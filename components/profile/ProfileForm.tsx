@@ -6,6 +6,7 @@ import { TextField } from "@/components/ui/TextField";
 import { SelectField } from "@/components/ui/SelectField";
 import { Button } from "@/components/ui/Button";
 import { FormMessage } from "@/components/ui/FormMessage";
+import { SavedToast } from "@/components/ui/SavedToast";
 import { CountryCityFields } from "@/components/ui/CountryCityFields";
 import { PhoneField } from "@/components/ui/PhoneField";
 import {
@@ -30,7 +31,9 @@ type Props = {
 function Heading() {
   return (
     <div className="flex flex-col gap-1">
-      <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">Profile</h1>
+      <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">
+        Profile
+      </h1>
       <p className="text-sm text-[var(--color-text-muted)]">
         Manage your personal details and professional background.
       </p>
@@ -62,7 +65,11 @@ function ProfileSummary({
   return (
     <div className="flex flex-col gap-10">
       <Heading />
-      {justSaved ? <FormMessage variant="success">Your changes are saved.</FormMessage> : null}
+      {justSaved ? (
+        <div className="saved-flash">
+          <FormMessage variant="success">Your changes are saved.</FormMessage>
+        </div>
+      ) : null}
 
       <section className="flex flex-col gap-2">
         <h2 className="text-base font-semibold text-[var(--color-text)]">Personal Information</h2>
@@ -81,7 +88,11 @@ function ProfileSummary({
           <Row label="Current role" value={customerProfile?.current_role} />
           <Row
             label="Employment type"
-            value={customerProfile?.employment_type ? EMPLOYMENT_TYPE_LABELS[customerProfile.employment_type as keyof typeof EMPLOYMENT_TYPE_LABELS] : null}
+            value={
+              customerProfile?.employment_type
+                ? EMPLOYMENT_TYPE_LABELS[customerProfile.employment_type as keyof typeof EMPLOYMENT_TYPE_LABELS]
+                : null
+            }
           />
           <Row label="Company / organization" value={customerProfile?.company_name} />
           <Row label="Industry" value={industry} />
@@ -89,7 +100,9 @@ function ProfileSummary({
             label="Years of experience"
             value={
               customerProfile?.years_experience_range
-                ? EXPERIENCE_RANGE_LABELS[customerProfile.years_experience_range as keyof typeof EXPERIENCE_RANGE_LABELS]
+                ? EXPERIENCE_RANGE_LABELS[
+                    customerProfile.years_experience_range as keyof typeof EXPERIENCE_RANGE_LABELS
+                  ]
                 : null
             }
           />
@@ -112,21 +125,29 @@ export function ProfileForm({ email, profile, customerProfile, industries }: Pro
   // professional part starts on the form.
   const [editing, setEditing] = useState(!customerProfile);
   const [handled, setHandled] = useState(state);
+  // Counts saves, so the animated confirmation shows again after each one.
+  const [saves, setSaves] = useState(0);
   if (state !== handled) {
     setHandled(state);
-    if (state.success) setEditing(false);
+    if (state.success) {
+      setEditing(false);
+      setSaves((n) => n + 1);
+    }
   }
 
   if (!editing) {
     return (
-      <ProfileSummary
-        email={email}
-        profile={profile}
-        customerProfile={customerProfile}
-        industries={industries}
-        justSaved={Boolean(state.success)}
-        onEdit={() => setEditing(true)}
-      />
+      <>
+        {saves > 0 ? <SavedToast key={saves} /> : null}
+        <ProfileSummary
+          email={email}
+          profile={profile}
+          customerProfile={customerProfile}
+          industries={industries}
+          justSaved={Boolean(state.success)}
+          onEdit={() => setEditing(true)}
+        />
+      </>
     );
   }
 
@@ -167,8 +188,8 @@ export function ProfileForm({ email, profile, customerProfile, industries }: Pro
           <h2 className="text-base font-semibold text-[var(--color-text)]">Professional Information</h2>
           {!customerProfile ? (
             <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-              Complete your professional background so experts can better understand your
-              context when you start booking sessions.
+              Complete your professional background so experts can better understand your context when you start booking
+              sessions.
             </p>
           ) : null}
         </div>
@@ -235,7 +256,13 @@ export function ProfileForm({ email, profile, customerProfile, industries }: Pro
           Save Changes
         </Button>
         {customerProfile ? (
-          <Button type="button" variant="secondary" onClick={() => setEditing(false)} disabled={isPending} className="sm:w-auto">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setEditing(false)}
+            disabled={isPending}
+            className="sm:w-auto"
+          >
             Cancel
           </Button>
         ) : null}
