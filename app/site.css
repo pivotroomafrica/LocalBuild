@@ -7127,3 +7127,28 @@ a.hws-card:hover,
     animation: none;
   }
 }
+
+/* Expert page: key achievements */
+.pr .achieve {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pr .achieve li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--pr-mist);
+  line-height: 1.5;
+}
+.pr .achieve .ms {
+  flex: none;
+  margin-top: 1px;
+  color: var(--pr-blue);
+  font-size: 22px;
+}

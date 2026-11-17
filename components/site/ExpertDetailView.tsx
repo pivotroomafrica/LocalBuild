@@ -95,6 +95,12 @@ function ReviewCard({ review }: { review: PublicReview }) {
  */
 export function ExpertDetailView({ profile, railAuth, railSnapshot }: Props) {
   const firstName = profile.fullName.split(/\s+/)[0] || profile.fullName;
+  // Career highlights, one per line as the expert wrote them; typed bullets
+  // or numbers ("•", "-", "1.") are dropped since the list adds its own.
+  const achievements = (profile.careerHighlights ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*(?:[•\-*–]|\d+[.)])\s*/, "").trim())
+    .filter(Boolean);
   const role = [profile.currentPosition, profile.currentCompany].filter(Boolean).join(", ");
   const location = [profile.city, profile.country].filter(Boolean).join(", ");
   const format = formatLine(profile);
@@ -234,7 +240,7 @@ export function ExpertDetailView({ profile, railAuth, railSnapshot }: Props) {
             </section>
           ) : null}
 
-          {profile.experience.length > 0 || profile.careerHighlights ? (
+          {profile.experience.length > 0 ? (
             <section className="psec" style={{ gap: 8 }}>
               <h2 className="h3" style={{ marginBlockEnd: 8 }}>
                 Experience
@@ -254,9 +260,22 @@ export function ExpertDetailView({ profile, railAuth, railSnapshot }: Props) {
                   </div>
                 </div>
               ))}
-              {profile.careerHighlights ? (
-                <p style={{ paddingBlockStart: profile.experience.length > 0 ? 16 : 0 }}>{profile.careerHighlights}</p>
-              ) : null}
+            </section>
+          ) : null}
+
+          {achievements.length > 0 ? (
+            <section className="psec" style={{ gap: 12 }}>
+              <h2 className="h3">Key achievements</h2>
+              <ul className="achieve">
+                {achievements.map((item, index) => (
+                  <li key={index}>
+                    <span className="ms" aria-hidden="true">
+                      workspace_premium
+                    </span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
             </section>
           ) : null}
 
