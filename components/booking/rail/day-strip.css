@@ -314,3 +314,151 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* The location card: which clock every day and time is shown in. */
+.pr .place-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #c9d3ff;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #f3f6ff, #eef1ff);
+}
+.pr .place-pin {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--pr-blue);
+  font-size: 20px;
+}
+.pr .place-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.pr .place-label {
+  color: var(--pr-slate);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.pr .place-where {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  font-size: 15px;
+}
+.pr .place-where .cc-flag,
+.pr .place-remind .cc-flag {
+  width: 20px;
+  height: 15px;
+  border-radius: 2px;
+  object-fit: cover;
+}
+.pr .place-clock {
+  color: var(--pr-blue);
+  font-size: 13px;
+  font-weight: 500;
+}
+.pr .place-change-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--pr-blue);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--pr-blue);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 160ms var(--pr-ease),
+    color 160ms var(--pr-ease);
+}
+.pr .place-change-btn .ms {
+  font-size: 18px;
+}
+.pr .place-change-btn:hover {
+  background: var(--pr-blue);
+  color: #ffffff;
+}
+.pr .place-updated {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #e8f7ee;
+  color: #1f7a45;
+  font-size: 13px;
+  font-weight: 500;
+  animation: place-updated 3.2s ease forwards;
+}
+.pr .place-updated .ms {
+  font-size: 16px;
+}
+@keyframes place-updated {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  10%,
+  80% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0.85;
+  }
+}
+/* Days slide in again after a change of place, to show they moved. */
+.pr .dstrip .dcard {
+  animation: dcard-in 360ms var(--pr-ease) both;
+}
+.pr .dstrip .dcard:nth-child(2) {
+  animation-delay: 40ms;
+}
+.pr .dstrip .dcard:nth-child(3) {
+  animation-delay: 80ms;
+}
+.pr .dstrip .dcard:nth-child(4) {
+  animation-delay: 120ms;
+}
+.pr .dstrip .dcard:nth-child(n + 5) {
+  animation-delay: 160ms;
+}
+@keyframes dcard-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.pr .place-remind {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: -4px 0 10px;
+  color: var(--pr-slate);
+  font-size: 13px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pr .place-updated,
+  .pr .dstrip .dcard {
+    animation: none;
+  }
+}

@@ -192,7 +192,16 @@ export function RailSelect({
     for (const field of fields) if (!field.reportValidity()) return;
     setSignupPart((signupPart + 1) as 2 | 3);
   };
+  // A short "Times updated for …" note after a change, so it's clear the
+  // days and times below moved to the new clock.
+  const [zoneNotice, setZoneNotice] = useState<{ tick: number; label: string } | null>(null);
   const chooseZone = (zone: string, close = false) => {
+    const country = findCountry(countryOfZone(zone) ?? "");
+    const city = cityOf(zone);
+    setZoneNotice((prev) => ({
+      tick: (prev?.tick ?? 0) + 1,
+      label: country ? (zoneChoices(country.code).length > 1 ? `${country.name} (${city})` : country.name) : city,
+    }));
     setCustomerTimezone(zone);
     storeClientZone(zone);
     setSelectedDate(null);
@@ -580,23 +589,45 @@ export function RailSelect({
           {/* Where they are sets their clock: a country, and a city only
               for the few countries with several clocks. */}
           <div className="place">
-            <p className="place-line">
-              <span className="muted">Times for</span>{" "}
-              {clientCountry ? (
-                <>
-                  <Flag code={clientCountry.code} />{" "}
-                  <strong>{clientCountry.name}</strong>
-                  {placeChoices.length > 1 ? <span className="muted"> · {cityOf(customerTimezone)}</span> : null}
-                </>
-              ) : (
-                <strong>{cityOf(customerTimezone)}</strong>
-              )}{" "}
+            {/* Where they are sets the clock every time below is shown in,
+                so it's a clear card, not a footnote. */}
+            <div className="place-card">
+              <span className="place-pin ms" aria-hidden="true">
+                schedule
+              </span>
+              <span className="place-info">
+                <span className="place-label">Times shown for</span>
+                <span className="place-where">
+                  {clientCountry ? (
+                    <>
+                      <Flag code={clientCountry.code} /> <strong>{clientCountry.name}</strong>
+                      {placeChoices.length > 1 ? <span className="muted"> · {cityOf(customerTimezone)}</span> : null}
+                    </>
+                  ) : (
+                    <strong>{cityOf(customerTimezone)}</strong>
+                  )}
+                </span>
+                <span className="place-clock">
+                  {timeStyle === "ethiopian" ? "Ethiopian time" : `${cityOf(customerTimezone)} local time`}
+                </span>
+              </span>
               {placeOpen ? null : (
-                <button type="button" className="place-change" onClick={() => setPlaceOpen(true)}>
+                <button type="button" className="place-change-btn" onClick={() => setPlaceOpen(true)}>
+                  <span className="ms" aria-hidden="true">
+                    public
+                  </span>
                   Change
                 </button>
               )}
-            </p>
+            </div>
+            {zoneNotice ? (
+              <p key={zoneNotice.tick} className="place-updated" role="status">
+                <span className="ms" aria-hidden="true">
+                  check_circle
+                </span>
+                Times updated for {zoneNotice.label}
+              </p>
+            ) : null}
             {placeOpen ? (
               <div className="place-panel">
                 <span className="label" id="rail-country-label">
@@ -706,7 +737,7 @@ export function RailSelect({
                   </button>
                 )}
                 <div
-                  key={viewMonth}
+                  key={`${viewMonth}|${customerTimezone}`}
                   className="dstrip"
                   ref={(node) => {
                     stripRef.current = node;
@@ -719,7 +750,8 @@ export function RailSelect({
                   {availableDates.map((date) => {
                     const day = new Date(`${date}T00:00:00`);
                     const open = slotsByDate.get(date)?.length ?? 0;
-                    const on = activeDate === date;
+                    // Only a day they picked looks picked (nothing pre-selected).
+                    const on = selectedDate === date;
                     return (
                       <button
                         key={date}
@@ -779,6 +811,20 @@ export function RailSelect({
               month: "short",
             })}
           </legend>
+          <p className="place-remind">
+            {clientCountry ? <Flag code={clientCountry.code} /> : null}
+            <span>{timeStyle === "ethiopian" ? "Ethiopian time" : `${cityOf(customerTimezone)} local time`}</span>
+            <button
+              type="button"
+              className="place-change"
+              onClick={() => {
+                setPane("day");
+                setPlaceOpen(true);
+              }}
+            >
+              Change
+            </button>
+          </p>
 
           {timeGroups.map((group) => (
             <div key={group.part} className="tgroup">
