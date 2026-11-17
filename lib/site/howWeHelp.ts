@@ -35,7 +35,7 @@ export const HOW_PAGES: HowPage[] = [
     ],
     steps: [
       { title: "Find your expert", body: "Search by what you're working on and open a profile to see their experience, prices and open times." },
-      { title: "Pick a length and a time", body: "Times run from 24 hours to 90 days ahead, as the expert has opened them." },
+      { title: "Pick a length and a time", body: "Times run from 24 hours to 12 months ahead, as the expert has opened them." },
       { title: "Pay to confirm", body: "Pay with Chapa (telebirr, CBE Birr or card) or by bank transfer. The booking is confirmed once payment is verified." },
       { title: "Join the call", body: "Open the Meet link at the start time. Afterwards you can leave a review." },
     ],

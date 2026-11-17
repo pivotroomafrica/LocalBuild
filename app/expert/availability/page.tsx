@@ -47,6 +47,10 @@ export default async function ExpertAvailabilityPage() {
           <p className="muted" style={{ margin: 0, maxWidth: "62ch" }}>
             Clients can only book the times you open here. Set your regular days once; add extra dates whenever you like.
           </p>
+          <p className="muted" style={{ margin: 0, maxWidth: "62ch" }}>
+            Your plan runs for the next 12 months. Clients see the next 3 months that still have free time; when a
+            month is booked up to your monthly hours, the next month opens in its place.
+          </p>
         </div>
 
         <MonthlyPlanSection

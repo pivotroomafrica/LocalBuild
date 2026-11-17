@@ -9,7 +9,7 @@ type Faq = { cat: string; q: string; a: string };
  * timings are left out until the company confirms them. */
 const FAQS: Faq[] = [
   ["Booking", "How do I find the right expert?", "Go to Find an expert, search or filter by topic, format and price, and open any profile to see what they have done, their prices, session lengths and open times."],
-  ["Booking", "How far ahead can I book?", "From 24 hours ahead up to 90 days ahead. Experts open their own times, and every open time is shown on their profile."],
+  ["Booking", "How far ahead can I book?", "From 24 hours ahead up to 12 months ahead. Experts open their own times, and every open time is shown on their profile."],
   ["Booking", "Can a colleague join my session?", "Sessions are booked one to one. If you would like someone to join, say so in what you write for the expert and ask whether they agree."],
   ["Payments", "How do I pay?", "Through Chapa, with telebirr, CBE Birr or a bank card, or by bank transfer, which our team verifies. You pay when you book, and your booking is confirmed once the payment is verified."],
   ["Payments", "Are there any extra fees?", "No. The price you see already includes 15% VAT. There is nothing else to pay."],

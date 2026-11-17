@@ -90,14 +90,15 @@ function toDateKey(iso: string, timeZone: string | undefined) {
   return `${lookup.year}-${lookup.month}-${lookup.day}`;
 }
 
-/** Experts can be booked up to 90 days ahead (booking_horizon_days()), and
- * get_bookable_slots() serves at most ~31 days per call, so the whole
- * window is loaded as three ranges at once. */
-const HORIZON_RANGES: [number, number][] = [
-  [0, 30],
-  [31, 61],
-  [62, 90],
-];
+/** Experts can be booked up to a year ahead (booking_horizon_days(), 067),
+ * and get_bookable_slots() serves at most ~31 days per call. Times are
+ * loaded a quarter at a time, and only until three months with free time
+ * are found (clients see three months; a booked-up month drops out and the
+ * next one with free time takes its place). */
+const HORIZON_RANGES: [number, number][] = Array.from({ length: 12 }, (_, i) => [i * 31, Math.min(i * 31 + 30, 365)]);
+const RANGES_PER_BATCH = 3;
+/** How many months with free time a client is shown at once. */
+const MONTHS_SHOWN = 3;
 
 function utcDayPlus(days: number) {
   const now = new Date();
@@ -238,21 +239,31 @@ export function RailSelect({
   useEffect(() => {
     if (!loadKey || !duration || !format) return;
     let cancelled = false;
-    Promise.all(
-      HORIZON_RANGES.map(([from, to]) =>
-        fetchBookableSlotsAction({
-          expertSlug,
-          durationMinutes: duration,
-          sessionFormat: format,
-          rangeStart: utcDayPlus(from),
-          rangeEnd: utcDayPlus(to),
-          customerTimezone: customerTimezone || undefined,
-        }),
-      ),
-    )
-      .then((results) => {
-        const seen = new Set<string>();
-        const slots = results.flat().filter((slot) => !seen.has(slot.startAt) && seen.add(slot.startAt));
+    const zone = customerTimezone || undefined;
+    const load = async () => {
+      const seen = new Set<string>();
+      const slots: BookableSlot[] = [];
+      for (let i = 0; i < HORIZON_RANGES.length; i += RANGES_PER_BATCH) {
+        const results = await Promise.all(
+          HORIZON_RANGES.slice(i, i + RANGES_PER_BATCH).map(([from, to]) =>
+            fetchBookableSlotsAction({
+              expertSlug,
+              durationMinutes: duration,
+              sessionFormat: format,
+              rangeStart: utcDayPlus(from),
+              rangeEnd: utcDayPlus(to),
+              customerTimezone: zone,
+            }),
+          ),
+        );
+        for (const slot of results.flat()) if (!seen.has(slot.startAt) && seen.add(slot.startAt)) slots.push(slot);
+        const months = new Set(slots.map((slot) => toDateKey(slot.startAt, displayZone).slice(0, 7)));
+        if (months.size >= MONTHS_SHOWN) break;
+      }
+      return slots;
+    };
+    load()
+      .then((slots) => {
         if (!cancelled) setSlotsResult({ key: loadKey, slots });
       })
       .catch(() => {
@@ -284,7 +295,11 @@ export function RailSelect({
   const allDates = useMemo(() => Array.from(slotsByDate.keys()).sort(), [slotsByDate]);
   // Only months with free times can be shown, so the arrows skip empty
   // months and never reach back before the first bookable day.
-  const availableMonths = useMemo(() => Array.from(new Set(allDates.map((date) => date.slice(0, 7)))), [allDates]);
+  // The next three months that still have free time.
+  const availableMonths = useMemo(
+    () => Array.from(new Set(allDates.map((date) => date.slice(0, 7)))).slice(0, MONTHS_SHOWN),
+    [allDates],
+  );
   const viewMonth =
     chosenMonth && availableMonths.includes(chosenMonth) ? chosenMonth : (availableMonths[0] ?? null);
   const availableDates = viewMonth ? allDates.filter((date) => date.startsWith(viewMonth)) : [];
@@ -691,7 +706,7 @@ export function RailSelect({
             </p>
           ) : availableDates.length === 0 ? (
             <p className="notice" style={{ margin: 0 }}>
-              No free times in the next 90 days for this session length. Try another length or format.
+              No free times in the next 12 months for this session length. Try another length or format.
             </p>
           ) : (
             <>

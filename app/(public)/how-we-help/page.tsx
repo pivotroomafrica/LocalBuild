@@ -10,7 +10,7 @@ export const metadata = {
 
 const STEPS = [
   { title: "Find the person who has done it", body: "Search by your problem and compare vetted experts' experience, prices and open times." },
-  { title: "Book a time that suits you", body: "Pick a length from 15 to 90 minutes, online or in person, from 24 hours to 90 days ahead." },
+  { title: "Book a time that suits you", body: "Pick a length from 15 to 90 minutes, online or in person, from 24 hours to 12 months ahead." },
   { title: "Pay securely", body: "With Chapa or by bank transfer. The price you see includes VAT." },
   { title: "Talk it through", body: "Meet on Google Meet or in person, then leave a review for the next client." },
 ];

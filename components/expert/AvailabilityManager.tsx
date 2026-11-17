@@ -51,7 +51,7 @@ type Props = {
   withPlan?: boolean;
 };
 
-const UPCOMING_MONTHS_AHEAD = 6;
+const UPCOMING_MONTHS_AHEAD = 12;
 
 function detectBrowserTimezone(): string {
   try {
