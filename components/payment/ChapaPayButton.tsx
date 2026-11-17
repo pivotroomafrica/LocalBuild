@@ -16,9 +16,11 @@ const initialState: StartChapaPaymentState = {};
 export function ChapaPayButton({
   bookingReference,
   expertSlug,
+  label = "Pay with Chapa",
 }: {
   bookingReference: string;
   expertSlug: string;
+  label?: string;
 }) {
   const [state, formAction, isPending] = useActionState(startChapaPaymentAction, initialState);
 
@@ -28,7 +30,7 @@ export function ChapaPayButton({
       <input type="hidden" name="expert_slug" value={expertSlug} />
       {state.error ? <FormMessage variant="error">{state.error}</FormMessage> : null}
       <Button type="submit" isLoading={isPending} loadingText="Redirecting to Chapa...">
-        Pay with Chapa
+        {label}
       </Button>
     </form>
   );

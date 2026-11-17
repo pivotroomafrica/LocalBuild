@@ -7072,3 +7072,58 @@ a.hws-card:hover,
     animation: none;
   }
 }
+
+/* Booking card: a Chapa payment that didn't go through */
+.payfail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #f3c2c2;
+  border-radius: 16px;
+  background: #fff5f5;
+  animation: payfail-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.payfail-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.payfail-icon {
+  flex: none;
+  color: #d23b3b;
+  font-size: 26px;
+}
+.payfail-title {
+  margin: 0;
+  color: #8f1d1d;
+  font-size: 17px;
+  font-weight: 700;
+}
+.payfail-text {
+  margin: 0;
+  color: #5c2020;
+  font-size: 14px;
+  line-height: 1.5;
+}
+@keyframes payfail-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(3px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .payfail {
+    animation: none;
+  }
+}

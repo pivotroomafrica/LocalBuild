@@ -112,13 +112,10 @@ export function RailPayment({
   return (
     <section className="flex flex-col gap-4">
       {failedChapaAttempt ? (
-        <FormMessage variant="error">
-          Your Chapa payment didn&apos;t go through. You can try Chapa again or use manual bank
-          transfer below.
-        </FormMessage>
+        <PaymentFailedPanel booking={booking} expertSlug={expertSlug} chapaAvailable={chapaAvailable} />
       ) : null}
 
-      {chapaAvailable ? (
+      {chapaAvailable && !failedChapaAttempt ? (
         <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
           <h2 className="mb-1 text-xl font-extrabold tracking-[-0.02em] text-[var(--color-text)]">Pay with Chapa</h2>
           <p className="mb-3 text-sm text-[var(--color-text-muted)]">
@@ -147,7 +144,7 @@ export function RailPayment({
         </FormMessage>
       ) : null}
 
-      {chapaAvailable ? (
+      {chapaAvailable && !failedChapaAttempt ? (
         <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
           <div className="h-px flex-1 bg-[var(--color-border)]" />
           Or
@@ -171,7 +168,11 @@ export function RailPayment({
         </div>
       )}
 
-      <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+      <div
+        id={`bank-${booking.booking_reference}`}
+        tabIndex={-1}
+        className="scroll-mt-6 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 outline-none"
+      >
         <h2 className="mb-1 text-xl font-extrabold tracking-[-0.02em] text-[var(--color-text)]">Manual bank transfer</h2>
         <p className="mb-3 text-sm text-[var(--color-text-muted)]">
           Transfer the amount using the bank details below, then submit your transaction reference
@@ -218,6 +219,50 @@ export function RailPayment({
         Our team checks every bank transfer by hand and then confirms your booking.
       </p>
     </section>
+  );
+}
+
+/** Shown when Chapa reported the last attempt as not paid: says so plainly
+ * and puts both ways forward right under it. */
+function PaymentFailedPanel({
+  booking,
+  expertSlug,
+  chapaAvailable,
+}: {
+  booking: Booking;
+  expertSlug: string;
+  chapaAvailable: boolean;
+}) {
+  function goToBank() {
+    const bank = document.getElementById(`bank-${booking.booking_reference}`);
+    bank?.scrollIntoView({ behavior: "smooth", block: "start" });
+    bank?.focus({ preventScroll: true });
+  }
+
+  return (
+    <div className="payfail" role="alert">
+      <div className="payfail-head">
+        <span className="ms payfail-icon" aria-hidden="true">
+          error
+        </span>
+        <div className="flex flex-col gap-1">
+          <h2 className="payfail-title">Your payment didn&apos;t go through</h2>
+          <p className="payfail-text">
+            Chapa didn&apos;t confirm this payment, so your booking isn&apos;t paid yet. Your time is still held for
+            you: try again, or pay by bank transfer.
+          </p>
+        </div>
+      </div>
+      {booking.hold_expires_at ? <HoldCountdown holdExpiresAt={booking.hold_expires_at} /> : null}
+      <div className="flex flex-col gap-2">
+        {chapaAvailable ? (
+          <ChapaPayButton bookingReference={booking.booking_reference} expertSlug={expertSlug} label="Try again with Chapa" />
+        ) : null}
+        <Button type="button" variant="secondary" onClick={goToBank}>
+          Pay by bank transfer instead
+        </Button>
+      </div>
+    </div>
   );
 }
 
