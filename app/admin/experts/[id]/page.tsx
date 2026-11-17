@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { CompanyLogosEditor } from "@/components/expert/CompanyLogosEditor";
+import { companiesOf, companyLogoUrl, readCompanyLogos } from "@/lib/expert/companyLogos";
 import { createClient } from "@/lib/supabase/server";
 import {
   getActiveExpertCategories,
@@ -152,6 +154,18 @@ export default async function AdminExpertDetailPage({ params }: PageProps<"/admi
           selectedCategoryIds={categoryIds}
         />
       </details>
+
+      <section className="panel">
+        <CompanyLogosEditor
+          forAdmin
+          expertProfileId={expertProfile.id}
+          ownerUserId={expertProfile.user_id}
+          companies={companiesOf(expertProfile.current_company, expertProfile.experience)}
+          logos={Object.fromEntries(
+            Object.entries(readCompanyLogos(expertProfile.company_logos)).map(([key, path]) => [key, companyLogoUrl(path)]),
+          )}
+        />
+      </section>
 
       <section className="panel stack" style={{ gap: 8 }}>
         <h2 className="ws-h2">Giving back</h2>

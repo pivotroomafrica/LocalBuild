@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { companyLogoUrl, readCompanyLogos } from "@/lib/expert/companyLogos";
 import type { Database } from "@/types/database";
 import { getExpertPhotoUrl, getExpertPhotoUrls, type ExpertApplicationData } from "@/lib/expert/data";
 import { EXPERT_EXPERIENCE_RANGE_LABELS, type ExpertExperienceRange } from "@/types/expert";
@@ -21,6 +22,8 @@ type TypedClient = SupabaseClient<Database>;
 export type ExpertGiving = { ngoName: string };
 
 export type PublicProfileData = {
+  /** Company key (companyKey()) -> public logo URL (066). */
+  companyLogos: Record<string, string>;
   slug: string;
   fullName: string;
   headline: string | null;
@@ -217,12 +220,14 @@ export async function fetchPublicExpertProfile(supabase: TypedClient, slug: stri
     { data: reviews, error: reviewsError },
     pricing,
     { data: giving, error: givingError },
+    { data: logoMap },
   ] = await Promise.all([
     supabase.rpc("get_expert_profile_public_v2", { p_slug: slug }, { get: true }).maybeSingle(),
     supabase.rpc("get_expert_session_types_public", { p_slug: slug }, { get: true }),
     supabase.rpc("get_expert_reviews_public", { p_slug: slug }, { get: true }),
     fetchPlatformPricing(supabase),
     supabase.rpc("get_expert_giving_public", { p_slug: slug }, { get: true }).maybeSingle(),
+    supabase.rpc("get_expert_company_logos_public", { p_slug: slug }, { get: true }),
   ]);
   if (error) throw new Error(`failed to load get_expert_profile_public_v2: ${describeSupabaseError(error)}`);
   if (!profile) return null;
@@ -237,6 +242,10 @@ export async function fetchPublicExpertProfile(supabase: TypedClient, slug: stri
   const [photoUrl] = await getExpertPhotoUrls(supabase, [profile.profile_image_path]);
 
   return {
+    // Logos are extras: a failure to load them just shows none.
+    companyLogos: Object.fromEntries(
+      Object.entries(readCompanyLogos(logoMap)).map(([key, path]) => [key, companyLogoUrl(path)]),
+    ),
     slug: profile.slug!,
     fullName: profile.full_name ?? "",
     headline: profile.headline,
@@ -307,6 +316,9 @@ export async function toPreviewProfileData(
   ]);
 
   return {
+    companyLogos: Object.fromEntries(
+      Object.entries(readCompanyLogos(expertProfile.company_logos)).map(([key, path]) => [key, companyLogoUrl(path)]),
+    ),
     slug: expertProfile.slug,
     fullName,
     headline: expertProfile.headline,
