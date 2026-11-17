@@ -7173,10 +7173,15 @@ a.hws-card:hover,
 }
 .pr .logos-ed-row {
   display: flex;
-  align-items: center;
-  gap: 14px;
+  flex-direction: column;
+  gap: 12px;
   padding-block: 12px;
   border-top: 1px solid var(--pr-line);
+}
+.pr .logos-ed-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 .pr .logos-ed-row:last-child {
   border-bottom: 1px solid var(--pr-line);
@@ -7219,8 +7224,8 @@ a.hws-card:hover,
 .pr .logos-ed-msg {
   margin: 0;
 }
-@media (max-width: 520px) {
-  .pr .logos-ed-row {
+@media (max-width: 620px) {
+  .pr .logos-ed-main {
     flex-wrap: wrap;
   }
   .pr .logos-ed-actions {
@@ -7290,4 +7295,94 @@ a.hws-card:hover,
   .pr .mega-item {
     padding: 0 4px 0 8px;
   }
+}
+
+.pr .logos-ed-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pr .logos-ed-hint {
+  color: #1f7a45;
+  font-size: 12px;
+  font-weight: 600;
+}
+.pr .logos-ed-use img {
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  border-radius: 4px;
+  background: #ffffff;
+  object-fit: contain;
+}
+.pr .logos-ed-search {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-left: 62px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--pr-mist);
+  animation: logos-open 220ms var(--pr-ease);
+}
+@keyframes logos-open {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+.pr .logos-ed-search .btn {
+  align-self: flex-start;
+  gap: 6px;
+}
+.pr .logos-ed-results {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pr .logos-ed-results button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--pr-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pr .logos-ed-results button:hover {
+  border-color: var(--pr-blue);
+}
+.pr .logos-ed-results img {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--pr-line);
+  border-radius: 6px;
+  object-fit: contain;
+  padding: 2px;
+  background: #ffffff;
+}
+.pr .logos-ed-results span:nth-of-type(1) {
+  flex: 1;
+}
+.pr .logos-ed-pick {
+  color: var(--pr-blue);
+  font-size: 14px;
+  font-weight: 600;
+}
+@media (max-width: 620px) {
+  .pr .logos-ed-search {
+    margin-left: 0;
+  }
+}
+.pr .logos-ed-search .input {
+  background: #ffffff;
+  border: 1px solid var(--pr-line);
 }

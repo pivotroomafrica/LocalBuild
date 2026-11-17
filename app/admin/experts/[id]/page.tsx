@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CompanyLogosEditor } from "@/components/expert/CompanyLogosEditor";
 import { companiesOf, companyLogoUrl, readCompanyLogos } from "@/lib/expert/companyLogos";
+import { libraryMatchesFor } from "@/lib/expert/companyLibrary";
 import { createClient } from "@/lib/supabase/server";
 import {
   getActiveExpertCategories,
@@ -53,7 +54,9 @@ export default async function AdminExpertDetailPage({ params }: PageProps<"/admi
       .order("created_at", { ascending: false }),
   ]);
 
-  const activeOfferings = sessionOfferings.filter((o) => o.is_active).sort((a, b) => a.duration_minutes - b.duration_minutes);
+  const activeOfferings = sessionOfferings
+    .filter((o) => o.is_active)
+    .sort((a, b) => a.duration_minutes - b.duration_minutes);
   const missing = getMissingRequiredFields(data);
   const hiddenCount = expertProfile.hidden_fields.length;
   const isPublished = expertProfile.application_status === "approved" && expertProfile.profile_status === "published";
@@ -84,7 +87,9 @@ export default async function AdminExpertDetailPage({ params }: PageProps<"/admi
             {PROFILE_STATUS_LABELS[expertProfile.profile_status as keyof typeof PROFILE_STATUS_LABELS] ??
               expertProfile.profile_status}
           </strong>
-          {expertProfile.submitted_at ? ` · Submitted ${new Date(expertProfile.submitted_at).toLocaleDateString()}` : ""}
+          {expertProfile.submitted_at
+            ? ` · Submitted ${new Date(expertProfile.submitted_at).toLocaleDateString()}`
+            : ""}
           {" · "}
           {expertProfile.terms_accepted_at
             ? `Accepted expert terms ${new Date(expertProfile.terms_accepted_at).toLocaleDateString()}`
@@ -96,7 +101,12 @@ export default async function AdminExpertDetailPage({ params }: PageProps<"/admi
         <h2 className="ws-h2">Before this profile goes live</h2>
         <ol className="stack" style={{ gap: 6, margin: 0, paddingInlineStart: 20 }}>
           <li>
-            Check and tidy the details below. {missing.length > 0 ? <span>Still missing: {missing.join(", ")}.</span> : "Everything required is filled in."}
+            Check and tidy the details below.{" "}
+            {missing.length > 0 ? (
+              <span>Still missing: {missing.join(", ")}.</span>
+            ) : (
+              "Everything required is filled in."
+            )}
           </li>
           <li>
             Choose what clients can see ({hiddenCount === 0 ? "everything is shown" : `${hiddenCount} hidden`}), then{" "}
@@ -105,7 +115,11 @@ export default async function AdminExpertDetailPage({ params }: PageProps<"/admi
           <li>Approve the application.</li>
           <li>
             Publish. The profile then appears on{" "}
-            {isPublished ? <Link href={`/experts/${expertProfile.slug}`}>/experts/{expertProfile.slug}</Link> : <span>/experts/{expertProfile.slug}</span>}
+            {isPublished ? (
+              <Link href={`/experts/${expertProfile.slug}`}>/experts/{expertProfile.slug}</Link>
+            ) : (
+              <span>/experts/{expertProfile.slug}</span>
+            )}
             , in the directory and in matching.
           </li>
         </ol>
@@ -119,7 +133,8 @@ export default async function AdminExpertDetailPage({ params }: PageProps<"/admi
           profileStatus={expertProfile.profile_status}
         />
         {expertProfile.review_message &&
-        (expertProfile.application_status === "changes_requested" || expertProfile.application_status === "rejected") ? (
+        (expertProfile.application_status === "changes_requested" ||
+          expertProfile.application_status === "rejected") ? (
           <p className="notice" style={{ margin: 0 }}>
             <strong>
               {expertProfile.application_status === "rejected" ? "Reason sent to applicant: " : "Changes requested: "}
@@ -161,8 +176,15 @@ export default async function AdminExpertDetailPage({ params }: PageProps<"/admi
           expertProfileId={expertProfile.id}
           ownerUserId={expertProfile.user_id}
           companies={companiesOf(expertProfile.current_company, expertProfile.experience)}
+          matches={await libraryMatchesFor(
+            supabase,
+            companiesOf(expertProfile.current_company, expertProfile.experience),
+          )}
           logos={Object.fromEntries(
-            Object.entries(readCompanyLogos(expertProfile.company_logos)).map(([key, path]) => [key, companyLogoUrl(path)]),
+            Object.entries(readCompanyLogos(expertProfile.company_logos)).map(([key, path]) => [
+              key,
+              companyLogoUrl(path),
+            ]),
           )}
         />
       </section>
@@ -290,7 +312,11 @@ function ReviewActions({
   }
 
   if (applicationStatus === "changes_requested") {
-    return <p className="muted" style={{ margin: 0 }}>Waiting for the applicant to resubmit.</p>;
+    return (
+      <p className="muted" style={{ margin: 0 }}>
+        Waiting for the applicant to resubmit.
+      </p>
+    );
   }
 
   if (applicationStatus === "approved" && profileStatus === "ready") {
@@ -339,8 +365,16 @@ function ReviewActions({
   }
 
   if (applicationStatus === "rejected") {
-    return <p className="muted" style={{ margin: 0 }}>This application was rejected. Rejection is terminal.</p>;
+    return (
+      <p className="muted" style={{ margin: 0 }}>
+        This application was rejected. Rejection is terminal.
+      </p>
+    );
   }
 
-  return <p className="muted" style={{ margin: 0 }}>No actions available for this status.</p>;
+  return (
+    <p className="muted" style={{ margin: 0 }}>
+      No actions available for this status.
+    </p>
+  );
 }

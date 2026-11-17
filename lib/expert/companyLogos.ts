@@ -46,3 +46,5 @@ export function companiesOf(currentCompany: string | null | undefined, experienc
   if (Array.isArray(experience)) for (const row of experience) add((row as { organization?: unknown })?.organization);
   return names;
 }
+
+export type LibraryMatch = { id: string; name: string; logoUrl: string };

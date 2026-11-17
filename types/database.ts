@@ -404,6 +404,33 @@ export type Database = {
           },
         ]
       }
+      companies: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          logo_path: string
+          name: string
+          name_key: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          logo_path: string
+          name: string
+          name_key: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          logo_path?: string
+          name?: string
+          name_key?: string
+        }
+        Relationships: []
+      }
       customer_profiles: {
         Row: {
           company_name: string | null

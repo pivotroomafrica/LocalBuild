@@ -7,6 +7,7 @@ import { LiveProfilePreview } from "@/components/expert/LiveProfilePreview";
 import { previewValuesFrom } from "@/components/expert/previewValues";
 import { CompanyLogosEditor } from "@/components/expert/CompanyLogosEditor";
 import { companiesOf, companyLogoUrl, readCompanyLogos } from "@/lib/expert/companyLogos";
+import { libraryMatchesFor } from "@/lib/expert/companyLibrary";
 
 export default async function ExpertApplicationExpertisePage({
   searchParams,
@@ -48,8 +49,12 @@ export default async function ExpertApplicationExpertisePage({
                 expertProfileId={profile.id}
                 ownerUserId={profile.user_id}
                 companies={companiesOf(profile.current_company, profile.experience)}
+                matches={await libraryMatchesFor(supabase, companiesOf(profile.current_company, profile.experience))}
                 logos={Object.fromEntries(
-                  Object.entries(readCompanyLogos(profile.company_logos)).map(([key, path]) => [key, companyLogoUrl(path)]),
+                  Object.entries(readCompanyLogos(profile.company_logos)).map(([key, path]) => [
+                    key,
+                    companyLogoUrl(path),
+                  ]),
                 )}
               />
             </div>
