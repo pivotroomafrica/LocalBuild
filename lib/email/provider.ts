@@ -14,6 +14,15 @@ export type EmailSendParams = {
    * produce two sends of the same email even if our own retry logic
    * double-fires the HTTP call. */
   idempotencyKey: string;
+  /** Files attached to the email (e.g. a calendar invite). */
+  attachments?: EmailAttachment[];
+};
+
+export type EmailAttachment = {
+  filename: string;
+  /** Plain text content; providers encode it as needed. */
+  content: string;
+  contentType: string;
 };
 
 export type EmailSendResult = { ok: true; providerId: string } | { ok: false; error: string };

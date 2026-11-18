@@ -30,6 +30,7 @@ function renderShell(params: {
             <tr>
               <td style="padding:0 24px;font-size:14px;line-height:1.6;color:#44403c;">
                 ${params.bodyHtml}
+                <!--calendar-->
               </td>
             </tr>
             <tr>

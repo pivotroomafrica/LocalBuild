@@ -1,4 +1,5 @@
 import { getEmailProvider } from "@/lib/email/factory";
+import type { EmailAttachment } from "@/lib/email/provider";
 import { getCalendarProvider } from "@/lib/calendar/factory";
 import { getAppUrl } from "./config";
 import { sendAdminsNewOrder } from "@/lib/notify/account";
@@ -12,7 +13,12 @@ import {
   getRescheduleContext,
   getCancellationContext,
   getPendingChangeRequestContext,
+  countReschedules,
+  type BookingNotificationContext,
+  type BookingCalendarState,
 } from "./data";
+import { sessionInvite, withCalendarBlock, type SessionInviteKind } from "./calendarInvite";
+import type { EmailContent } from "./emailTemplates";
 import {
   bookingConfirmationCustomerEmail,
   bookingConfirmationExpertEmail,
@@ -36,6 +42,46 @@ function parseEventIdFromDedupeKey(dedupeKey: string): string | null {
   const idx = dedupeKey.indexOf(":");
   if (idx === -1) return null;
   return dedupeKey.slice(idx + 1) || null;
+}
+
+/** Adds the calendar block and invite file to a booking email. Best
+ * effort: anything going wrong here sends the email without them. */
+function addCalendar(
+  content: EmailContent,
+  args: {
+    kind: SessionInviteKind;
+    audience: "customer" | "expert";
+    ctx: BookingNotificationContext;
+    calendarState: BookingCalendarState | null;
+    startAt: string;
+    endAt: string;
+    sequence: number;
+  },
+): { content: EmailContent; attachments: EmailAttachment[] } {
+  try {
+    const { ctx, audience } = args;
+    const invite = sessionInvite({
+      kind: args.kind,
+      audience,
+      bookingReference: ctx.booking_reference,
+      withName: audience === "customer" ? ctx.expert_full_name : ctx.customer_full_name,
+      recipient:
+        audience === "customer"
+          ? { name: ctx.customer_full_name, email: ctx.customer_email }
+          : { name: ctx.expert_full_name, email: ctx.expert_email },
+      startAt: args.startAt,
+      endAt: args.endAt,
+      sessionFormat: ctx.session_format,
+      meetingUrl: args.calendarState?.calendar_meeting_url ?? null,
+      googleEventId: args.calendarState?.calendar_event_id ?? null,
+      sequence: args.sequence,
+      appUrl: getAppUrl(),
+    });
+    return { content: withCalendarBlock(content, invite), attachments: [invite.attachment] };
+  } catch (error) {
+    console.error("addCalendar: skipped", error instanceof Error ? error.message : error);
+    return { content, attachments: [] };
+  }
 }
 
 export type JobHandlerResult = { ok: true; providerId: string | null } | { ok: false; error: string };
@@ -98,12 +144,22 @@ async function handleBookingConfirmationEmailCustomer(job: IntegrationJobRow): P
     meetingUrl: calendarState?.calendar_meeting_url ?? null,
     appUrl: getAppUrl(),
   });
+  const withCal = addCalendar(content, {
+    kind: "confirm",
+    audience: "customer",
+    ctx,
+    calendarState,
+    startAt: ctx.start_at,
+    endAt: ctx.end_at,
+    sequence: await countReschedules(job.booking_id),
+  });
 
   const result = await getEmailProvider().send({
     to: ctx.customer_email,
-    subject: content.subject,
-    html: content.html,
-    text: content.text,
+    subject: withCal.content.subject,
+    html: withCal.content.html,
+    text: withCal.content.text,
+    attachments: withCal.attachments,
     idempotencyKey: job.dedupe_key,
   });
 
@@ -140,12 +196,22 @@ async function handleBookingConfirmationEmailExpert(job: IntegrationJobRow): Pro
     discussionTopic: ctx.discussion_topic,
     appUrl: getAppUrl(),
   });
+  const withCal = addCalendar(content, {
+    kind: "confirm",
+    audience: "expert",
+    ctx,
+    calendarState,
+    startAt: ctx.start_at,
+    endAt: ctx.end_at,
+    sequence: await countReschedules(job.booking_id),
+  });
 
   const result = await getEmailProvider().send({
     to: ctx.expert_email,
-    subject: content.subject,
-    html: content.html,
-    text: content.text,
+    subject: withCal.content.subject,
+    html: withCal.content.html,
+    text: withCal.content.text,
+    attachments: withCal.attachments,
     idempotencyKey: job.dedupe_key,
   });
 
@@ -351,12 +417,22 @@ async function handleRescheduleEmailCustomer(job: IntegrationJobRow): Promise<Jo
     meetingUrl: calendarState?.calendar_meeting_url ?? null,
     appUrl: getAppUrl(),
   });
+  const withCal = addCalendar(content, {
+    kind: "reschedule",
+    audience: "customer",
+    ctx,
+    calendarState,
+    startAt: reschedule.newStartAt,
+    endAt: reschedule.newEndAt,
+    sequence: await countReschedules(job.booking_id, reschedule.createdAt),
+  });
 
   const result = await getEmailProvider().send({
     to: ctx.customer_email,
-    subject: content.subject,
-    html: content.html,
-    text: content.text,
+    subject: withCal.content.subject,
+    html: withCal.content.html,
+    text: withCal.content.text,
+    attachments: withCal.attachments,
     idempotencyKey: job.dedupe_key,
   });
 
@@ -386,12 +462,22 @@ async function handleRescheduleEmailExpert(job: IntegrationJobRow): Promise<JobH
     meetingUrl: calendarState?.calendar_meeting_url ?? null,
     appUrl: getAppUrl(),
   });
+  const withCal = addCalendar(content, {
+    kind: "reschedule",
+    audience: "expert",
+    ctx,
+    calendarState,
+    startAt: reschedule.newStartAt,
+    endAt: reschedule.newEndAt,
+    sequence: await countReschedules(job.booking_id, reschedule.createdAt),
+  });
 
   const result = await getEmailProvider().send({
     to: ctx.expert_email,
-    subject: content.subject,
-    html: content.html,
-    text: content.text,
+    subject: withCal.content.subject,
+    html: withCal.content.html,
+    text: withCal.content.text,
+    attachments: withCal.attachments,
     idempotencyKey: job.dedupe_key,
   });
 
@@ -453,9 +539,10 @@ async function handleCancellationEmailCustomer(job: IntegrationJobRow): Promise<
   const cancellationId = parseEventIdFromDedupeKey(job.dedupe_key);
   if (!cancellationId) return { ok: false, error: "Malformed dedupe_key: missing cancellation id." };
 
-  const [ctx, cancellation] = await Promise.all([
+  const [ctx, cancellation, calendarState] = await Promise.all([
     getNotificationContext(job.booking_id),
     getCancellationContext(cancellationId),
+    getBookingCalendarState(job.booking_id),
   ]);
   if (!ctx) return { ok: false, error: "Booking notification context not found." };
   if (!cancellation) return { ok: false, error: "Cancellation history record not found." };
@@ -468,12 +555,22 @@ async function handleCancellationEmailCustomer(job: IntegrationJobRow): Promise<
     financialFollowupRequired: cancellation.financialFollowupRequired,
     appUrl: getAppUrl(),
   });
+  const withCal = addCalendar(content, {
+    kind: "cancel",
+    audience: "customer",
+    ctx,
+    calendarState,
+    startAt: ctx.start_at,
+    endAt: ctx.end_at,
+    sequence: (await countReschedules(job.booking_id)) + 1,
+  });
 
   const result = await getEmailProvider().send({
     to: ctx.customer_email,
-    subject: content.subject,
-    html: content.html,
-    text: content.text,
+    subject: withCal.content.subject,
+    html: withCal.content.html,
+    text: withCal.content.text,
+    attachments: withCal.attachments,
     idempotencyKey: job.dedupe_key,
   });
 
@@ -484,7 +581,10 @@ async function handleCancellationEmailExpert(job: IntegrationJobRow): Promise<Jo
   const cancellationId = parseEventIdFromDedupeKey(job.dedupe_key);
   if (!cancellationId) return { ok: false, error: "Malformed dedupe_key: missing cancellation id." };
 
-  const ctx = await getNotificationContext(job.booking_id);
+  const [ctx, calendarState] = await Promise.all([
+    getNotificationContext(job.booking_id),
+    getBookingCalendarState(job.booking_id),
+  ]);
   if (!ctx) return { ok: false, error: "Booking notification context not found." };
 
   const content = sessionCancelledExpertEmail({
@@ -494,12 +594,22 @@ async function handleCancellationEmailExpert(job: IntegrationJobRow): Promise<Jo
     bookingReference: ctx.booking_reference,
     appUrl: getAppUrl(),
   });
+  const withCal = addCalendar(content, {
+    kind: "cancel",
+    audience: "expert",
+    ctx,
+    calendarState,
+    startAt: ctx.start_at,
+    endAt: ctx.end_at,
+    sequence: (await countReschedules(job.booking_id)) + 1,
+  });
 
   const result = await getEmailProvider().send({
     to: ctx.expert_email,
-    subject: content.subject,
-    html: content.html,
-    text: content.text,
+    subject: withCal.content.subject,
+    html: withCal.content.html,
+    text: withCal.content.text,
+    attachments: withCal.attachments,
     idempotencyKey: job.dedupe_key,
   });
 

@@ -136,6 +136,7 @@ export type RescheduleContext = {
   newStartAt: string;
   newEndAt: string;
   reason: string | null;
+  createdAt: string;
 };
 
 /** For calendar_update/reschedule_email_* jobs -- reads the exact
@@ -147,7 +148,7 @@ export async function getRescheduleContext(rescheduleId: string): Promise<Resche
   const supabase = createServiceRoleClient();
   const { data } = await supabase
     .from("booking_reschedules")
-    .select("old_start_at, old_end_at, new_start_at, new_end_at, reason")
+    .select("old_start_at, old_end_at, new_start_at, new_end_at, reason, created_at")
     .eq("id", rescheduleId)
     .maybeSingle();
   if (!data) return null;
@@ -157,7 +158,19 @@ export async function getRescheduleContext(rescheduleId: string): Promise<Resche
     newStartAt: data.new_start_at,
     newEndAt: data.new_end_at,
     reason: data.reason,
+    createdAt: data.created_at,
   };
+}
+
+/** How many times the booking has been moved, counting reschedules made up
+ * to `upToCreatedAt` when given. Calendar invites use it as the
+ * version number (SEQUENCE), so each move replaces the last. */
+export async function countReschedules(bookingId: string, upToCreatedAt?: string): Promise<number> {
+  const supabase = createServiceRoleClient();
+  let query = supabase.from("booking_reschedules").select("id", { count: "exact", head: true }).eq("booking_id", bookingId);
+  if (upToCreatedAt) query = query.lte("created_at", upToCreatedAt);
+  const { count } = await query;
+  return count ?? 0;
 }
 
 export type CancellationContext = {
