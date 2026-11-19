@@ -951,3 +951,291 @@ html:has(.wl) {
     margin-top: 36px;
   }
 }
+
+/* Problem -> fix: red "Today" over blue "With Pivotroom", in one card,
+ * so it's unmistakable which part is the problem and which the answer. */
+.pr .wl-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin: 0 0 14px;
+  padding: 4px 12px 4px 8px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.pr .wl-tag .ms {
+  font-size: 16px;
+}
+.pr .wl-tag-bad {
+  background: #fdecea;
+  color: #b42318;
+}
+.pr .wl-tag-good {
+  background: var(--pr-blue-tint);
+  color: var(--pr-blue);
+}
+/* The three cards share rows, so the problem/fix line sits at one height. */
+.pr .wl-pairs {
+  grid-template-rows: auto auto;
+  row-gap: 0;
+}
+.pr .wl-pair {
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
+  overflow: hidden;
+  border: 1px solid var(--pr-line);
+  border-radius: 20px;
+  background: #ffffff;
+}
+.pr .wl-pair-bad,
+.pr .wl-pair-good {
+  padding: 24px;
+}
+.pr .wl-pair-bad {
+  background: #fffafa;
+}
+.pr .wl-pair-good {
+  position: relative;
+  border-top: 1px dashed #f3c7c2;
+  background: #ffffff;
+}
+/* The arrow from problem to fix. */
+.pr .wl-pair-good::before {
+  content: "arrow_downward";
+  position: absolute;
+  top: -15px;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-left: -15px;
+  border-radius: 50%;
+  background: var(--pr-blue);
+  color: #ffffff;
+  font-family: var(--font-material-symbols);
+  font-size: 18px;
+  line-height: 1;
+  font-feature-settings: "liga";
+}
+.pr .wl-pair h3 {
+  margin: 0 0 8px;
+  font-family: var(--pr-display);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.pr .wl-pair p:not(.wl-tag) {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+}
+.pr .wl-pair-bad p:not(.wl-tag) {
+  color: var(--pr-slate);
+}
+.pr .wl-pair-bad h3 {
+  color: #7a271a;
+}
+.pr .wl-pair-good p:not(.wl-tag) {
+  color: var(--pr-ink);
+}
+.pr .wl-answer {
+  justify-content: center;
+  text-align: center;
+}
+
+/* Comparison: the slow path reads as the problem. */
+.pr .wl-path-slow {
+  border-color: #f3c7c2;
+  background: #fffafa;
+}
+.pr .wl-path-slow .wl-path-label {
+  color: #7a271a;
+}
+.pr .wl-path-fast .wl-tag-good {
+  background: rgba(122, 148, 240, 0.18);
+  color: #c8d3fb;
+}
+.pr .wl-bar-fill.slow {
+  background: #f04438;
+}
+.pr .wl-path-slow .wl-bar {
+  background: #fde4e1;
+}
+.pr .wl-path-slow .wl-path-foot {
+  color: #b42318;
+}
+@media (max-width: 640px) {
+  .pr .wl-pair-bad,
+  .pr .wl-pair-good {
+    padding: 20px;
+  }
+  .pr .wl-pair-good {
+    padding-top: 24px;
+  }
+}
+
+/* ---------- Expert page (/waitlist/experts) ---------- */
+.pr .wl-top-link {
+  color: var(--pr-ink);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.pr .wl-top-link:hover {
+  color: var(--pr-blue);
+}
+.pr .wl-xhero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 520px);
+  gap: clamp(32px, 5vw, 64px);
+  align-items: start;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: clamp(16px, 4vw, 48px) var(--pr-gutter) clamp(72px, 9vw, 112px);
+}
+.pr .wl-xhero-copy {
+  align-self: center;
+}
+.pr .wl-xhero .wl-badge {
+  margin-top: 0;
+}
+.pr .wl-xh1 {
+  max-width: 16ch;
+}
+.pr .wl-xlede {
+  margin-top: 20px;
+}
+.pr .wl-xpoints {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 16px;
+}
+.pr .wl-xpoints li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.pr .wl-xpoints .ms {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--pr-blue-tint);
+  color: var(--pr-blue);
+  font-size: 16px;
+}
+.pr .wl-xform {
+  scroll-margin-top: 16px;
+}
+.pr .wl-xform .wl-more {
+  margin-top: 0;
+}
+.pr .wl-steps .wl-card-sm {
+  padding-top: 28px;
+}
+.pr .wl-faq-wrap {
+  max-width: 820px;
+}
+.pr .wl-faq {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 40px;
+}
+.pr .wl-faq-item {
+  border: 1px solid var(--pr-line);
+  border-radius: 16px;
+  background: #ffffff;
+}
+.pr .wl-faq-item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+.pr .wl-faq-item summary::-webkit-details-marker {
+  display: none;
+}
+.pr .wl-faq-item summary .ms {
+  flex: none;
+  font-size: 22px;
+  transition: transform 220ms var(--pr-ease);
+}
+.pr .wl-faq-item[open] summary .ms {
+  transform: rotate(45deg);
+}
+.pr .wl-faq-item p {
+  margin: 0;
+  padding: 0 20px 18px;
+  color: var(--pr-slate);
+  line-height: 1.6;
+}
+.pr .wl-final {
+  text-align: center;
+}
+.pr .wl-final-btn {
+  margin-top: 28px;
+}
+.pr .wl-expert-more {
+  margin: 0;
+  text-align: center;
+}
+@media (max-width: 900px) {
+  .pr .wl-xhero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pr .wl-xhero-copy {
+    position: static;
+  }
+}
+@media (max-width: 640px) {
+  .pr .wl-top-link {
+    font-size: 14px;
+  }
+  .pr .wl-xh1 {
+    font-size: clamp(34px, 9.6vw, 44px);
+    line-height: 1.04;
+  }
+  .pr .wl-xpoints {
+    margin-top: 20px;
+    font-size: 15px;
+  }
+  .pr .wl-faq-item summary {
+    padding: 16px;
+  }
+  .pr .wl-faq-item p {
+    padding: 0 16px 16px;
+  }
+  .pr .wl-final-btn {
+    width: 100%;
+  }
+  .pr .wl-sticky-one {
+    grid-column: 1 / -1;
+  }
+}
+
+.pr .wl-logo-link,
+.pr .wl-logo-link:hover {
+  color: var(--pr-ink);
+}
+@media (max-width: 900px) {
+  .pr .wl-pairs {
+    grid-template-rows: none;
+    row-gap: 20px;
+  }
+}

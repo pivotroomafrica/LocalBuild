@@ -87,7 +87,8 @@ export function WaitlistJoin() {
   );
 }
 
-function JoinForm({ who, onClose }: { who: Who; onClose: () => void }) {
+/** One sign-up form; without onClose it is shown on its own (expert page). */
+export function JoinForm({ who, onClose }: { who: Who; onClose?: () => void }) {
   const [state, action, pending] = useActionState<WaitlistAccountState, FormData>(signUpForWaitlistAction, {});
 
   if (state.status) {
@@ -129,11 +130,13 @@ function JoinForm({ who, onClose }: { who: Who; onClose: () => void }) {
               : "Create your account now, and on launch day you just log in and book."}
           </p>
         </div>
-        <button type="button" className="wl-close" onClick={onClose} aria-label="Close">
-          <span className="ms" aria-hidden="true">
-            close
-          </span>
-        </button>
+        {onClose ? (
+          <button type="button" className="wl-close" onClick={onClose} aria-label="Close">
+            <span className="ms" aria-hidden="true">
+              close
+            </span>
+          </button>
+        ) : null}
       </div>
 
       <NameFields />
@@ -189,7 +192,7 @@ function JoinForm({ who, onClose }: { who: Who; onClose: () => void }) {
  * Phones: once the join buttons have scrolled away, a bar at the bottom
  * keeps both choices one tap away (they open the forms at the top).
  */
-export function WaitlistStickyBar() {
+export function WaitlistStickyBar({ expertOnly = false }: { expertOnly?: boolean }) {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -205,12 +208,20 @@ export function WaitlistStickyBar() {
 
   return (
     <div className={show ? "wl-sticky on" : "wl-sticky"} aria-hidden={!show}>
-      <a href="#join-client" className="btn btn-ink md" tabIndex={show ? 0 : -1}>
-        Join as a client
-      </a>
-      <a href="#join-expert" className="btn btn-line md" tabIndex={show ? 0 : -1}>
-        I&apos;m an expert
-      </a>
+      {expertOnly ? (
+        <a href="#apply" className="btn btn-ink md wl-sticky-one" tabIndex={show ? 0 : -1}>
+          Apply as an expert
+        </a>
+      ) : (
+        <>
+          <a href="#join-client" className="btn btn-ink md" tabIndex={show ? 0 : -1}>
+            Join as a client
+          </a>
+          <a href="#join-expert" className="btn btn-line md" tabIndex={show ? 0 : -1}>
+            I&apos;m an expert
+          </a>
+        </>
+      )}
     </div>
   );
 }

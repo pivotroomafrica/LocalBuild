@@ -40,21 +40,41 @@ const PROMISES: Ms[] = [
   },
 ];
 
-const DIASPORA_PAINS: Ms[] = [
+type Pair = {
+  icon: string;
+  problem: string;
+  problemText: string;
+  fix: string;
+  fixText: string;
+};
+
+/** Each problem, and Pivotroom's answer to it, in one card. */
+const DIASPORA: Pair[] = [
   {
     icon: "public_off",
-    title: "Advice built for somewhere else",
-    text: "Frameworks from other markets, applied to licences, suppliers and banks their authors have never dealt with.",
+    problem: "Advice built for somewhere else",
+    problemText:
+      "Frameworks from other markets, applied to licences, suppliers and banks their authors have never dealt with.",
+    fix: "Advice from someone who built here",
+    fixText:
+      "Talk to an expert who has done it in Ethiopia, in your sector, recently.",
   },
   {
     icon: "hourglass_bottom",
-    title: "Paying to learn the basics",
-    text: "Weeks of fees before anyone tells you what an experienced operator would have said in the first ten minutes.",
+    problem: "Paying to learn the basics",
+    problemText:
+      "Weeks of fees before anyone tells you what an experienced operator would have said in the first ten minutes.",
+    fix: "The basics in the first ten minutes",
+    fixText:
+      "One focused hour at a price you see up front, not a retainer that runs for months.",
   },
   {
     icon: "flight_takeoff",
-    title: "A good idea, lost",
-    text: "When the money runs low before the business runs well, the investment goes back abroad, and the opportunity with it.",
+    problem: "A good idea, lost",
+    problemText:
+      "When the money runs low before the business runs well, the investment goes back abroad, and the opportunity with it.",
+    fix: "Capital kept for the business",
+    fixText: "Find the flaws in your plan before you spend on them, not after.",
   },
 ];
 
@@ -204,9 +224,14 @@ export default async function WaitlistPage() {
             </button>
           </form>
         ) : (
-          <Link href="/auth/login" className="btn btn-line wl-top-btn">
-            Log in
-          </Link>
+          <div className="wl-account">
+            <Link href="/waitlist/experts" className="wl-top-link">
+              For experts
+            </Link>
+            <Link href="/auth/login" className="btn btn-line wl-top-btn">
+              Log in
+            </Link>
+          </div>
         )}
       </header>
 
@@ -317,26 +342,38 @@ export default async function WaitlistPage() {
               back where it came from. Ethiopia loses an investor. You lose
               years.
             </p>
-            <div className="wl-grid3">
-              {DIASPORA_PAINS.map((item, index) => (
+            <div className="wl-grid3 wl-pairs">
+              {DIASPORA.map((item, index) => (
                 <div
-                  key={item.title}
-                  className="wl-card"
+                  key={item.problem}
+                  className="wl-pair"
                   data-reveal
                   style={{ "--d": index } as React.CSSProperties}
                 >
-                  <span className="wl-icon wl-icon-warn ms" aria-hidden="true">
-                    {item.icon}
-                  </span>
-                  <h3>{item.title}</h3>
-                  <p>{item.text}</p>
+                  <div className="wl-pair-bad">
+                    <p className="wl-tag wl-tag-bad">
+                      <span className="ms" aria-hidden="true">
+                        close
+                      </span>
+                      Today
+                    </p>
+                    <h3>{item.problem}</h3>
+                    <p>{item.problemText}</p>
+                  </div>
+                  <div className="wl-pair-good">
+                    <p className="wl-tag wl-tag-good">
+                      <span className="ms" aria-hidden="true">
+                        check
+                      </span>
+                      With Pivotroom
+                    </p>
+                    <h3>{item.fix}</h3>
+                    <p>{item.fixText}</p>
+                  </div>
                 </div>
               ))}
             </div>
             <div className="wl-answer" data-reveal>
-              <span className="ms" aria-hidden="true">
-                check_circle
-              </span>
               <p>
                 <strong>Before you commit a single birr</strong>, sit down with
                 someone who has built in your sector, in Ethiopia. One hour can
@@ -367,12 +404,13 @@ export default async function WaitlistPage() {
             </p>
             <div className="wl-compare">
               <div className="wl-path wl-path-slow" data-reveal>
-                <p className="wl-path-label">
+                <p className="wl-tag wl-tag-bad">
                   <span className="ms" aria-hidden="true">
-                    sync_problem
+                    close
                   </span>
-                  Trial and error
+                  Without Pivotroom
                 </p>
+                <p className="wl-path-label">Trial and error</p>
                 <ol>
                   {TRIAL_STEPS.map((step) => (
                     <li key={step}>{step}</li>
@@ -390,12 +428,13 @@ export default async function WaitlistPage() {
                 data-reveal
                 style={{ "--d": 1 } as React.CSSProperties}
               >
-                <p className="wl-path-label">
+                <p className="wl-tag wl-tag-good">
                   <span className="ms" aria-hidden="true">
-                    bolt
+                    check
                   </span>
                   With Pivotroom
                 </p>
+                <p className="wl-path-label">One hour with someone who knows</p>
                 <ol>
                   {PIVOT_STEPS.map((step) => (
                     <li key={step}>{step}</li>
@@ -423,8 +462,8 @@ export default async function WaitlistPage() {
               How it works
             </p>
             <h2 className="h2 wl-h2" data-reveal>
-              Simple, because your problem{" "}
-              <span className="wl-acc">isn&apos;t.</span>
+              From question to decision,{" "}
+              <span className="wl-acc">in three steps.</span>
             </h2>
             <div className="wl-grid3 wl-steps">
               {HOW.map((item, index) => (
@@ -549,6 +588,17 @@ export default async function WaitlistPage() {
                     </Link>
                   </p>
                 ) : null}
+                <p className="wl-expert-more">
+                  <Link
+                    href="/waitlist/experts"
+                    className="btn btn-line md block"
+                  >
+                    Everything experts need to know
+                    <span className="ms" aria-hidden="true">
+                      arrow_forward
+                    </span>
+                  </Link>
+                </p>
               </div>
             </div>
           </div>
