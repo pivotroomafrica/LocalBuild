@@ -49,15 +49,13 @@ export function sessionInvite(args: {
     title: `Pivotroom session with ${args.withName}`,
     description: [
       online
-        ? args.meetingUrl
-          ? `Online. Join on Google Meet: ${args.meetingUrl}`
-          : "Online. The Google Meet link will be on your session page before the session."
+        ? `Online, on Google Meet. Join from your session page: ${sessionUrl}\nSign in to Google as ${args.recipient.email} when joining; with another account you'll wait at "Ask to join".`
         : "In person. Agree the place with each other before the session.",
       `Booking reference: ${args.bookingReference}`,
-      `Session page: ${sessionUrl}`,
+      ...(online ? [] : [`Session page: ${sessionUrl}`]),
       "Need to move or cancel? Use the session page. Questions: hello@pivotroom.africa",
     ].join("\n"),
-    location: online ? (args.meetingUrl ?? "Online (Google Meet)") : "In person",
+    location: online ? `Online (Google Meet): ${sessionUrl}` : "In person",
     startAt: args.startAt,
     endAt: args.endAt,
     uid: args.bookingReference,

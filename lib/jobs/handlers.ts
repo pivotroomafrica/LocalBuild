@@ -142,6 +142,7 @@ async function handleBookingConfirmationEmailCustomer(job: IntegrationJobRow): P
     sessionFormat: ctx.session_format,
     bookingReference: ctx.booking_reference,
     meetingUrl: calendarState?.calendar_meeting_url ?? null,
+    guestEmail: ctx.customer_email,
     appUrl: getAppUrl(),
   });
   const withCal = addCalendar(content, {
@@ -194,6 +195,7 @@ async function handleBookingConfirmationEmailExpert(job: IntegrationJobRow): Pro
     bookingReference: ctx.booking_reference,
     meetingUrl: calendarState?.calendar_meeting_url ?? null,
     discussionTopic: ctx.discussion_topic,
+    guestEmail: ctx.expert_email,
     appUrl: getAppUrl(),
   });
   const withCal = addCalendar(content, {
@@ -290,6 +292,7 @@ async function handleSessionReminderCustomer(job: IntegrationJobRow): Promise<Jo
     bookingReference: ctx.booking_reference,
     meetingUrl: calendarState?.calendar_meeting_url ?? null,
     offsetMinutes,
+    guestEmail: ctx.customer_email,
     appUrl: getAppUrl(),
   });
 
@@ -325,6 +328,7 @@ async function handleSessionReminderExpert(job: IntegrationJobRow): Promise<JobH
     meetingUrl: calendarState?.calendar_meeting_url ?? null,
     discussionTopic: ctx.discussion_topic,
     offsetMinutes,
+    guestEmail: ctx.expert_email,
     appUrl: getAppUrl(),
   });
 
@@ -415,6 +419,7 @@ async function handleRescheduleEmailCustomer(job: IntegrationJobRow): Promise<Jo
     sessionFormat: ctx.session_format,
     bookingReference: ctx.booking_reference,
     meetingUrl: calendarState?.calendar_meeting_url ?? null,
+    guestEmail: ctx.customer_email,
     appUrl: getAppUrl(),
   });
   const withCal = addCalendar(content, {
@@ -460,6 +465,7 @@ async function handleRescheduleEmailExpert(job: IntegrationJobRow): Promise<JobH
     sessionFormat: ctx.session_format,
     bookingReference: ctx.booking_reference,
     meetingUrl: calendarState?.calendar_meeting_url ?? null,
+    guestEmail: ctx.expert_email,
     appUrl: getAppUrl(),
   });
   const withCal = addCalendar(content, {

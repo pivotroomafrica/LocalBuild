@@ -1,9 +1,19 @@
+import { MeetAccountNote } from "@/components/booking/MeetAccountNote";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { requireCustomerPage, getCustomerSessionDetail } from "@/lib/dashboard/data";
-import { formatSessionDateTime, pendingActionForSession } from "@/lib/dashboard/presentation";
-import { SessionStatusPill, PaymentStatusPill } from "@/components/session/StatusPill";
+import {
+  requireCustomerPage,
+  getCustomerSessionDetail,
+} from "@/lib/dashboard/data";
+import {
+  formatSessionDateTime,
+  pendingActionForSession,
+} from "@/lib/dashboard/presentation";
+import {
+  SessionStatusPill,
+  PaymentStatusPill,
+} from "@/components/session/StatusPill";
 import { SessionActionsPanel } from "@/components/booking/SessionActionsPanel";
 import { hasNotStarted } from "@/lib/booking/data";
 import { SESSION_FORMAT_LABELS, type SessionFormat } from "@/types/booking";
@@ -51,26 +61,51 @@ export default async function DashboardSessionDetailPage({
 
   const detail = await getCustomerSessionDetail(supabase, userId, reference);
   if (!detail) notFound();
+  const myEmail = (await supabase.auth.getUser()).data.user?.email ?? null;
 
-  const { booking, intake, payments, derivedState, rescheduleHistory, cancellation, pendingChangeRequest } = detail;
-  const action = pendingActionForSession(derivedState, booking.booking_reference);
-  const ownReview = isReviewable(booking) ? await getOwnReviewForBooking(supabase, booking.id) : null;
-  const isPaid = booking.booking_status === "confirmed" || booking.booking_status === "completed";
+  const {
+    booking,
+    intake,
+    payments,
+    derivedState,
+    rescheduleHistory,
+    cancellation,
+    pendingChangeRequest,
+  } = detail;
+  const action = pendingActionForSession(
+    derivedState,
+    booking.booking_reference,
+  );
+  const ownReview = isReviewable(booking)
+    ? await getOwnReviewForBooking(supabase, booking.id)
+    : null;
+  const isPaid =
+    booking.booking_status === "confirmed" ||
+    booking.booking_status === "completed";
   const [receipt, { data: me }] = isPaid
     ? await Promise.all([
         getReceiptForBooking(supabase, booking.id),
-        supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
+        supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", userId)
+          .maybeSingle(),
       ])
     : [null, { data: null }];
 
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <Link href="/dashboard/sessions" className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)]">
+        <Link
+          href="/dashboard/sessions"
+          className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+        >
           &larr; Back to My Sessions
         </Link>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">{detail.expertName}</h1>
+          <h1 className="text-[28px] font-extrabold leading-tight tracking-[-0.03em] text-[var(--color-text)] sm:text-[32px]">
+            {detail.expertName}
+          </h1>
           <SessionStatusPill state={derivedState} />
         </div>
       </div>
@@ -109,7 +144,9 @@ export default async function DashboardSessionDetailPage({
             </p>
           ) : (
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-[var(--color-text)]">How was your session? Your review helps the next client decide.</p>
+              <p className="text-sm text-[var(--color-text)]">
+                How was your session? Your review helps the next client decide.
+              </p>
               <Link
                 href={`/dashboard/sessions/${booking.booking_reference}/review`}
                 className="inline-flex items-center justify-center rounded-full bg-[var(--color-brand)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-brand-hover)]"
@@ -123,11 +160,15 @@ export default async function DashboardSessionDetailPage({
 
       {pendingChangeRequest ? (
         <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-bg)] p-5">
-          <h2 className="text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Your expert has requested a new time</h2>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">{pendingChangeRequest.reason}</p>
+          <h2 className="text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">
+            Your expert has requested a new time
+          </h2>
+          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+            {pendingChangeRequest.reason}
+          </p>
           <p className="mt-2 text-xs text-[var(--color-text-muted)]">
-            Your session hasn&apos;t changed yet. Reschedule below to pick a new time, or decline to keep the
-            current one.
+            Your session hasn&apos;t changed yet. Reschedule below to pick a new
+            time, or decline to keep the current one.
           </p>
         </section>
       ) : null}
@@ -145,27 +186,45 @@ export default async function DashboardSessionDetailPage({
       />
 
       <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
-        <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Session</h2>
+        <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">
+          Session
+        </h2>
         <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-          <Field label="Date & time" value={formatSessionDateTime(booking.start_at, booking.customer_timezone)} />
-          <Field label="Duration" value={`${booking.duration_minutes} minutes`} />
+          <Field
+            label="Date & time"
+            value={formatSessionDateTime(
+              booking.start_at,
+              booking.customer_timezone,
+            )}
+          />
+          <Field
+            label="Duration"
+            value={`${booking.duration_minutes} minutes`}
+          />
           <Field
             label="Format"
-            value={SESSION_FORMAT_LABELS[booking.session_format as "online" | "in_person"] ?? booking.session_format}
+            value={
+              SESSION_FORMAT_LABELS[
+                booking.session_format as "online" | "in_person"
+              ] ?? booking.session_format
+            }
           />
           <Field label="Booking reference" value={booking.booking_reference} />
         </dl>
         <div className="mt-3 text-xs text-[var(--color-text-muted)]">
           {booking.session_format === "online" ? (
             booking.calendar_meeting_url ? (
-              <a
-                href={booking.calendar_meeting_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm font-medium text-[var(--color-accent)] hover:underline"
-              >
-                Join Google Meet
-              </a>
+              <>
+                <a
+                  href={booking.calendar_meeting_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-[var(--color-accent)] hover:underline"
+                >
+                  Join Google Meet
+                </a>
+                <MeetAccountNote email={myEmail} />
+              </>
             ) : booking.booking_status === "confirmed" ? (
               "Meeting details are being prepared."
             ) : (
@@ -179,12 +238,26 @@ export default async function DashboardSessionDetailPage({
 
       {intake ? (
         <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
-          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">What You Wanted to Discuss</h2>
+          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">
+            What You Wanted to Discuss
+          </h2>
           <dl className="flex flex-col gap-3 text-sm">
-            <Field label="Discussion topic" value={intake.discussion_topic} block />
-            <Field label="Additional context" value={intake.additional_context} block />
+            <Field
+              label="Discussion topic"
+              value={intake.discussion_topic}
+              block
+            />
+            <Field
+              label="Additional context"
+              value={intake.additional_context}
+              block
+            />
             {intake.materials_to_review ? (
-              <Field label="Materials to review" value={intake.materials_to_review} block />
+              <Field
+                label="Materials to review"
+                value={intake.materials_to_review}
+                block
+              />
             ) : null}
           </dl>
         </section>
@@ -192,14 +265,17 @@ export default async function DashboardSessionDetailPage({
 
       {cancellation ? (
         <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
-          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Cancellation</h2>
+          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">
+            Cancellation
+          </h2>
           <dl className="flex flex-col gap-3 text-sm">
             <Field label="Cancelled by" value={cancellation.actor_type} />
             <Field label="Reason" value={cancellation.reason} block />
           </dl>
           {cancellation.financial_followup_required ? (
             <p className="mt-3 text-xs text-[var(--color-text-muted)]">
-              This booking had a verified payment. Pivotroom will follow up separately about it.
+              This booking had a verified payment. Pivotroom will follow up
+              separately about it.
             </p>
           ) : null}
         </section>
@@ -207,13 +283,25 @@ export default async function DashboardSessionDetailPage({
 
       {rescheduleHistory.length > 0 ? (
         <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
-          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Reschedule History</h2>
+          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">
+            Reschedule History
+          </h2>
           <ul className="flex flex-col gap-3">
             {rescheduleHistory.map((reschedule) => (
-              <li key={reschedule.id} className="rounded-xl bg-[var(--color-bg)] p-3 text-sm">
+              <li
+                key={reschedule.id}
+                className="rounded-xl bg-[var(--color-bg)] p-3 text-sm"
+              >
                 <p className="text-[var(--color-text)]">
-                  {formatSessionDateTime(reschedule.old_start_at, booking.customer_timezone)} &rarr;{" "}
-                  {formatSessionDateTime(reschedule.new_start_at, booking.customer_timezone)}
+                  {formatSessionDateTime(
+                    reschedule.old_start_at,
+                    booking.customer_timezone,
+                  )}{" "}
+                  &rarr;{" "}
+                  {formatSessionDateTime(
+                    reschedule.new_start_at,
+                    booking.customer_timezone,
+                  )}
                 </p>
                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">
                   Rescheduled by {reschedule.actor_type}
@@ -227,21 +315,33 @@ export default async function DashboardSessionDetailPage({
 
       {payments.length > 0 ? (
         <section className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5 shadow-[var(--shadow-card)]">
-          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">Payment</h2>
+          <h2 className="mb-3 text-[15px] font-extrabold tracking-[-0.01em] text-[var(--color-text)]">
+            Payment
+          </h2>
           <ul className="flex flex-col gap-3">
             {payments.map((payment) => (
-              <li key={payment.id} className="rounded-xl bg-[var(--color-bg)] p-3">
+              <li
+                key={payment.id}
+                className="rounded-xl bg-[var(--color-bg)] p-3"
+              >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-medium text-[var(--color-text)]">
-                    {Number(payment.amount_paid).toLocaleString()} {payment.currency}
+                    {Number(payment.amount_paid).toLocaleString()}{" "}
+                    {payment.currency}
                   </span>
-                  <PaymentStatusPill status={payment.payment_status as PaymentStatus} />
+                  <PaymentStatusPill
+                    status={payment.payment_status as PaymentStatus}
+                  />
                 </div>
                 <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-                  Submitted {new Date(payment.submitted_at).toLocaleDateString()}
+                  Submitted{" "}
+                  {new Date(payment.submitted_at).toLocaleDateString()}
                 </p>
-                {payment.payment_status === "rejected" && payment.rejection_reason ? (
-                  <p className="mt-2 text-sm text-[var(--color-danger)]">{payment.rejection_reason}</p>
+                {payment.payment_status === "rejected" &&
+                payment.rejection_reason ? (
+                  <p className="mt-2 text-sm text-[var(--color-danger)]">
+                    {payment.rejection_reason}
+                  </p>
                 ) : null}
               </li>
             ))}
@@ -250,24 +350,42 @@ export default async function DashboardSessionDetailPage({
       ) : null}
 
       {isPaid ? (
-        <ReceiptPanel bookingReference={booking.booking_reference} defaultName={me?.full_name ?? ""} receipt={receipt} />
+        <ReceiptPanel
+          bookingReference={booking.booking_reference}
+          defaultName={me?.full_name ?? ""}
+          receipt={receipt}
+        />
       ) : null}
     </div>
   );
 }
 
-function Field({ label, value, block = false }: { label: string; value: string; block?: boolean }) {
+function Field({
+  label,
+  value,
+  block = false,
+}: {
+  label: string;
+  value: string;
+  block?: boolean;
+}) {
   if (block) {
     return (
       <div>
-        <dt className="text-xs font-medium text-[var(--color-text-muted)]">{label}</dt>
-        <dd className="mt-1 whitespace-pre-wrap text-sm text-[var(--color-text)]">{value}</dd>
+        <dt className="text-xs font-medium text-[var(--color-text-muted)]">
+          {label}
+        </dt>
+        <dd className="mt-1 whitespace-pre-wrap text-sm text-[var(--color-text)]">
+          {value}
+        </dd>
       </div>
     );
   }
   return (
     <div>
-      <dt className="text-xs font-medium text-[var(--color-text-muted)]">{label}</dt>
+      <dt className="text-xs font-medium text-[var(--color-text-muted)]">
+        {label}
+      </dt>
       <dd className="text-sm text-[var(--color-text)]">{value}</dd>
     </div>
   );

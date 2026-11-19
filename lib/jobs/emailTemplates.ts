@@ -78,15 +78,36 @@ function offsetLabel(offsetMinutes: number): string {
   return `in ${offsetMinutes} minutes`;
 }
 
-function meetingDetailsHtml(sessionFormat: string, meetingUrl: string | null): string {
+/**
+ * How to join. Online sessions never show the raw Meet link in an email:
+ * the "Join session" button opens the session page in Pivotroom, where
+ * only the signed-in client and expert see the link. The note names the
+ * Google account to join with: the meeting admits the invited address
+ * straight in, and anyone else waits at "Ask to join".
+ */
+function meetingDetailsHtml(sessionFormat: string, guestEmail?: string | null): string {
   if (sessionFormat !== "online") {
     return `<p style="margin:12px 0 0 0;">Meeting location will be provided separately.</p>`;
   }
-  if (meetingUrl) {
-    return `<p style="margin:12px 0 0 0;"><a href="${meetingUrl}" style="color:${BRAND_COLOR};">Join Google Meet</a></p>`;
-  }
-  return `<p style="margin:12px 0 0 0;">Meeting details will be added before your session.</p>`;
+  const account = guestEmail
+    ? `<p style="margin:8px 0 0 0;padding:10px 12px;border-radius:6px;background-color:#fef9c3;color:#713f12;">When Google Meet opens, be signed in to Google as <strong>${escapeHtml(guestEmail)}</strong>, the address this email was sent to. Signed in with any other account, you'll be left waiting at "Ask to join".</p>`
+    : "";
+  return `<p style="margin:12px 0 0 0;">Online, on Google Meet. Use the <strong>Join session</strong> button below: the meeting link is on your session page in Pivotroom.</p>${account}`;
 }
+
+function meetingDetailsText(sessionFormat: string, guestEmail?: string | null): string {
+  if (sessionFormat !== "online") return "Meeting location will be provided separately.";
+  return [
+    "Online, on Google Meet. Join from your session page in Pivotroom (link below).",
+    guestEmail
+      ? `When Google Meet opens, be signed in to Google as ${guestEmail}, the address this email was sent to. With any other account you'll be left waiting at "Ask to join".`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+const ctaFor = (sessionFormat: string) => (sessionFormat === "online" ? "Join session" : "View Session");
 
 // =========================================================================
 // booking_confirmation_email_customer (spec section 14)
@@ -99,6 +120,8 @@ export function bookingConfirmationCustomerEmail(params: {
   sessionFormat: string;
   bookingReference: string;
   meetingUrl: string | null;
+  /** The invited address: the Google account to join Meet with. */
+  guestEmail?: string | null;
   appUrl: string;
 }): EmailContent {
   const dateTime = formatSessionDateTime(params.startAt, params.customerTimezone);
@@ -116,9 +139,9 @@ export function bookingConfirmationCustomerEmail(params: {
           fieldRowHtml("Format", formatLabel) +
           fieldRowHtml("Booking reference", params.bookingReference),
       )}
-      ${meetingDetailsHtml(params.sessionFormat, params.meetingUrl)}
+      ${meetingDetailsHtml(params.sessionFormat, params.guestEmail)}
     `,
-    ctaLabel: "View Session",
+    ctaLabel: ctaFor(params.sessionFormat),
     ctaUrl,
   });
 
@@ -133,13 +156,9 @@ export function bookingConfirmationCustomerEmail(params: {
     `Format: ${formatLabel}`,
     `Booking reference: ${params.bookingReference}`,
     "",
-    params.sessionFormat === "online"
-      ? params.meetingUrl
-        ? `Join Google Meet: ${params.meetingUrl}`
-        : "Meeting details will be added before your session."
-      : "Meeting location will be provided separately.",
+    meetingDetailsText(params.sessionFormat, params.guestEmail),
     "",
-    `View your session: ${ctaUrl}`,
+    `${ctaFor(params.sessionFormat)}: ${ctaUrl}`,
   );
 
   return { subject: "Your Pivotroom session is confirmed", html, text };
@@ -157,6 +176,8 @@ export function bookingConfirmationExpertEmail(params: {
   sessionFormat: string;
   bookingReference: string;
   meetingUrl: string | null;
+  /** The invited address: the Google account to join Meet with. */
+  guestEmail?: string | null;
   discussionTopic: string | null;
   appUrl: string;
 }): EmailContent {
@@ -178,10 +199,10 @@ export function bookingConfirmationExpertEmail(params: {
           fieldRowHtml("Format", formatLabel) +
           fieldRowHtml("Booking reference", params.bookingReference),
       )}
-      ${meetingDetailsHtml(params.sessionFormat, params.meetingUrl)}
+      ${meetingDetailsHtml(params.sessionFormat, params.guestEmail)}
       ${topicHtml}
     `,
-    ctaLabel: "View Session",
+    ctaLabel: ctaFor(params.sessionFormat),
     ctaUrl,
   });
 
@@ -194,14 +215,10 @@ export function bookingConfirmationExpertEmail(params: {
     `Format: ${formatLabel}`,
     `Booking reference: ${params.bookingReference}`,
     "",
-    params.sessionFormat === "online"
-      ? params.meetingUrl
-        ? `Join Google Meet: ${params.meetingUrl}`
-        : "Meeting details will be added before the session."
-      : "Meeting location will be provided separately.",
+    meetingDetailsText(params.sessionFormat, params.guestEmail),
     params.discussionTopic ? `\nDiscussion topic: ${truncate(params.discussionTopic, 200)}` : "",
     "",
-    `View session: ${ctaUrl}`,
+    `${ctaFor(params.sessionFormat)}: ${ctaUrl}`,
   );
 
   return { subject: "New confirmed Pivotroom session", html, text };
@@ -263,6 +280,8 @@ export function sessionReminderCustomerEmail(params: {
   sessionFormat: string;
   bookingReference: string;
   meetingUrl: string | null;
+  /** The invited address: the Google account to join Meet with. */
+  guestEmail?: string | null;
   offsetMinutes: number;
   appUrl: string;
 }): EmailContent {
@@ -280,9 +299,9 @@ export function sessionReminderCustomerEmail(params: {
           fieldRowHtml("Duration", `${params.durationMinutes} minutes`) +
           fieldRowHtml("Format", formatLabel),
       )}
-      ${meetingDetailsHtml(params.sessionFormat, params.meetingUrl)}
+      ${meetingDetailsHtml(params.sessionFormat, params.guestEmail)}
     `,
-    ctaLabel: "View Session",
+    ctaLabel: ctaFor(params.sessionFormat),
     ctaUrl,
   });
 
@@ -294,9 +313,9 @@ export function sessionReminderCustomerEmail(params: {
     `Duration: ${params.durationMinutes} minutes`,
     `Format: ${formatLabel}`,
     "",
-    params.sessionFormat === "online" && params.meetingUrl ? `Join Google Meet: ${params.meetingUrl}` : "",
+    meetingDetailsText(params.sessionFormat, params.guestEmail),
     "",
-    `View session: ${ctaUrl}`,
+    `${ctaFor(params.sessionFormat)}: ${ctaUrl}`,
   );
 
   return { subject, html, text };
@@ -310,6 +329,8 @@ export function sessionReminderExpertEmail(params: {
   sessionFormat: string;
   bookingReference: string;
   meetingUrl: string | null;
+  /** The invited address: the Google account to join Meet with. */
+  guestEmail?: string | null;
   discussionTopic: string | null;
   offsetMinutes: number;
   appUrl: string;
@@ -331,10 +352,10 @@ export function sessionReminderExpertEmail(params: {
           fieldRowHtml("Duration", `${params.durationMinutes} minutes`) +
           fieldRowHtml("Format", formatLabel),
       )}
-      ${meetingDetailsHtml(params.sessionFormat, params.meetingUrl)}
+      ${meetingDetailsHtml(params.sessionFormat, params.guestEmail)}
       ${topicHtml}
     `,
-    ctaLabel: "View Session",
+    ctaLabel: ctaFor(params.sessionFormat),
     ctaUrl,
   });
 
@@ -346,10 +367,10 @@ export function sessionReminderExpertEmail(params: {
     `Duration: ${params.durationMinutes} minutes`,
     `Format: ${formatLabel}`,
     "",
-    params.sessionFormat === "online" && params.meetingUrl ? `Join Google Meet: ${params.meetingUrl}` : "",
+    meetingDetailsText(params.sessionFormat, params.guestEmail),
     params.discussionTopic ? `\nDiscussion topic: ${truncate(params.discussionTopic, 200)}` : "",
     "",
-    `View session: ${ctaUrl}`,
+    `${ctaFor(params.sessionFormat)}: ${ctaUrl}`,
   );
 
   return { subject, html, text };
@@ -368,6 +389,8 @@ export function sessionRescheduledCustomerEmail(params: {
   sessionFormat: string;
   bookingReference: string;
   meetingUrl: string | null;
+  /** The invited address: the Google account to join Meet with. */
+  guestEmail?: string | null;
   appUrl: string;
 }): EmailContent {
   const oldDateTime = formatSessionDateTime(params.oldStartAt, params.customerTimezone);
@@ -386,9 +409,9 @@ export function sessionRescheduledCustomerEmail(params: {
           fieldRowHtml("Format", formatLabel) +
           fieldRowHtml("Booking reference", params.bookingReference),
       )}
-      ${meetingDetailsHtml(params.sessionFormat, params.meetingUrl)}
+      ${meetingDetailsHtml(params.sessionFormat, params.guestEmail)}
     `,
-    ctaLabel: "View Session",
+    ctaLabel: ctaFor(params.sessionFormat),
     ctaUrl,
   });
 
@@ -402,7 +425,9 @@ export function sessionRescheduledCustomerEmail(params: {
     `Format: ${formatLabel}`,
     `Booking reference: ${params.bookingReference}`,
     "",
-    `View your session: ${ctaUrl}`,
+    meetingDetailsText(params.sessionFormat, params.guestEmail),
+    "",
+    `${ctaFor(params.sessionFormat)}: ${ctaUrl}`,
   );
 
   return { subject: "Your Pivotroom session has been rescheduled", html, text };
@@ -417,6 +442,8 @@ export function sessionRescheduledExpertEmail(params: {
   sessionFormat: string;
   bookingReference: string;
   meetingUrl: string | null;
+  /** The invited address: the Google account to join Meet with. */
+  guestEmail?: string | null;
   appUrl: string;
 }): EmailContent {
   const oldDateTime = formatSessionDateTime(params.oldStartAt, params.expertTimezone);
@@ -435,9 +462,9 @@ export function sessionRescheduledExpertEmail(params: {
           fieldRowHtml("Format", formatLabel) +
           fieldRowHtml("Booking reference", params.bookingReference),
       )}
-      ${meetingDetailsHtml(params.sessionFormat, params.meetingUrl)}
+      ${meetingDetailsHtml(params.sessionFormat, params.guestEmail)}
     `,
-    ctaLabel: "View Session",
+    ctaLabel: ctaFor(params.sessionFormat),
     ctaUrl,
   });
 
@@ -451,7 +478,9 @@ export function sessionRescheduledExpertEmail(params: {
     `Format: ${formatLabel}`,
     `Booking reference: ${params.bookingReference}`,
     "",
-    `View session: ${ctaUrl}`,
+    meetingDetailsText(params.sessionFormat, params.guestEmail),
+    "",
+    `${ctaFor(params.sessionFormat)}: ${ctaUrl}`,
   );
 
   return { subject: "A confirmed Pivotroom session has been rescheduled", html, text };
