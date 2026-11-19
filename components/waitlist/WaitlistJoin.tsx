@@ -45,7 +45,7 @@ export function WaitlistJoin() {
   }, []);
 
   return (
-    <div className="wl-join" id="join-forms">
+    <div className="wl-join" id="join-forms" data-join-forms>
       <div className="wl-choice" role="group" aria-label="Join Pivotroom">
         <button
           type="button"
@@ -175,12 +175,42 @@ function JoinForm({ who, onClose }: { who: Who; onClose: () => void }) {
           {state.error}
         </p>
       ) : null}
-      <button type="submit" className="wl-btn-dark wl-btn-wide" disabled={pending}>
+      <button type="submit" className="btn btn-ink lg block" disabled={pending}>
         {pending ? "Creating your account…" : expert ? "Create my expert account" : "Join the waitlist"}
       </button>
       <p className="wl-small">
         Already have an account? <a href={expert ? "/auth/login?next=/expert/onboarding" : "/auth/login"}>Log in</a>
       </p>
     </form>
+  );
+}
+
+/**
+ * Phones: once the join buttons have scrolled away, a bar at the bottom
+ * keeps both choices one tap away (they open the forms at the top).
+ */
+export function WaitlistStickyBar() {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    const target = document.querySelector("[data-join-forms]");
+    if (!target || !("IntersectionObserver" in window)) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setShow(!entry.isIntersecting && entry.boundingClientRect.top < 0),
+      { threshold: 0 },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div className={show ? "wl-sticky on" : "wl-sticky"} aria-hidden={!show}>
+      <a href="#join-client" className="btn btn-ink md" tabIndex={show ? 0 : -1}>
+        Join as a client
+      </a>
+      <a href="#join-expert" className="btn btn-line md" tabIndex={show ? 0 : -1}>
+        I&apos;m an expert
+      </a>
+    </div>
   );
 }

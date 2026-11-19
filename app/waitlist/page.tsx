@@ -1,16 +1,12 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Instrument_Serif } from "next/font/google";
 import { createClient } from "@/lib/supabase/server";
 import { getDirectoryForRequest } from "@/lib/public/cached";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { signOutAction } from "@/lib/auth/actions";
-import { WaitlistJoin } from "@/components/waitlist/WaitlistJoin";
+import { WaitlistJoin, WaitlistStickyBar } from "@/components/waitlist/WaitlistJoin";
 import { RevealOnScroll } from "@/components/site/RevealOnScroll";
 import "./waitlist.css";
-
-/** The italic accent word in headings. */
-const serif = Instrument_Serif({ subsets: ["latin"], weight: "400", style: "italic", variable: "--font-wl-serif" });
 
 export const metadata: Metadata = {
   title: "Pivotroom is opening soon",
@@ -125,7 +121,7 @@ export default async function WaitlistPage() {
   }
 
   return (
-    <div className={`pr wl ${serif.variable}`}>
+    <div className="pr wl">
       <RevealOnScroll />
       <div className="wl-sky" aria-hidden="true">
         <span className="wl-cloud c1" />
@@ -138,12 +134,12 @@ export default async function WaitlistPage() {
         {user ? (
           <form action={signOutAction} className="wl-account">
             <span className="wl-who">{user.email}</span>
-            <button type="submit" className="wl-pill-btn">
+            <button type="submit" className="btn btn-line wl-top-btn">
               Sign out
             </button>
           </form>
         ) : (
-          <Link href="/auth/login" className="wl-pill-btn">
+          <Link href="/auth/login" className="btn btn-line wl-top-btn">
             Log in
           </Link>
         )}
@@ -159,12 +155,12 @@ export default async function WaitlistPage() {
             <span className="wl-dot" aria-hidden="true" />
             Opening soon
           </p>
-          <h1 className="wl-h1">
+          <h1 className="h1 wl-h1">
             Stop guessing.
             <br />
-            Talk to someone who&apos;s <em>done it.</em>
+            Talk to someone who&apos;s <span className="wl-acc">done it.</span>
           </h1>
-          <p className="wl-lede">
+          <p className="lede wl-lede">
             Pivotroom connects investors and businesses with vetted Ethiopian founders, executives and professionals,
             so you reach your goal faster, and in control.
           </p>
@@ -185,7 +181,7 @@ export default async function WaitlistPage() {
           ) : (
             <div className="wl-done wl-hero-done">
               <p className="wl-done-text">{expertNote}</p>
-              <Link href={expertHref} className="wl-btn-dark" style={{ marginTop: 16 }}>
+              <Link href={expertHref} className="btn btn-ink lg" style={{ marginTop: 16 }}>
                 {expertLabel}
                 <span className="ms" aria-hidden="true">
                   arrow_forward
@@ -222,11 +218,11 @@ export default async function WaitlistPage() {
         {/* ---------------- Diaspora investors ---------------- */}
         <section className="wl-section">
           <div className="wl-wrap">
-            <p className="wl-eyebrow" data-reveal>
+            <p className="eyebrow wl-eyebrow" data-reveal>
               For diaspora investors
             </p>
-            <h2 className="wl-h2" data-reveal>
-              Investing back home shouldn&apos;t <em>drain the investment.</em>
+            <h2 className="h2 wl-h2" data-reveal>
+              Investing back home shouldn&apos;t <span className="wl-acc">drain the investment.</span>
             </h2>
             <p className="wl-text" data-reveal>
               Many Ethiopian diaspora investors come home with capital and real ambition, and meet consulting that
@@ -259,11 +255,11 @@ export default async function WaitlistPage() {
         {/* ---------------- Growing businesses ---------------- */}
         <section className="wl-section wl-section-alt">
           <div className="wl-wrap">
-            <p className="wl-eyebrow" data-reveal>
+            <p className="eyebrow wl-eyebrow" data-reveal>
               For growing businesses
             </p>
-            <h2 className="wl-h2" data-reveal>
-              &ldquo;Let&apos;s try it&rdquo; is the most <em>expensive strategy.</em>
+            <h2 className="h2 wl-h2" data-reveal>
+              &ldquo;Let&apos;s try it&rdquo; is the most <span className="wl-acc">expensive strategy.</span>
             </h2>
             <p className="wl-text" data-reveal>
               Mid-sized and large businesses hit obstacles all the time: expansion, financing, regulation, operations,
@@ -312,11 +308,11 @@ export default async function WaitlistPage() {
         {/* ---------------- How it works ---------------- */}
         <section className="wl-section">
           <div className="wl-wrap">
-            <p className="wl-eyebrow" data-reveal>
+            <p className="eyebrow wl-eyebrow" data-reveal>
               How Pivotroom works
             </p>
-            <h2 className="wl-h2" data-reveal>
-              The experience you need, <em>in one hour.</em>
+            <h2 className="h2 wl-h2" data-reveal>
+              The experience you need, <span className="wl-acc">in one hour.</span>
             </h2>
             <div className="wl-grid3 wl-steps">
               {HOW.map((item, index) => (
@@ -336,17 +332,17 @@ export default async function WaitlistPage() {
         {/* ---------------- Goal ---------------- */}
         <section className="wl-goal">
           <div className="wl-wrap wl-goal-inner" data-reveal>
-            <p className="wl-eyebrow wl-eyebrow-light">Our goal</p>
-            <h2 className="wl-goal-title">
+            <p className="eyebrow wl-eyebrow wl-eyebrow-light">Our goal</p>
+            <h2 className="h1 wl-goal-title">
               Speed to your goal.
               <br />
-              <em>In a controlled way.</em>
+              <span className="wl-acc">In a controlled way.</span>
             </h2>
             <p className="wl-goal-text">
               Pivotroom exists so you reach the outcome you want faster, without losing control of your capital, your
               time or your direction. You choose the expert, you set the agenda, and you decide what happens next.
             </p>
-            <a href="#join" className="wl-cta-light">
+            <a href="#join" className="btn btn-white lg wl-goal-btn">
               Join the waitlist
               <span className="ms" aria-hidden="true">
                 arrow_upward
@@ -360,9 +356,9 @@ export default async function WaitlistPage() {
           <div className="wl-wrap">
             <div className="wl-expert" data-reveal>
               <div className="wl-expert-copy">
-                <p className="wl-eyebrow">For experts</p>
-                <h2 className="wl-h2 wl-h2-left">
-                  Your experience can save someone <em>months.</em>
+                <p className="eyebrow wl-eyebrow">For experts</p>
+                <h2 className="h2 wl-h2 wl-h2-left">
+                  Your experience can save someone <span className="wl-acc">months.</span>
                 </h2>
                 <p className="wl-text wl-text-left">
                   Founders, executives and professionals: share what you&apos;ve learned, one paid hour at a time, on
@@ -372,14 +368,14 @@ export default async function WaitlistPage() {
               <div className="wl-expert-box">
                 <p className="wl-expert-note">{expertNote}</p>
                 {expertHref.startsWith("#") ? (
-                  <a href={expertHref} className="wl-btn-dark wl-btn-wide">
+                  <a href={expertHref} className="btn btn-ink lg block">
                     {expertLabel}
                     <span className="ms" aria-hidden="true">
                       arrow_upward
                     </span>
                   </a>
                 ) : (
-                  <Link href={expertHref} className="wl-btn-dark wl-btn-wide">
+                  <Link href={expertHref} className="btn btn-ink lg block">
                     {expertLabel}
                     <span className="ms" aria-hidden="true">
                       arrow_forward
@@ -396,6 +392,8 @@ export default async function WaitlistPage() {
           </div>
         </section>
       </main>
+
+      {!user ? <WaitlistStickyBar /> : null}
 
       <footer className="wl-foot">
         <span>© {new Date().getFullYear()} Pivotroom</span>
