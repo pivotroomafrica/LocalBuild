@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { publicOrigin } from "@/lib/utils/publicOrigin";
 import { homePathFor, safeNext } from "@/lib/auth/home";
+import { isAdminUser, isOpenDuringWaitlist, waitlistModeOn } from "@/lib/waitlist/gate";
 
 const PROTECTED_PREFIXES = [
   "/dashboard",
@@ -74,6 +75,21 @@ export async function updateSession(request: NextRequest) {
   // marketplace pages.
   const matchesPrefix = (path: string, prefix: string) =>
     path === prefix || path.startsWith(`${prefix}/`);
+
+  // Waitlist mode (070): everything but the open pages shows /waitlist,
+  // for everyone except admins.
+  const waitlistOn = await waitlistModeOn(supabase);
+  if (waitlistOn && !isOpenDuringWaitlist(pathname) && !(user && (await isAdminUser(supabase, user.id)))) {
+    const rewrite = NextResponse.rewrite(new URL("/waitlist", request.url), { request });
+    supabaseResponse.cookies.getAll().forEach((cookie) => rewrite.cookies.set(cookie));
+    rewrite.headers.set("x-robots-tag", "noindex");
+    return rewrite;
+  }
+  // With the waitlist off, its page goes back to the home page (admins can
+  // still open it to preview).
+  if (!waitlistOn && pathname === "/waitlist" && !(user && (await isAdminUser(supabase, user.id)))) {
+    return NextResponse.redirect(new URL("/", origin));
+  }
 
   const isProtected = PROTECTED_PREFIXES.some((prefix) => matchesPrefix(pathname, prefix));
   const isAuthPage = AUTH_PREFIXES.some((prefix) => matchesPrefix(pathname, prefix));

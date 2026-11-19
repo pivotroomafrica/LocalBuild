@@ -1228,6 +1228,7 @@ export type Database = {
           manual_verification_threshold: number
           updated_at: string
           vat_rate: number
+          waitlist_mode: boolean
         }
         Insert: {
           commission_rate?: number
@@ -1236,6 +1237,7 @@ export type Database = {
           manual_verification_threshold?: number
           updated_at?: string
           vat_rate?: number
+          waitlist_mode?: boolean
         }
         Update: {
           commission_rate?: number
@@ -1244,6 +1246,7 @@ export type Database = {
           manual_verification_threshold?: number
           updated_at?: string
           vat_rate?: number
+          waitlist_mode?: boolean
         }
         Relationships: []
       }
@@ -1358,6 +1361,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      waitlist_signups: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string
+          email: string
+          email_key: string
+          full_name: string
+          id: string
+          interest: string | null
+          notified_at: string | null
+          phone: string | null
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          email: string
+          email_key: string
+          full_name: string
+          id?: string
+          interest?: string | null
+          notified_at?: string | null
+          phone?: string | null
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          email?: string
+          email_key?: string
+          full_name?: string
+          id?: string
+          interest?: string | null
+          notified_at?: string | null
+          phone?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {
@@ -1796,6 +1838,17 @@ export type Database = {
         Args: { object_name: string }
         Returns: boolean
       }
+      join_waitlist: {
+        Args: {
+          p_city: string
+          p_country: string
+          p_email: string
+          p_full_name: string
+          p_interest: string
+          p_phone: string
+        }
+        Returns: string
+      }
       manual_payment_verification_hold_hours: { Args: never; Returns: number }
       mark_own_chapa_payment_failed: {
         Args: { p_payment_id: string; p_reason?: string }
@@ -1893,6 +1946,7 @@ export type Database = {
         }
         Returns: string
       }
+      set_waitlist_mode: { Args: { p_on: boolean }; Returns: boolean }
       submit_expert_review: {
         Args: { p_body: string; p_booking_reference: string; p_rating: number }
         Returns: string
@@ -1937,6 +1991,7 @@ export type Database = {
         Args: { p_payment_id: string }
         Returns: undefined
       }
+      waitlist_mode: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

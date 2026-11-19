@@ -176,7 +176,7 @@ export function CountryCityFields({
             aria-invalid={touched && !cityValid ? true : undefined}
             aria-describedby={touched && !cityValid ? `${id}-city-err` : undefined}
             onKeyDown={onKeyDown}
-            placeholder={cities.length > 0 ? `Start typing, then pick, e.g. ${cities[0]}` : "Your city or town"}
+            placeholder={cities.length > 0 ? `Start typing, e.g. ${cities[0]}` : "Your city or town"}
           />
           {showList ? (
             <div className="cc-pop cc-city-pop">
