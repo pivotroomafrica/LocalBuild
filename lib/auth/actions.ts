@@ -311,3 +311,75 @@ export async function updatePasswordAction(
 
   redirect("/auth/login?reset=success");
 }
+
+/**
+ * Waitlist sign-up (070): the same account creation as signUpAction, from
+ * the waitlist page's inline forms. A client is also put on the waitlist
+ * list; an expert's confirmation link leads straight into the AI
+ * onboarding. Returns state instead of redirecting, so the page shows the
+ * result in place.
+ */
+export type WaitlistAccountState = {
+  error?: string;
+  status?: "check-email" | "signed-in";
+  as?: "client" | "expert";
+  name?: string;
+};
+
+export async function signUpForWaitlistAction(
+  _prevState: WaitlistAccountState,
+  formData: FormData,
+): Promise<WaitlistAccountState> {
+  const as = formData.get("as") === "expert" ? "expert" : "client";
+  // Bots fill every field, including this hidden one.
+  if (String(formData.get("website") ?? "").trim()) return { status: "check-email", as };
+
+  const names = readNames(formData);
+  if ("error" in names) return { error: names.error };
+
+  const email = String(formData.get("email") ?? "").trim();
+  if (!email) return { error: "Email is required." };
+
+  const password = String(formData.get("password") ?? "");
+  const passwordResult = validatePassword(password);
+  if (!passwordResult.valid) return { error: passwordResult.error };
+
+  const phoneResult = validatePhone(String(formData.get("phone") ?? ""));
+  if (!phoneResult.valid) return { error: phoneResult.error };
+
+  const placeResult = await readPlace(formData);
+  if ("error" in placeResult) return { error: placeResult.error };
+
+  if (!acceptedTerms(formData)) return { error: "Please agree to the Terms and Privacy Policy to create your account." };
+
+  const next = as === "expert" ? "/expert/onboarding" : "/dashboard";
+  const supabase = await createClient();
+  const origin = await siteOrigin();
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { ...names, phone: phoneResult.value, ...placeResult, terms_accepted: true },
+      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
+    },
+  });
+  if (error) return { error: friendlyAuthError(error.message) };
+
+  if (as === "client") {
+    const interest = String(formData.get("interest") ?? "").trim().slice(0, 1000);
+    const { error: listError } = await supabase.rpc("join_waitlist", {
+      p_full_name: names.full_name,
+      p_email: email,
+      p_phone: phoneResult.value ?? "",
+      p_country: placeResult.country,
+      p_city: placeResult.city,
+      p_interest: interest,
+    });
+    if (listError) console.error("signUpForWaitlistAction: join_waitlist", listError.message);
+  }
+
+  if (!data.session) return { status: "check-email", as, name: names.first_name };
+  if (as === "expert") redirect(next);
+  return { status: "signed-in", as, name: names.first_name };
+}

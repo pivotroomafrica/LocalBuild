@@ -247,22 +247,3 @@ export function notifyCustomerReceiptIssued(customerId: string, bookingReference
   });
 }
 
-/** To someone who just joined the waitlist: they're on the list. */
-export function notifyWaitlistJoined(email: string, name: string) {
-  later(async () => {
-    await send(
-      [{ email, name }],
-      noticeEmail({
-        subject: "You're on the Pivotroom waitlist",
-        heading: `You're on the list, ${firstName(name)}`,
-        paragraphs: [
-          "Thanks for joining the Pivotroom waitlist. We'll email you as soon as we open, so you can book one-to-one time with vetted Ethiopian founders, executives and professionals.",
-          "Nothing else to do for now.",
-        ],
-        ctaLabel: "Visit Pivotroom",
-        ctaUrl: getAppUrl(),
-      }),
-      "waitlist-joined",
-    );
-  });
-}

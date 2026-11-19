@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getDirectoryForRequest } from "@/lib/public/cached";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { signOutAction } from "@/lib/auth/actions";
-import { WaitlistForm } from "@/components/waitlist/WaitlistForm";
+import { WaitlistJoin } from "@/components/waitlist/WaitlistJoin";
 import { RevealOnScroll } from "@/components/site/RevealOnScroll";
 import "./waitlist.css";
 
@@ -18,7 +18,8 @@ export const metadata: Metadata = {
     "Stop guessing. Talk to someone who has done it. Pivotroom connects investors and businesses with vetted Ethiopian founders, executives and professionals. Join the waitlist.",
 };
 
-const EXPERT_SIGNUP = "/auth/signup?next=/expert/onboarding";
+/** Opens the expert form in the hero (WaitlistJoin listens for it). */
+const EXPERT_SIGNUP = "#join-expert";
 
 type Ms = { icon: string; title: string; text: string };
 
@@ -76,14 +77,36 @@ export default async function WaitlistPage() {
   const faces = experts.filter((expert) => expert.photoUrl).slice(0, 5);
 
   let expertHref = EXPERT_SIGNUP;
+  /** Signed in without an expert profile: a client on the list. */
+  let clientName: string | null = null;
   let expertLabel = "Apply as an expert";
-  let expertNote = "Create your account, then our AI helps you build your profile in about 10 minutes.";
+  let expertNote = "Create your account right here, then our AI helps you build your profile in about 10 minutes.";
   if (user) {
     const { data: expert } = await supabase
       .from("expert_profiles")
       .select("application_status")
       .eq("user_id", user.id)
       .maybeSingle();
+    if (!expert) {
+      // Clients who joined with an account (or Google) are on the list:
+      // make sure their row is there for Admin -> Waitlist.
+      const { data: me } = await supabase
+        .from("profiles")
+        .select("full_name, first_name, phone, country, city")
+        .eq("id", user.id)
+        .maybeSingle();
+      clientName = me?.first_name || me?.full_name?.split(" ")[0] || "";
+      if (user.email && me?.full_name) {
+        await supabase.rpc("join_waitlist", {
+          p_full_name: me.full_name,
+          p_email: user.email,
+          p_phone: me.phone ?? "",
+          p_country: me.country ?? "",
+          p_city: me.city ?? "",
+          p_interest: "",
+        });
+      }
+    }
     if (!expert || expert.application_status === "draft") {
       expertHref = "/expert/onboarding";
       expertLabel = expert ? "Continue your expert profile" : "Build your expert profile";
@@ -146,7 +169,30 @@ export default async function WaitlistPage() {
             so you reach your goal faster, and in control.
           </p>
 
-          <WaitlistForm />
+          {!user ? (
+            <WaitlistJoin />
+          ) : clientName !== null ? (
+            <div className="wl-done wl-hero-done">
+              <span className="wl-done-icon ms" aria-hidden="true">
+                task_alt
+              </span>
+              <h3 className="wl-done-title">You&apos;re on the list{clientName ? `, ${clientName}` : ""}</h3>
+              <p className="wl-done-text">
+                Your account is ready. We&apos;ll email you the moment Pivotroom opens, then you just log in and book.
+                Are you an expert too? <Link href="/expert/onboarding">Build your expert profile</Link>.
+              </p>
+            </div>
+          ) : (
+            <div className="wl-done wl-hero-done">
+              <p className="wl-done-text">{expertNote}</p>
+              <Link href={expertHref} className="wl-btn-dark" style={{ marginTop: 16 }}>
+                {expertLabel}
+                <span className="ms" aria-hidden="true">
+                  arrow_forward
+                </span>
+              </Link>
+            </div>
+          )}
 
           {faces.length >= 3 ? (
             <div className="wl-faces">
@@ -159,9 +205,6 @@ export default async function WaitlistPage() {
               Vetted experts are already getting ready
             </div>
           ) : null}
-          <p className="wl-expert-link">
-            Are you an expert? <a href="#experts">Apply now</a>
-          </p>
 
           <div className="wl-promises">
             {PROMISES.map((item, index) => (
@@ -328,15 +371,24 @@ export default async function WaitlistPage() {
               </div>
               <div className="wl-expert-box">
                 <p className="wl-expert-note">{expertNote}</p>
-                <Link href={expertHref} className="wl-btn-dark wl-btn-wide">
-                  {expertLabel}
-                  <span className="ms" aria-hidden="true">
-                    arrow_forward
-                  </span>
-                </Link>
+                {expertHref.startsWith("#") ? (
+                  <a href={expertHref} className="wl-btn-dark wl-btn-wide">
+                    {expertLabel}
+                    <span className="ms" aria-hidden="true">
+                      arrow_upward
+                    </span>
+                  </a>
+                ) : (
+                  <Link href={expertHref} className="wl-btn-dark wl-btn-wide">
+                    {expertLabel}
+                    <span className="ms" aria-hidden="true">
+                      arrow_forward
+                    </span>
+                  </Link>
+                )}
                 {!user ? (
                   <p className="wl-small">
-                    Already started? <Link href="/auth/login?next=/expert/onboarding">Log in to continue</Link>
+                    Already have an account? <Link href="/auth/login?next=/expert/onboarding">Log in to continue</Link>
                   </p>
                 ) : null}
               </div>
