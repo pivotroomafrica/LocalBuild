@@ -878,3 +878,76 @@ html:has(.wl) {
     padding-inline: 12px;
   }
 }
+
+/* Reframing line under the comparison */
+.pr .wl-quote {
+  max-width: 34ch;
+  margin: 48px auto 0;
+  font-family: var(--pr-display);
+  font-size: clamp(22px, 2.6vw, 30px);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  text-align: center;
+  text-wrap: balance;
+}
+.pr .wl-quote::before {
+  content: "";
+  display: block;
+  width: 40px;
+  height: 3px;
+  margin: 0 auto 20px;
+  border-radius: 999px;
+  background: var(--pr-blue);
+}
+
+/* "Why it's safe to ask": four small cards */
+.pr .wl-grid4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 48px;
+}
+.pr .wl-card-sm {
+  padding: 24px;
+}
+.pr .wl-card-sm h3 {
+  font-size: 18px;
+}
+.pr .wl-icon-soft {
+  background: var(--pr-blue-tint);
+  color: var(--pr-blue);
+}
+@media (max-width: 1000px) {
+  .pr .wl-grid4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .pr .wl-grid4 {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    margin-top: 32px;
+  }
+  .pr .wl-card-sm {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 14px;
+    align-items: start;
+    padding: 18px;
+  }
+  .pr .wl-card-sm .wl-icon {
+    grid-row: span 2;
+    width: 40px;
+    height: 40px;
+    margin-bottom: 0;
+    font-size: 20px;
+  }
+  .pr .wl-card-sm h3 {
+    margin-bottom: 4px;
+    font-size: 17px;
+  }
+  .pr .wl-quote {
+    margin-top: 36px;
+  }
+}

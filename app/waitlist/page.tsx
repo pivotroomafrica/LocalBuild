@@ -4,7 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getDirectoryForRequest } from "@/lib/public/cached";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { signOutAction } from "@/lib/auth/actions";
-import { WaitlistJoin, WaitlistStickyBar } from "@/components/waitlist/WaitlistJoin";
+import {
+  WaitlistJoin,
+  WaitlistStickyBar,
+} from "@/components/waitlist/WaitlistJoin";
 import { RevealOnScroll } from "@/components/site/RevealOnScroll";
 import "./waitlist.css";
 
@@ -20,36 +23,93 @@ const EXPERT_SIGNUP = "#join-expert";
 type Ms = { icon: string; title: string; text: string };
 
 const PROMISES: Ms[] = [
-  { icon: "verified", title: "Vetted experts", text: "Founders, executives and professionals, each reviewed by our team." },
-  { icon: "timer", title: "One focused hour", text: "Not a months-long retainer. A real conversation about your problem." },
-  { icon: "route", title: "A clear next step", text: "Leave knowing what to do, and what to avoid." },
+  {
+    icon: "verified",
+    title: "Vetted, not volunteered",
+    text: "Every expert is reviewed by our team before their profile goes live. Their track record is on the page, not in a sales pitch.",
+  },
+  {
+    icon: "timer",
+    title: "An hour, not a retainer",
+    text: "No six-month contract to find out whether the advice is any good. One focused session, at a price you see before you book.",
+  },
+  {
+    icon: "route",
+    title: "You leave with a decision",
+    text: "Not a sixty-page report. A clearer view of what to do next, and just as usefully, what to stop doing.",
+  },
 ];
 
 const DIASPORA_PAINS: Ms[] = [
   {
-    icon: "link_off",
-    title: "Advice that doesn't fit",
-    text: "Generic consultants who don't know your sector, or how things really work on the ground in Ethiopia.",
+    icon: "public_off",
+    title: "Advice built for somewhere else",
+    text: "Frameworks from other markets, applied to licences, suppliers and banks their authors have never dealt with.",
   },
   {
-    icon: "money_off",
-    title: "Capital drained before launch",
-    text: "Months of fees and reports, spent before the business has served a single customer.",
+    icon: "hourglass_bottom",
+    title: "Paying to learn the basics",
+    text: "Weeks of fees before anyone tells you what an experienced operator would have said in the first ten minutes.",
   },
   {
     icon: "flight_takeoff",
-    title: "Investment pushed back out",
-    text: "As the odds of success fall, the money leaves the country, and the opportunity with it.",
+    title: "A good idea, lost",
+    text: "When the money runs low before the business runs well, the investment goes back abroad, and the opportunity with it.",
   },
 ];
 
-const TRIAL_STEPS = ["Try an idea", "Wait months to see if it works", "It doesn't, quite", "Guess again"];
-const PIVOT_STEPS = ["Book an hour with someone who solved it", "Get a plan built on real experience", "Act, with confidence"];
+const TRIAL_STEPS = [
+  "Guess at a fix",
+  "Spend months finding out",
+  "Learn it only half worked",
+  "Guess again",
+];
+const PIVOT_STEPS = [
+  "Talk to someone who has fixed exactly this",
+  "Hear what worked, and what quietly failed",
+  "Act on a plan you can defend",
+];
 
 const HOW: Ms[] = [
-  { icon: "flag", title: "Tell us your goal", text: "Expanding, raising finance, entering a market, fixing operations: whatever is in the way." },
-  { icon: "person_search", title: "Pick the right expert", text: "Someone who has already done exactly that, here. Their experience is on their profile." },
-  { icon: "forum", title: "Talk, then act", text: "One focused session online or in person, and you leave with a clear way forward." },
+  {
+    icon: "flag",
+    title: "Name the goal",
+    text: "Raising finance, entering a market, fixing operations, deciding on an investment. Start with whatever is in the way.",
+  },
+  {
+    icon: "person_search",
+    title: "Choose who has done it",
+    text: "Read real profiles: what each expert has built, where, and what they help with. You choose. Nobody is assigned to you.",
+  },
+  {
+    icon: "forum",
+    title: "Talk, then decide",
+    text: "Meet on Google Meet or in person, for the price you saw before booking. Leave knowing your next move.",
+  },
+];
+
+/** Things that make it safe to ask (all true of the product today). */
+const SAFE: Ms[] = [
+  {
+    icon: "fact_check",
+    title: "Reviewed experts only",
+    text: "No profile goes live until our team has approved it.",
+  },
+  {
+    icon: "sell",
+    title: "The price, up front",
+    text: "You see exactly what an hour costs before you book. No surprises after.",
+  },
+  {
+    icon: "lock",
+    title: "Pay safely in ETB",
+    text: "Pay online or by bank transfer, confirmed before your session.",
+  },
+  {
+    icon: "event_repeat",
+    title: "Plans change",
+    text: "Need another time? Move your session from your account.",
+  },
 ];
 
 /**
@@ -76,7 +136,8 @@ export default async function WaitlistPage() {
   /** Signed in without an expert profile: a client on the list. */
   let clientName: string | null = null;
   let expertLabel = "Apply as an expert";
-  let expertNote = "Create your account right here, then our AI helps you build your profile in about 10 minutes.";
+  let expertNote =
+    "Create your account right here. Our AI then turns a few quick answers into your profile, in about 10 minutes.";
   if (user) {
     const { data: expert } = await supabase
       .from("expert_profiles")
@@ -105,18 +166,22 @@ export default async function WaitlistPage() {
     }
     if (!expert || expert.application_status === "draft") {
       expertHref = "/expert/onboarding";
-      expertLabel = expert ? "Continue your expert profile" : "Build your expert profile";
+      expertLabel = expert
+        ? "Continue your expert profile"
+        : "Build your expert profile";
       expertNote = expert
         ? "Pick up where you left off. Your answers are saved."
         : "Our AI helps you build your profile in about 10 minutes.";
     } else if (expert.application_status === "approved") {
       expertHref = "/expert/dashboard";
       expertLabel = "Go to your expert dashboard";
-      expertNote = "You're approved. Set your availability and price so you're ready on launch day.";
+      expertNote =
+        "You're approved. Set your availability and price so you're ready on launch day.";
     } else {
       expertHref = "/expert/application";
       expertLabel = "See your application";
-      expertNote = "We're reviewing your profile and will email you before we open.";
+      expertNote =
+        "We're reviewing your profile and will email you before we open.";
     }
   }
 
@@ -153,16 +218,16 @@ export default async function WaitlistPage() {
           </span>
           <p className="wl-badge">
             <span className="wl-dot" aria-hidden="true" />
-            Opening soon
+            Opening soon in Ethiopia
           </p>
           <h1 className="h1 wl-h1">
-            Stop guessing.
-            <br />
-            Talk to someone who&apos;s <span className="wl-acc">done it.</span>
+            Borrow ten years of experience.{" "}
+            <span className="wl-acc">For one hour.</span>
           </h1>
           <p className="lede wl-lede">
-            Pivotroom connects investors and businesses with vetted Ethiopian founders, executives and professionals,
-            so you reach your goal faster, and in control.
+            Pivotroom sits you across the table from vetted Ethiopian founders,
+            executives and specialists who have already solved the problem in
+            front of you. You pay for an hour. You get the years behind it.
           </p>
 
           {!user ? (
@@ -172,16 +237,24 @@ export default async function WaitlistPage() {
               <span className="wl-done-icon ms" aria-hidden="true">
                 task_alt
               </span>
-              <h3 className="wl-done-title">You&apos;re on the list{clientName ? `, ${clientName}` : ""}</h3>
+              <h3 className="wl-done-title">
+                You&apos;re on the list{clientName ? `, ${clientName}` : ""}
+              </h3>
               <p className="wl-done-text">
-                Your account is ready. We&apos;ll email you the moment Pivotroom opens, then you just log in and book.
-                Are you an expert too? <Link href="/expert/onboarding">Build your expert profile</Link>.
+                Your account is ready. We&apos;ll email you the moment Pivotroom
+                opens, then you just log in and book. Are you an expert too?{" "}
+                <Link href="/expert/onboarding">Build your expert profile</Link>
+                .
               </p>
             </div>
           ) : (
             <div className="wl-done wl-hero-done">
               <p className="wl-done-text">{expertNote}</p>
-              <Link href={expertHref} className="btn btn-ink lg" style={{ marginTop: 16 }}>
+              <Link
+                href={expertHref}
+                className="btn btn-ink lg"
+                style={{ marginTop: 16 }}
+              >
                 {expertLabel}
                 <span className="ms" aria-hidden="true">
                   arrow_forward
@@ -195,7 +268,12 @@ export default async function WaitlistPage() {
               <span className="wl-face-row">
                 {faces.map((face) => (
                   // eslint-disable-next-line @next/next/no-img-element -- storage URL
-                  <img key={face.slug} src={face.photoUrl!} alt="" className="wl-face" />
+                  <img
+                    key={face.slug}
+                    src={face.photoUrl!}
+                    alt=""
+                    className="wl-face"
+                  />
                 ))}
               </span>
               Vetted experts are already getting ready
@@ -204,7 +282,12 @@ export default async function WaitlistPage() {
 
           <div className="wl-promises">
             {PROMISES.map((item, index) => (
-              <div key={item.title} className="wl-promise" data-reveal style={{ "--d": index } as React.CSSProperties}>
+              <div
+                key={item.title}
+                className="wl-promise"
+                data-reveal
+                style={{ "--d": index } as React.CSSProperties}
+              >
                 <span className="wl-icon ms" aria-hidden="true">
                   {item.icon}
                 </span>
@@ -219,19 +302,29 @@ export default async function WaitlistPage() {
         <section className="wl-section">
           <div className="wl-wrap">
             <p className="eyebrow wl-eyebrow" data-reveal>
-              For diaspora investors
+              For the diaspora investor
             </p>
             <h2 className="h2 wl-h2" data-reveal>
-              Investing back home shouldn&apos;t <span className="wl-acc">drain the investment.</span>
+              The most expensive advice is the advice that{" "}
+              <span className="wl-acc">almost fits.</span>
             </h2>
             <p className="wl-text" data-reveal>
-              Many Ethiopian diaspora investors come home with capital and real ambition, and meet consulting that
-              doesn&apos;t fit. Misaligned advice drains the capital, lowers the chance of success, and too often pushes
-              the investment back out of the country.
+              You earned the capital abroad. You know the opportunity at home is
+              real. What you don&apos;t have is someone who has done this exact
+              thing, here, recently. So you hire general consultants, wait for
+              reports and pay as you learn. By the time the gaps show, the
+              capital is thinner, the odds are worse, and the money often goes
+              back where it came from. Ethiopia loses an investor. You lose
+              years.
             </p>
             <div className="wl-grid3">
               {DIASPORA_PAINS.map((item, index) => (
-                <div key={item.title} className="wl-card" data-reveal style={{ "--d": index } as React.CSSProperties}>
+                <div
+                  key={item.title}
+                  className="wl-card"
+                  data-reveal
+                  style={{ "--d": index } as React.CSSProperties}
+                >
                   <span className="wl-icon wl-icon-warn ms" aria-hidden="true">
                     {item.icon}
                   </span>
@@ -245,8 +338,10 @@ export default async function WaitlistPage() {
                 check_circle
               </span>
               <p>
-                <strong>With Pivotroom</strong>, you speak first with someone who has already built in your sector, in
-                Ethiopia, before you commit your capital.
+                <strong>Before you commit a single birr</strong>, sit down with
+                someone who has built in your sector, in Ethiopia. One hour can
+                tell you which half of your plan is wrong. It may be the
+                cheapest hour of the whole investment.
               </p>
             </div>
           </div>
@@ -256,15 +351,19 @@ export default async function WaitlistPage() {
         <section className="wl-section wl-section-alt">
           <div className="wl-wrap">
             <p className="eyebrow wl-eyebrow" data-reveal>
-              For growing businesses
+              For growing companies
             </p>
             <h2 className="h2 wl-h2" data-reveal>
-              &ldquo;Let&apos;s try it&rdquo; is the most <span className="wl-acc">expensive strategy.</span>
+              Trial and error is a strategy.{" "}
+              <span className="wl-acc">It&apos;s just a very slow one.</span>
             </h2>
             <p className="wl-text" data-reveal>
-              Mid-sized and large businesses hit obstacles all the time: expansion, financing, regulation, operations,
-              a new market. Without someone who has solved it before, the answer becomes months of trial and error,
-              and &ldquo;maybe this will work&rdquo;. Every wrong guess costs time, money, and more.
+              Every mid-sized and large business hits a wall eventually: a new
+              market, a financing round, a regulator, an operation that
+              won&apos;t scale. Most solve it the hard way. Try something, wait,
+              measure, try again. It feels prudent. It is often the most
+              expensive option on the table, paid for in months, money, staff
+              morale and market position you don&apos;t get back.
             </p>
             <div className="wl-compare">
               <div className="wl-path wl-path-slow" data-reveal>
@@ -282,9 +381,15 @@ export default async function WaitlistPage() {
                 <div className="wl-bar">
                   <span className="wl-bar-fill slow" />
                 </div>
-                <p className="wl-path-foot">Months. Time, money, morale and market position at risk.</p>
+                <p className="wl-path-foot">
+                  Months. Paid for in time, money, morale and market share.
+                </p>
               </div>
-              <div className="wl-path wl-path-fast" data-reveal style={{ "--d": 1 } as React.CSSProperties}>
+              <div
+                className="wl-path wl-path-fast"
+                data-reveal
+                style={{ "--d": 1 } as React.CSSProperties}
+              >
                 <p className="wl-path-label">
                   <span className="ms" aria-hidden="true">
                     bolt
@@ -299,9 +404,15 @@ export default async function WaitlistPage() {
                 <div className="wl-bar">
                   <span className="wl-bar-fill fast" />
                 </div>
-                <p className="wl-path-foot">Days. Decisions built on experience, not guesswork.</p>
+                <p className="wl-path-foot">
+                  Days. Your decisions start where their experience ends.
+                </p>
               </div>
             </div>
+            <p className="wl-quote" data-reveal>
+              The real question isn&apos;t whether an hour is worth the fee.
+              It&apos;s what the next six months of guessing will cost.
+            </p>
           </div>
         </section>
 
@@ -309,16 +420,55 @@ export default async function WaitlistPage() {
         <section className="wl-section">
           <div className="wl-wrap">
             <p className="eyebrow wl-eyebrow" data-reveal>
-              How Pivotroom works
+              How it works
             </p>
             <h2 className="h2 wl-h2" data-reveal>
-              The experience you need, <span className="wl-acc">in one hour.</span>
+              Simple, because your problem{" "}
+              <span className="wl-acc">isn&apos;t.</span>
             </h2>
             <div className="wl-grid3 wl-steps">
               {HOW.map((item, index) => (
-                <div key={item.title} className="wl-card" data-reveal style={{ "--d": index } as React.CSSProperties}>
+                <div
+                  key={item.title}
+                  className="wl-card"
+                  data-reveal
+                  style={{ "--d": index } as React.CSSProperties}
+                >
                   <span className="wl-step-num">{index + 1}</span>
                   <span className="wl-icon ms" aria-hidden="true">
+                    {item.icon}
+                  </span>
+                  <h3>{item.title}</h3>
+                  <p>{item.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ---------------- Safe to ask ---------------- */}
+        <section className="wl-section wl-section-alt">
+          <div className="wl-wrap">
+            <p className="eyebrow wl-eyebrow" data-reveal>
+              Why it&apos;s safe to ask
+            </p>
+            <h2 className="h2 wl-h2" data-reveal>
+              Asking for help should be the{" "}
+              <span className="wl-acc">low-risk part.</span>
+            </h2>
+            <p className="wl-text" data-reveal>
+              The decision you&apos;re facing is risky enough. So we took the
+              risk out of getting advice on it.
+            </p>
+            <div className="wl-grid4">
+              {SAFE.map((item, index) => (
+                <div
+                  key={item.title}
+                  className="wl-card wl-card-sm"
+                  data-reveal
+                  style={{ "--d": index } as React.CSSProperties}
+                >
+                  <span className="wl-icon wl-icon-soft ms" aria-hidden="true">
                     {item.icon}
                   </span>
                   <h3>{item.title}</h3>
@@ -339,8 +489,12 @@ export default async function WaitlistPage() {
               <span className="wl-acc">In a controlled way.</span>
             </h2>
             <p className="wl-goal-text">
-              Pivotroom exists so you reach the outcome you want faster, without losing control of your capital, your
-              time or your direction. You choose the expert, you set the agenda, and you decide what happens next.
+              Speed alone is easy: you can always move fast in the wrong
+              direction. Control alone is easy too: you can study a decision
+              until the moment has passed. Pivotroom gives you both. The
+              shortcut of someone else&apos;s experience, with every decision
+              still yours. You choose the expert. You set the agenda. You decide
+              what happens next.
             </p>
             <a href="#join" className="btn btn-white lg wl-goal-btn">
               Join the waitlist
@@ -358,11 +512,16 @@ export default async function WaitlistPage() {
               <div className="wl-expert-copy">
                 <p className="eyebrow wl-eyebrow">For experts</p>
                 <h2 className="h2 wl-h2 wl-h2-left">
-                  Your experience can save someone <span className="wl-acc">months.</span>
+                  Your experience took years to earn.{" "}
+                  <span className="wl-acc">Let it earn again.</span>
                 </h2>
                 <p className="wl-text wl-text-left">
-                  Founders, executives and professionals: share what you&apos;ve learned, one paid hour at a time, on
-                  your own schedule. Get your profile ready now, so clients can book you from day one.
+                  You&apos;ve already solved problems other people are only now
+                  running into. On Pivotroom you share that, one paid hour at a
+                  time, on your schedule and at your price. No pitching, no
+                  proposals: clients arrive having already chosen you. If you
+                  like, give part of every session to a cause you care about.
+                  Build your profile now, and be bookable from day one.
                 </p>
               </div>
               <div className="wl-expert-box">
@@ -384,7 +543,10 @@ export default async function WaitlistPage() {
                 )}
                 {!user ? (
                   <p className="wl-small">
-                    Already have an account? <Link href="/auth/login?next=/expert/onboarding">Log in to continue</Link>
+                    Already have an account?{" "}
+                    <Link href="/auth/login?next=/expert/onboarding">
+                      Log in to continue
+                    </Link>
                   </p>
                 ) : null}
               </div>
