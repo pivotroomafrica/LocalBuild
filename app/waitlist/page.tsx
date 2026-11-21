@@ -216,7 +216,7 @@ export default async function WaitlistPage() {
       </div>
 
       <header className="wl-top">
-        <BrandLogo size={28} />
+        <BrandLogo size={28} className="wl-logo" />
         {user ? (
           <form action={signOutAction} className="wl-account">
             <span className="wl-who">{user.email}</span>

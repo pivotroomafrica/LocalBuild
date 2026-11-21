@@ -1254,3 +1254,43 @@ html:has(.wl) {
   color: var(--pr-slate);
   text-align: center;
 }
+
+/* Top bar: the logo scales with the screen so the links always fit. */
+.pr svg.wl-logo {
+  height: 28px;
+  width: auto;
+}
+.pr .wl-top {
+  flex-wrap: nowrap;
+}
+.pr .wl-top-link,
+.pr .wl-top-btn {
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .pr svg.wl-logo {
+    height: 21px;
+  }
+  .pr .wl-top {
+    gap: 10px;
+  }
+  .pr .wl-account {
+    gap: 10px;
+  }
+  .pr .wl-top-btn {
+    height: 36px;
+    padding-inline: 14px;
+    font-size: 14px;
+  }
+}
+@media (max-width: 400px) {
+  .pr svg.wl-logo {
+    height: 17px;
+  }
+  .pr .wl-top-link {
+    font-size: 13px;
+  }
+  .pr .wl-top-btn {
+    padding-inline: 12px;
+  }
+}
