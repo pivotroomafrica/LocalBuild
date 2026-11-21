@@ -1,5 +1,7 @@
 import { getEmailProvider } from "@/lib/email/factory";
 import type { EmailAttachment } from "@/lib/email/provider";
+import { sendPushToUser } from "@/lib/push/send";
+import { formatSessionDateTime } from "@/lib/dashboard/presentation";
 import { getCalendarProvider } from "@/lib/calendar/factory";
 import { getAppUrl } from "./config";
 import { sendAdminsNewOrder } from "@/lib/notify/account";
@@ -178,6 +180,14 @@ async function handleBookingConfirmationEmailCustomer(job: IntegrationJobRow): P
     });
   }
 
+  if (result.ok) {
+    await sendPushToUser(ctx.customer_id, {
+      title: "Your session is confirmed",
+      body: `${ctx.expert_full_name} · ${formatSessionDateTime(ctx.start_at, ctx.customer_timezone)}`,
+      url: `/dashboard/sessions/${encodeURIComponent(ctx.booking_reference)}`,
+      tag: `booking-${ctx.booking_reference}`,
+    });
+  }
   return result.ok ? { ok: true, providerId: result.providerId } : { ok: false, error: result.error };
 }
 
@@ -217,6 +227,14 @@ async function handleBookingConfirmationEmailExpert(job: IntegrationJobRow): Pro
     idempotencyKey: job.dedupe_key,
   });
 
+  if (result.ok) {
+    await sendPushToUser(ctx.expert_user_id, {
+      title: "New confirmed session",
+      body: `${ctx.customer_full_name} · ${formatSessionDateTime(ctx.start_at, ctx.expert_timezone)}`,
+      url: `/expert/sessions/${encodeURIComponent(ctx.booking_reference)}`,
+      tag: `booking-${ctx.booking_reference}`,
+    });
+  }
   return result.ok ? { ok: true, providerId: result.providerId } : { ok: false, error: result.error };
 }
 
@@ -304,6 +322,14 @@ async function handleSessionReminderCustomer(job: IntegrationJobRow): Promise<Jo
     idempotencyKey: job.dedupe_key,
   });
 
+  if (result.ok) {
+    await sendPushToUser(ctx.customer_id, {
+      title: `Your session is ${whenLabel(offsetMinutes)}`,
+      body: `With ${ctx.expert_full_name} · ${formatSessionDateTime(ctx.start_at, ctx.customer_timezone)}`,
+      url: `/dashboard/sessions/${encodeURIComponent(ctx.booking_reference)}`,
+      tag: `reminder-${ctx.booking_reference}`,
+    });
+  }
   return result.ok ? { ok: true, providerId: result.providerId } : { ok: false, error: result.error };
 }
 
@@ -340,6 +366,14 @@ async function handleSessionReminderExpert(job: IntegrationJobRow): Promise<JobH
     idempotencyKey: job.dedupe_key,
   });
 
+  if (result.ok) {
+    await sendPushToUser(ctx.expert_user_id, {
+      title: `Session ${whenLabel(offsetMinutes)}`,
+      body: `With ${ctx.customer_full_name} · ${formatSessionDateTime(ctx.start_at, ctx.expert_timezone)}`,
+      url: `/expert/sessions/${encodeURIComponent(ctx.booking_reference)}`,
+      tag: `reminder-${ctx.booking_reference}`,
+    });
+  }
   return result.ok ? { ok: true, providerId: result.providerId } : { ok: false, error: result.error };
 }
 
@@ -364,6 +398,17 @@ async function handlePaymentRejectedEmail(job: IntegrationJobRow): Promise<JobHa
     idempotencyKey: job.dedupe_key,
   });
 
+  if (result.ok) {
+    const booking = await getNotificationContext(job.booking_id);
+    if (booking) {
+      await sendPushToUser(booking.customer_id, {
+        title: "Your payment needs attention",
+        body: `We couldn't verify the payment for ${ctx.bookingReference}. Open it to fix it.`,
+        url: `/dashboard/sessions/${encodeURIComponent(ctx.bookingReference)}`,
+        tag: `booking-${ctx.bookingReference}`,
+      });
+    }
+  }
   return result.ok ? { ok: true, providerId: result.providerId } : { ok: false, error: result.error };
 }
 
@@ -441,6 +486,14 @@ async function handleRescheduleEmailCustomer(job: IntegrationJobRow): Promise<Jo
     idempotencyKey: job.dedupe_key,
   });
 
+  if (result.ok) {
+    await sendPushToUser(ctx.customer_id, {
+      title: "Your session has moved",
+      body: `New time: ${formatSessionDateTime(reschedule.newStartAt, ctx.customer_timezone)} · ${ctx.expert_full_name}`,
+      url: `/dashboard/sessions/${encodeURIComponent(ctx.booking_reference)}`,
+      tag: `booking-${ctx.booking_reference}`,
+    });
+  }
   return result.ok ? { ok: true, providerId: result.providerId } : { ok: false, error: result.error };
 }
 
@@ -487,6 +540,14 @@ async function handleRescheduleEmailExpert(job: IntegrationJobRow): Promise<JobH
     idempotencyKey: job.dedupe_key,
   });
 
+  if (result.ok) {
+    await sendPushToUser(ctx.expert_user_id, {
+      title: "A session has moved",
+      body: `New time: ${formatSessionDateTime(reschedule.newStartAt, ctx.expert_timezone)} · ${ctx.customer_full_name}`,
+      url: `/expert/sessions/${encodeURIComponent(ctx.booking_reference)}`,
+      tag: `booking-${ctx.booking_reference}`,
+    });
+  }
   return result.ok ? { ok: true, providerId: result.providerId } : { ok: false, error: result.error };
 }
 
@@ -519,6 +580,14 @@ async function handleRescheduleRequestEmailCustomer(job: IntegrationJobRow): Pro
     idempotencyKey: job.dedupe_key,
   });
 
+  if (result.ok) {
+    await sendPushToUser(ctx.customer_id, {
+      title: `${ctx.expert_full_name} asked to move your session`,
+      body: "Open it to pick a new time or keep the current one.",
+      url: `/dashboard/sessions/${encodeURIComponent(ctx.booking_reference)}`,
+      tag: `booking-${ctx.booking_reference}`,
+    });
+  }
   return result.ok ? { ok: true, providerId: result.providerId } : { ok: false, error: result.error };
 }
 
@@ -580,6 +649,14 @@ async function handleCancellationEmailCustomer(job: IntegrationJobRow): Promise<
     idempotencyKey: job.dedupe_key,
   });
 
+  if (result.ok) {
+    await sendPushToUser(ctx.customer_id, {
+      title: "Session cancelled",
+      body: `${ctx.expert_full_name} · ${formatSessionDateTime(ctx.start_at, ctx.customer_timezone)}`,
+      url: `/dashboard/sessions/${encodeURIComponent(ctx.booking_reference)}`,
+      tag: `booking-${ctx.booking_reference}`,
+    });
+  }
   return result.ok ? { ok: true, providerId: result.providerId } : { ok: false, error: result.error };
 }
 
@@ -619,7 +696,20 @@ async function handleCancellationEmailExpert(job: IntegrationJobRow): Promise<Jo
     idempotencyKey: job.dedupe_key,
   });
 
+  if (result.ok) {
+    await sendPushToUser(ctx.expert_user_id, {
+      title: "Session cancelled",
+      body: `${ctx.customer_full_name} · ${formatSessionDateTime(ctx.start_at, ctx.expert_timezone)}`,
+      url: `/expert/sessions/${encodeURIComponent(ctx.booking_reference)}`,
+      tag: `booking-${ctx.booking_reference}`,
+    });
+  }
   return result.ok ? { ok: true, providerId: result.providerId } : { ok: false, error: result.error };
+}
+
+/** "tomorrow" / "in 60 minutes", matching the reminder emails. */
+function whenLabel(offsetMinutes: number): string {
+  return offsetMinutes >= 1440 ? "tomorrow" : `in ${offsetMinutes} minutes`;
 }
 
 function truncate(value: string, max: number): string {

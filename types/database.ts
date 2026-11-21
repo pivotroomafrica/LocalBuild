@@ -718,7 +718,6 @@ export type Database = {
           submitted_at: string | null
           supported_ngo_id: string | null
           terms_accepted_at: string | null
-          topics: string[]
           updated_at: string
           user_id: string
           who_i_help: string | null
@@ -761,7 +760,6 @@ export type Database = {
           submitted_at?: string | null
           supported_ngo_id?: string | null
           terms_accepted_at?: string | null
-          topics?: string[]
           updated_at?: string
           user_id: string
           who_i_help?: string | null
@@ -804,7 +802,6 @@ export type Database = {
           submitted_at?: string | null
           supported_ngo_id?: string | null
           terms_accepted_at?: string | null
-          topics?: string[]
           updated_at?: string
           user_id?: string
           who_i_help?: string | null
@@ -1295,6 +1292,39 @@ export type Database = {
           role?: string
           terms_accepted_at?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          last_used_at: string | null
+          p256dh: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          last_used_at?: string | null
+          p256dh: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          last_used_at?: string | null
+          p256dh?: string
+          user_agent?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -1811,13 +1841,6 @@ export type Database = {
       get_expert_slug_for_booking: {
         Args: { p_booking_id: string }
         Returns: string
-      }
-      get_expert_topics_public: {
-        Args: never
-        Returns: {
-          slug: string
-          topics: string[]
-        }[]
       }
       get_platform_stats_public: {
         Args: never

@@ -4,6 +4,7 @@ import { getEmailProvider } from "@/lib/email/factory";
 import { isEmailConfigured, isEmailDeliveryEnabled } from "@/lib/email/config";
 import { getAppUrl } from "@/lib/jobs/config";
 import { noticeEmail, type EmailContent } from "@/lib/jobs/emailTemplates";
+import { sendPushToUser, type PushMessage } from "@/lib/push/send";
 
 /**
  * Account notices outside the booking lifecycle: admins hear about new
@@ -50,6 +51,13 @@ function later(task: () => Promise<void>) {
   });
 }
 
+/** A push notification to every admin's devices (best effort). */
+async function pushAdmins(message: PushMessage) {
+  const supabase = createServiceRoleClient();
+  const { data: admins } = await supabase.from("profiles").select("id").eq("role", "admin");
+  await Promise.all((admins ?? []).map((admin) => sendPushToUser(admin.id, message)));
+}
+
 const firstName = (name: string | null) => name?.trim().split(/\s+/)[0] || "there";
 
 /** To every admin: an expert submitted (or resubmitted) their application. */
@@ -71,6 +79,12 @@ export function notifyAdminsApplicationSubmitted(expertProfileId: string, expert
       }),
       `application-submitted:${expertProfileId}:${submittedAt}`,
     );
+    await pushAdmins({
+      title: "New expert application",
+      body: `${name} submitted their application.`,
+      url: `/admin/experts/${expertProfileId}`,
+      tag: `application-${expertProfileId}`,
+    });
   });
 }
 
@@ -120,6 +134,26 @@ export function notifyExpertOutcome(expertUserId: string, outcome: ExpertOutcome
                 ctaUrl: `${appUrl}/expert/application`,
               });
     await send([expert], content, `expert-${outcome}:${eventKey}`);
+    await sendPushToUser(expertUserId, {
+      title:
+        outcome === "approved"
+          ? "You're approved"
+          : outcome === "published"
+            ? "Your profile is live"
+            : outcome === "changes_requested"
+              ? "A few changes to your application"
+              : "About your application",
+      body:
+        outcome === "approved"
+          ? "Set the hours clients can book, so you're ready from day one."
+          : outcome === "published"
+            ? "Clients can now find and book you on Pivotroom."
+            : outcome === "changes_requested"
+              ? "Our team asked for a few changes. Open it to update."
+              : "Open it to read our message.",
+      url: outcome === "approved" ? "/expert/availability" : outcome === "published" ? "/expert/dashboard" : "/expert/application",
+      tag: "expert-application",
+    });
   });
 }
 
@@ -141,6 +175,12 @@ export function notifyAdminsManualPayment(bookingReference: string) {
       }),
       `manual-payment:${bookingReference}:${Date.now()}`,
     );
+    await pushAdmins({
+      title: "Bank transfer to verify",
+      body: `A client submitted a bank transfer for ${bookingReference}.`,
+      url: "/admin/payments",
+      tag: `payment-${bookingReference}`,
+    });
   });
 }
 
@@ -197,6 +237,12 @@ export async function sendAdminsNewOrder(order: {
       }),
       `new-order:${order.bookingReference}`,
     );
+    await pushAdmins({
+      title: "New order",
+      body: `${order.customerName ?? "A client"} booked ${order.expertName ?? "an expert"} · ${when}`,
+      url: `/admin/bookings/${encodeURIComponent(order.bookingReference)}`,
+      tag: `order-${order.bookingReference}`,
+    });
   } catch (error) {
     console.error("new order notice:", error instanceof Error ? error.message : error);
   }

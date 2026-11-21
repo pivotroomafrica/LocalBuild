@@ -1,11 +1,11 @@
 /*
  * Pivotroom service worker. Deliberately minimal: it never caches pages,
  * data or anything signed-in (so nobody ever sees stale prices, slots or
- * another session's content). Its only job: when a page can't load
- * because the device is offline, show the branded offline page instead
- * of the browser's error.
+ * another session's content). It does two things: shows the branded
+ * offline page when a page can't load, and shows push notifications
+ * (bookings, changes, reminders), opening the right page when tapped.
  */
-const OFFLINE_CACHE = "pivotroom-offline-v2";
+const OFFLINE_CACHE = "pivotroom-offline-v3";
 const OFFLINE_URL = "/offline.html";
 
 self.addEventListener("install", (event) => {
@@ -33,5 +33,41 @@ self.addEventListener("fetch", (event) => {
     fetch(event.request).catch(() =>
       caches.open(OFFLINE_CACHE).then((cache) => cache.match(OFFLINE_URL)),
     ),
+  );
+});
+
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : "" };
+  }
+  const title = data.title || "Pivotroom";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || "",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/badge-96.png",
+      tag: data.tag || undefined,
+      renotify: Boolean(data.tag),
+      data: { url: typeof data.url === "string" && data.url.startsWith("/") ? data.url : "/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url || "/", self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+      for (const client of windows) {
+        if (client.url.startsWith(self.location.origin) && "focus" in client) {
+          client.navigate(url);
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(url);
+    }),
   );
 });

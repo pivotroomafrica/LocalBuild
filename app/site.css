@@ -7390,3 +7390,66 @@ a.hws-card:hover,
     height: 18px;
   }
 }
+
+/* Push notifications card (dashboards) */
+.pr .notif-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border: 1px solid var(--pr-line);
+  border-radius: 16px;
+  background: #ffffff;
+}
+.pr .notif-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--pr-blue-tint);
+  color: var(--pr-blue);
+  font-size: 22px;
+}
+.pr .notif-body {
+  flex: 1;
+  min-width: 220px;
+}
+.pr .notif-title {
+  margin: 0;
+  font-family: var(--pr-display);
+  font-size: 17px;
+  font-weight: 700;
+}
+.pr .notif-text {
+  margin: 4px 0 0;
+  color: var(--pr-slate);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.pr .notif-note {
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+.pr .notif-note.ok {
+  color: #1f7a45;
+}
+.pr .notif-note.err {
+  color: #b42318;
+}
+.pr .notif-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+@media (max-width: 520px) {
+  .pr .notif-card > .btn,
+  .pr .notif-actions {
+    width: 100%;
+  }
+  .pr .notif-card > .btn {
+    justify-content: center;
+  }
+}

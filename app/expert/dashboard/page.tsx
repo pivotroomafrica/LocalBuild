@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NotificationsCard } from "@/components/push/NotificationsCard";
 import { createClient } from "@/lib/supabase/server";
 import { requireApprovedExpertPage } from "@/lib/expert/auth";
 import { getExpertOverview, payoutOf, profileCompleteness } from "@/lib/expert/overview";
@@ -50,6 +51,8 @@ export default async function ExpertDashboardPage() {
           {subtitle}
         </p>
       </div>
+
+      <NotificationsCard />
 
       {next ? (
         <section className="ov-next ink" aria-label="Next session" style={{ alignItems: "flex-start" }}>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NotificationsCard } from "@/components/push/NotificationsCard";
 import { createClient } from "@/lib/supabase/server";
 import {
   requireCustomerPage,
@@ -78,6 +79,8 @@ export default async function DashboardOverviewPage() {
           {subtitle}
         </p>
       </div>
+
+      <NotificationsCard />
 
       {next ? (
         <section className="ov-next ink" aria-label="Next session">

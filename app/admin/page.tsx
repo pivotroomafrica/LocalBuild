@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NotificationsCard } from "@/components/push/NotificationsCard";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdminPage } from "@/lib/admin/data";
 import { getAdminOverview, OVERVIEW_RANGES, type OverviewRange, type OverviewSession } from "@/lib/admin/overview";
@@ -102,6 +103,8 @@ export default async function AdminOverviewPage({ searchParams }: PageProps<"/ad
           · <span className="live-note">Live, updated {data.updatedAt}</span>
         </p>
       </div>
+
+      <NotificationsCard />
 
       <nav className="range-tabs" aria-label="Period">
         {OVERVIEW_RANGES.map((r) => (
