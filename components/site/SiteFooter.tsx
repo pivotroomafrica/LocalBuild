@@ -9,7 +9,7 @@ export function SiteFooter() {
       <div className="wrap in">
         <div className="top">
           <div className="brand">
-            <SiteLogo tone="white" />
+            <SiteLogo tone="white" label="Pivotroom.Africa" />
             <span>One hour with someone whose time you couldn&apos;t otherwise get.</span>
           </div>
           <div className="cols">

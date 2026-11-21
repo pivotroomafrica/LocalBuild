@@ -184,7 +184,7 @@ export default async function WaitlistExpertsPage() {
 
       <header className="wl-top">
         <Link href="/waitlist" aria-label="Pivotroom home" className="wl-logo-link">
-          <BrandLogo size={30} />
+          <BrandLogo size={28} label="" />
         </Link>
         <div className="wl-account">
           <Link href="/waitlist" className="wl-top-link">

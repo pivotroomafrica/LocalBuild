@@ -8,6 +8,7 @@ import { SignOutIconButton } from "@/components/site/SignOutIconButton";
 import { MobileMenu, MobileTabBar } from "@/components/site/MobileNav";
 import { MegaNav } from "@/components/site/MegaNav";
 import { siteNav } from "@/lib/site/nav";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 
 type Props = {
   isLoggedIn: boolean;
@@ -15,16 +16,14 @@ type Props = {
   isAdmin: boolean;
 };
 
-/** The wordmark lockup from the website design (fixed brand asset). */
-export function SiteLogo({ tone = "ink" }: { tone?: "ink" | "white" }) {
+/** The primary wordmark (brand guidelines v1.0): ink on light, white on ink.
+ * The surrounding link carries the accessible name. */
+export function SiteLogo({ tone = "ink", label = "" }: { tone?: "ink" | "white"; label?: string }) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element -- static SVG brand asset.
-    <img
-      src={tone === "ink" ? "/brand/pivotroom-ink.svg" : "/brand/pivotroom-white.svg"}
-      alt="Pivotroom"
-      width={159}
-      height={28}
-      style={{ height: 28, width: "auto", display: "block", alignSelf: "flex-start" }}
+    <BrandLogo
+      size={26}
+      label={label}
+      style={{ color: tone === "ink" ? "#0D0F12" : "#FFFFFF", alignSelf: "flex-start" }}
     />
   );
 }
