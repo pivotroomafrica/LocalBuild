@@ -170,7 +170,7 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
               {subtitle ? <span className="ws-sub">{subtitle}</span> : null}
             </span>
           </div>
-          <WorkspaceSidebarNav items={items} switchTo={switchTo} />
+          <WorkspaceSidebarNav items={items} switchTo={switchTo} picker={area === "admin"} />
           <form action={signOutAction} className="ws-signout">
             <button type="submit" className="ws-link">
               <span className="ms" aria-hidden="true">

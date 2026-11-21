@@ -11,6 +11,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 /** Still reachable during the waitlist. */
 const OPEN_PREFIXES = [
+  // Android app link check (Google Play app).
+  "/.well-known",
   "/waitlist",
   // Sign in / sign up, so experts and admins can get in.
   "/auth",

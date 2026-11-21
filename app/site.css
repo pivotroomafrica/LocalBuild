@@ -7453,3 +7453,162 @@ a.hws-card:hover,
     justify-content: center;
   }
 }
+
+/* ---------- Workspace on phones: header actions live in the ☰ menu ---------- */
+@media (max-width: 900px) {
+  .pr .ws-acts {
+    display: none;
+  }
+  .pr .ws-bar {
+    gap: 12px;
+  }
+  .pr .ws-bar .site-logo {
+    height: 22px;
+  }
+}
+
+/* ---------- Admin on phones: section picker instead of a scrolling row ---------- */
+.pr .ws-pick {
+  display: none;
+}
+@media (max-width: 900px) {
+  .pr .ws-body {
+    align-content: start;
+  }
+  .pr.ws-dark .ws-side:has(.ws-pick) {
+    display: block;
+    padding: 0;
+    overflow: visible;
+    background: none;
+  }
+  .pr.ws-dark .ws-side:has(.ws-pick) .ws-nav,
+  .pr.ws-dark .ws-side:has(.ws-pick) .ws-signout {
+    display: none;
+  }
+  .pr .ws-pick {
+    display: block;
+    border-radius: 18px;
+    background: var(--pr-ink);
+    color: #ffffff;
+  }
+  .pr .ws-pick > summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 60px;
+    padding: 10px 14px;
+    list-style: none;
+    cursor: pointer;
+  }
+  .pr .ws-pick > summary::-webkit-details-marker {
+    display: none;
+  }
+  .pr .ws-pick-icon {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--pr-ink-line);
+    color: var(--pr-blue-on-ink);
+    font-size: 22px;
+  }
+  .pr .ws-pick-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.25;
+  }
+  .pr .ws-pick-label {
+    color: var(--pr-slate-light);
+    font-size: 12px;
+  }
+  .pr .ws-pick-name {
+    overflow: hidden;
+    font-family: var(--pr-display);
+    font-size: 17px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pr .ws-pick-chev {
+    color: var(--pr-slate-light);
+    transition: transform 200ms var(--pr-ease);
+  }
+  .pr .ws-pick[open] .ws-pick-chev {
+    transform: rotate(180deg);
+  }
+  .pr .ws-pick-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding: 4px 12px 12px;
+  }
+  .pr .ws-tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 76px;
+    padding: 10px 6px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--pr-slate-light);
+    font-size: 13px;
+    line-height: 1.2;
+    text-align: center;
+  }
+  .pr .ws-tile .ms {
+    font-size: 22px;
+  }
+  .pr .ws-tile.on {
+    box-shadow: inset 0 0 0 1.5px var(--pr-blue-on-ink);
+    background: var(--pr-ink-line);
+    color: #ffffff;
+    font-weight: 600;
+  }
+  .pr .ws-tile.on .ms {
+    color: var(--pr-blue-on-ink);
+  }
+  .pr .ws-tile .ws-count {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+  }
+  .pr .ws-pick-switch {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+    padding: 12px 18px 16px;
+    border-top: 1px solid var(--pr-ink-line);
+  }
+  .pr .ws-pick-switch a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    color: var(--pr-slate-light);
+    font-size: 14px;
+  }
+  .pr .ws-pick-switch .ms {
+    font-size: 18px;
+  }
+}
+.pr .install-app-steps p {
+  margin: 0;
+}
+.pr .install-app-alt {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+}

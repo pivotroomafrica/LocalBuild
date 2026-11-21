@@ -5,7 +5,7 @@
  * offline page when a page can't load, and shows push notifications
  * (bookings, changes, reminders), opening the right page when tapped.
  */
-const OFFLINE_CACHE = "pivotroom-offline-v3";
+const OFFLINE_CACHE = "pivotroom-offline-v4";
 const OFFLINE_URL = "/offline.html";
 
 self.addEventListener("install", (event) => {
@@ -51,6 +51,9 @@ self.addEventListener("push", (event) => {
       badge: "/icons/badge-96.png",
       tag: data.tag || undefined,
       renotify: Boolean(data.tag),
+      silent: false,
+      vibrate: [200, 100, 200],
+      timestamp: Date.now(),
       data: { url: typeof data.url === "string" && data.url.startsWith("/") ? data.url : "/" },
     }),
   );
