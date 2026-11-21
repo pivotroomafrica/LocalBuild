@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PairSequence, type Pair } from "@/components/waitlist/PairSequence";
 import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
@@ -41,13 +42,7 @@ const PROMISES: Ms[] = [
   },
 ];
 
-type Pair = {
-  icon: string;
-  problem: string;
-  problemText: string;
-  fix: string;
-  fixText: string;
-};
+
 
 /** Each problem, and Pivotroom's answer to it, in one card. */
 const DIASPORA: Pair[] = [
@@ -345,37 +340,7 @@ export default async function WaitlistPage() {
               back where it came from. Ethiopia loses an investor. You lose
               years.
             </p>
-            <div className="wl-grid3 wl-pairs">
-              {DIASPORA.map((item, index) => (
-                <div
-                  key={item.problem}
-                  className="wl-pair"
-                  data-reveal
-                  style={{ "--d": index } as React.CSSProperties}
-                >
-                  <div className="wl-pair-bad">
-                    <p className="wl-tag wl-tag-bad">
-                      <span className="ms" aria-hidden="true">
-                        close
-                      </span>
-                      Today
-                    </p>
-                    <h3>{item.problem}</h3>
-                    <p>{item.problemText}</p>
-                  </div>
-                  <div className="wl-pair-good">
-                    <p className="wl-tag wl-tag-good">
-                      <span className="ms" aria-hidden="true">
-                        check
-                      </span>
-                      With Pivotroom
-                    </p>
-                    <h3>{item.fix}</h3>
-                    <p>{item.fixText}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <PairSequence pairs={DIASPORA} />
             <div className="wl-answer" data-reveal>
               <p>
                 <strong>Before you commit a single birr</strong>, sit down with

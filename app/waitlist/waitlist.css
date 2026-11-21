@@ -1294,3 +1294,101 @@ html:has(.wl) {
     padding-inline: 12px;
   }
 }
+
+/* ---------- Problem -> fix cards, played in sequence ---------- */
+.pr .wl-seq-dots {
+  display: none;
+}
+@media (min-width: 901px) {
+  /* The row pins while you scroll; the extra height is the scroll that
+   * plays the three cards. */
+  .pr .wl-seq.seq-on {
+    height: calc(100vh + 120vh);
+    margin-top: 8px;
+  }
+  .pr .wl-seq.seq-on .wl-seq-pin {
+    position: sticky;
+    top: max(88px, calc(50vh - 250px));
+  }
+  .pr .wl-seq.seq-on .wl-seq-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 24px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .pr .wl-seq-dots li {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--pr-line);
+    transition:
+      width 300ms var(--pr-ease),
+      background-color 300ms var(--pr-ease);
+  }
+  .pr .wl-seq-dots li.on {
+    width: 24px;
+    background: var(--pr-blue);
+  }
+}
+/* Hidden until played (only once the script has switched it on). */
+.pr .seq-on .wl-pair {
+  opacity: 0.35;
+  transform: translateY(18px);
+  transition:
+    opacity 450ms var(--pr-ease),
+    transform 600ms var(--pr-ease),
+    box-shadow 400ms var(--pr-ease);
+}
+.pr .seq-on .wl-pair-bad,
+.pr .seq-on .wl-pair-good > * {
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 500ms var(--pr-ease),
+    transform 600ms var(--pr-ease);
+}
+.pr .seq-on .wl-pair-good::before {
+  transform: scale(0.2);
+  opacity: 0;
+  transition:
+    transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1) 420ms,
+    opacity 200ms ease 420ms;
+}
+/* Played: problem, then the arrow, then the answer. */
+.pr .seq-on .wl-pair.is-on {
+  opacity: 1;
+  transform: none;
+  box-shadow: 0 24px 50px -34px rgba(13, 15, 18, 0.45);
+}
+.pr .seq-on .wl-pair.is-on .wl-pair-bad {
+  opacity: 1;
+  transform: none;
+  transition-delay: 80ms;
+}
+.pr .seq-on .wl-pair.is-on .wl-pair-good::before {
+  transform: scale(1);
+  opacity: 1;
+}
+.pr .seq-on .wl-pair.is-on .wl-pair-good > * {
+  opacity: 1;
+  transform: none;
+  transition-delay: 760ms;
+}
+.pr .seq-on .wl-pair.is-on .wl-pair-good > h3 {
+  transition-delay: 840ms;
+}
+.pr .seq-on .wl-pair.is-on .wl-pair-good > p:last-child {
+  transition-delay: 920ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pr .seq-on .wl-pair,
+  .pr .seq-on .wl-pair-bad,
+  .pr .seq-on .wl-pair-good > *,
+  .pr .seq-on .wl-pair-good::before {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
