@@ -77,11 +77,11 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
   let subtitle: string | null;
   if (area === "admin") {
     items = [
-      { href: "/admin", label: "Overview", icon: "space_dashboard", exact: true },
+      { href: "/admin", label: "Overview", icon: "space_dashboard", exact: true, dock: true },
       { href: "/admin/board", label: "Board", icon: "view_kanban" },
-      { href: "/admin/experts", label: "Applications", icon: "how_to_reg", badge: adminCounts.applications },
-      { href: "/admin/bookings", label: "Bookings", icon: "event" },
-      { href: "/admin/payments", label: "Payments", icon: "payments", badge: adminCounts.payments },
+      { href: "/admin/experts", label: "Applications", icon: "how_to_reg", badge: adminCounts.applications, dock: true },
+      { href: "/admin/bookings", label: "Bookings", icon: "event", dock: true },
+      { href: "/admin/payments", label: "Payments", icon: "payments", badge: adminCounts.payments, dock: true },
       { href: "/admin/receipts", label: "Receipts", icon: "receipt_long", badge: adminCounts.receipts },
       { href: "/admin/people", label: "Clients & experts", icon: "group" },
       { href: "/admin/ngos", label: "NGOs", icon: "volunteer_activism" },

@@ -7467,84 +7467,141 @@ a.hws-card:hover,
   }
 }
 
-/* ---------- Admin on phones: section picker instead of a scrolling row ---------- */
-.pr .ws-pick {
+/* ---------- Admin on phones: floating bottom bar ---------- */
+.pr .ws-dock {
   display: none;
 }
 @media (max-width: 900px) {
   .pr .ws-body {
     align-content: start;
   }
-  .pr.ws-dark .ws-side:has(.ws-pick) {
-    display: block;
-    padding: 0;
-    overflow: visible;
-    background: none;
+  .pr.ws-dark .ws-side:has(.ws-dock) {
+    display: contents;
   }
-  .pr.ws-dark .ws-side:has(.ws-pick) .ws-nav,
-  .pr.ws-dark .ws-side:has(.ws-pick) .ws-signout {
+  .pr.ws-dark .ws-side:has(.ws-dock) .ws-nav,
+  .pr.ws-dark .ws-side:has(.ws-dock) .ws-signout {
     display: none;
   }
-  .pr .ws-pick {
-    display: block;
-    border-radius: 18px;
-    background: var(--pr-ink);
-    color: #ffffff;
+  .pr.ws-dark:has(.ws-dock) .ws-main {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
   }
-  .pr .ws-pick > summary {
+  .pr .ws-dock {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    z-index: 60;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 2px;
+    max-width: 520px;
+    margin-inline: auto;
+    padding: 6px;
+    border: 1px solid var(--pr-ink-line);
+    border-radius: 22px;
+    background: rgba(13, 15, 18, 0.94);
+    box-shadow: 0 18px 40px -16px rgba(13, 15, 18, 0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .pr .ws-dock-link {
+    position: relative;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 12px;
-    min-height: 60px;
-    padding: 10px 14px;
+    justify-content: center;
+    gap: 2px;
+    min-height: 54px;
+    padding: 4px 2px;
+    border-radius: 16px;
+    color: var(--pr-slate-light);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.1;
     list-style: none;
     cursor: pointer;
+    transition:
+      background-color 160ms var(--pr-ease),
+      color 160ms var(--pr-ease);
   }
-  .pr .ws-pick > summary::-webkit-details-marker {
+  .pr .ws-dock-link::-webkit-details-marker {
     display: none;
   }
-  .pr .ws-pick-icon {
-    display: grid;
-    flex: none;
-    place-items: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
+  .pr .ws-dock-link.on,
+  .pr .ws-dock-more[open] > .ws-dock-link {
     background: var(--pr-ink-line);
+    color: #ffffff;
+  }
+  .pr .ws-dock-link.on .ms {
     color: var(--pr-blue-on-ink);
-    font-size: 22px;
   }
-  .pr .ws-pick-text {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    min-width: 0;
-    line-height: 1.25;
+  .pr .ws-dock-icon {
+    position: relative;
+    display: inline-flex;
   }
-  .pr .ws-pick-label {
-    color: var(--pr-slate-light);
-    font-size: 12px;
+  .pr .ws-dock-icon .ms {
+    font-size: 24px;
   }
-  .pr .ws-pick-name {
-    overflow: hidden;
-    font-family: var(--pr-display);
-    font-size: 17px;
+  .pr .ws-dock-badge {
+    position: absolute;
+    top: -4px;
+    right: -10px;
+    min-width: 18px;
+    height: 18px;
+    padding-inline: 5px;
+    border: 2px solid var(--pr-ink);
+    border-radius: 999px;
+    background: var(--pr-blue);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
     font-weight: 700;
+    box-sizing: content-box;
+  }
+  .pr .ws-dock-label {
+    max-width: 100%;
+    overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .pr .ws-pick-chev {
-    color: var(--pr-slate-light);
-    transition: transform 200ms var(--pr-ease);
+  /* "More": a sheet that rises above the bar; tapping outside closes it. */
+  .pr .ws-dock-more {
+    display: contents;
   }
-  .pr .ws-pick[open] .ws-pick-chev {
-    transform: rotate(180deg);
+  .pr .ws-dock-more[open] > summary::before {
+    content: "";
+    position: fixed;
+    inset: -100vh -100vw;
+    z-index: -1;
+    background: rgba(13, 15, 18, 0.35);
+    cursor: default;
+  }
+  .pr .ws-dock-sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(100% + 10px);
+    padding-top: 12px;
+    border: 1px solid var(--pr-ink-line);
+    border-radius: 22px;
+    background: var(--pr-ink);
+    color: #ffffff;
+    box-shadow: 0 24px 50px -20px rgba(13, 15, 18, 0.6);
+    animation: ws-sheet-up 220ms var(--pr-ease);
+  }
+  @keyframes ws-sheet-up {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
   }
   .pr .ws-pick-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
-    padding: 4px 12px 12px;
+    padding: 0 12px 12px;
   }
   .pr .ws-tile {
     position: relative;
@@ -7583,7 +7640,7 @@ a.hws-card:hover,
     display: flex;
     flex-wrap: wrap;
     gap: 4px 16px;
-    padding: 12px 18px 16px;
+    padding: 10px 18px 14px;
     border-top: 1px solid var(--pr-ink-line);
   }
   .pr .ws-pick-switch a {
@@ -7596,6 +7653,11 @@ a.hws-card:hover,
   }
   .pr .ws-pick-switch .ms {
     font-size: 18px;
+  }
+}
+@media (max-width: 900px) and (prefers-reduced-motion: reduce) {
+  .pr .ws-dock-sheet {
+    animation: none;
   }
 }
 .pr .install-app-steps p {
