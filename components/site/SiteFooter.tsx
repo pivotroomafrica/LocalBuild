@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SiteLogo } from "@/components/site/SiteChrome";
+import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 
 /** Public footer (website design). "Gift a session" is left out on purpose:
  * that feature doesn't exist. Payouts are explained in the expert terms. */
@@ -11,6 +12,7 @@ export function SiteFooter() {
           <div className="brand">
             <SiteLogo tone="white" label="Pivotroom.Africa" />
             <span>One hour with someone whose time you couldn&apos;t otherwise get.</span>
+            <InstallAppButton className="on-ink" />
           </div>
           <div className="cols">
             <div className="col">

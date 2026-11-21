@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Noto_Sans_Ethiopic } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 import "./site.css";
 import { isProductionSite, siteUrl } from "@/lib/site";
+import { PwaRegister } from "@/components/pwa/PwaRegister";
 
 /** Inter carries all UI text (weights 400/500/600); Satoshi Bold is the
  * display face for headings and the wordmark (website design). */
@@ -50,6 +51,14 @@ export const metadata: Metadata = {
   ...(isProductionSite() ? {} : { robots: { index: false, follow: false } }),
   title: "Pivotroom",
   description: "One hour with someone who has done it. Book a paid one-to-one session with a vetted Ethiopian founder, executive or professional.",
+  applicationName: "Pivotroom",
+  // iPhone/iPad "Add to Home Screen": opens full screen, named Pivotroom.
+  appleWebApp: { capable: true, title: "Pivotroom", statusBarStyle: "default" },
+};
+
+/** Browser and installed-app chrome colour (brand ink). */
+export const viewport: Viewport = {
+  themeColor: "#0D0F12",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -58,7 +67,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${inter.variable} ${notoEthiopic.variable} ${satoshi.variable} ${materialSymbols.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans">{children}</body>
+      <body className="min-h-full flex flex-col font-sans">
+        {children}
+        <PwaRegister />
+      </body>
     </html>
   );
 }

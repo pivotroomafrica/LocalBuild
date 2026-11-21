@@ -7307,3 +7307,86 @@ a.hws-card:hover,
   min-width: 220px;
   max-width: 380px;
 }
+
+/* "Install the app" (PWA) */
+.pr .install-app {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pr .install-app-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  height: 40px;
+  padding: 0 16px 0 12px;
+  border: 1px solid var(--pr-line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--pr-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 180ms var(--pr-ease), border-color 180ms var(--pr-ease);
+}
+.pr .install-app-btn:hover {
+  border-color: var(--pr-blue);
+}
+.pr .install-app-btn .ms {
+  font-size: 20px;
+}
+.pr .install-app-steps {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.pr .install-app-steps .ms {
+  font-size: 18px;
+  vertical-align: -4px;
+}
+.pr .install-app.on-ink {
+  margin-top: 16px;
+}
+.pr .install-app.on-ink .install-app-btn {
+  border-color: var(--pr-ink-line);
+  background: transparent;
+  color: #ffffff;
+}
+.pr .install-app.on-ink .install-app-btn:hover {
+  border-color: var(--pr-blue-on-ink);
+  background: rgba(255, 255, 255, 0.06);
+}
+.pr .install-app.on-ink .install-app-steps {
+  color: rgba(255, 255, 255, 0.78);
+}
+.pr .install-app.in-menu {
+  margin-top: 12px;
+}
+.pr .install-app.in-menu .install-app-btn {
+  width: 100%;
+  justify-content: center;
+  height: 48px;
+}
+.pr .install-app.in-menu .install-app-steps {
+  color: var(--pr-slate);
+  text-align: center;
+}
+
+/* Logo size: smaller on narrow phones and in the phone menu's top bar. */
+.pr svg.site-logo {
+  height: 26px;
+  width: auto;
+}
+.pr svg.site-logo.compact {
+  height: 20px;
+}
+@media (max-width: 400px) {
+  .pr svg.site-logo {
+    height: 21px;
+  }
+  .pr svg.site-logo.compact {
+    height: 18px;
+  }
+}

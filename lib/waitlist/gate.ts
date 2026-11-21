@@ -30,6 +30,15 @@ const OPEN_PREFIXES = [
   "/fonts",
   "/robots.txt",
   "/sitemap.xml",
+  // The installable app (PWA): manifest, service worker, icons.
+  "/manifest.webmanifest",
+  "/sw.js",
+  "/offline.html",
+  "/icons",
+  "/icon.svg",
+  "/apple-icon.png",
+  "/favicon.ico",
+  "/brand",
 ];
 
 const matches = (path: string, prefix: string) => path === prefix || path.startsWith(`${prefix}/`);

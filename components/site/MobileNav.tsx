@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOutAction } from "@/lib/auth/actions";
 import { SiteLogo } from "@/components/site/SiteChrome";
+import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 import { ArrowBox } from "@/components/site/MegaNav";
 import type { NavSection } from "@/lib/site/nav";
 
@@ -149,7 +150,7 @@ export function MobileMenu({
         <div id="mobile-menu" ref={panelRef} className="mm-sheet" role="dialog" aria-modal="true" aria-label="Menu">
           <div className="mm-top">
             <Link href="/" onClick={close} aria-label="Pivotroom home">
-              <SiteLogo />
+              <SiteLogo compact />
             </Link>
             <span className="mm-top-acts">
               {who.isLoggedIn ? null : (
@@ -218,6 +219,7 @@ export function MobileMenu({
               <Link href="/experts" className="btn btn-ink md block" onClick={close}>
                 Find an expert
               </Link>
+              <InstallAppButton className="in-menu" />
 
               {areaItems && areaItems.length > 0 ? (
                 <>

@@ -18,11 +18,21 @@ type Props = {
 
 /** The primary wordmark (brand guidelines v1.0): ink on light, white on ink.
  * The surrounding link carries the accessible name. */
-export function SiteLogo({ tone = "ink", label = "" }: { tone?: "ink" | "white"; label?: string }) {
+export function SiteLogo({
+  tone = "ink",
+  label = "",
+  compact = false,
+}: {
+  tone?: "ink" | "white";
+  label?: string;
+  /** Smaller, for tight bars (the phone menu). */
+  compact?: boolean;
+}) {
   return (
     <BrandLogo
       size={26}
       label={label}
+      className={compact ? "site-logo compact" : "site-logo"}
       style={{ color: tone === "ink" ? "#0D0F12" : "#FFFFFF", alignSelf: "flex-start" }}
     />
   );
