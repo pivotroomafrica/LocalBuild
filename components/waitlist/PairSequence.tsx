@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { seqStyle, useScrollSteps } from "./useScrollSteps";
 
 export type Pair = { icon: string; problem: string; problemText: string; fix: string; fixText: string };
 
@@ -12,68 +12,10 @@ export type Pair = { icon: string; problem: string; problemText: string; fix: st
  * Without JavaScript, or with reduced motion, all cards simply show.
  */
 export function PairSequence({ pairs }: { pairs: Pair[] }) {
-  const wrap = useRef<HTMLDivElement>(null);
-  const [enabled, setEnabled] = useState(false);
-  const [shown, setShown] = useState<boolean[]>(() => pairs.map(() => false));
-
-  useEffect(() => {
-    const el = wrap.current;
-    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const wide = window.matchMedia("(min-width: 901px)");
-    let frame = 0;
-
-    const fromScroll = () => {
-      frame = 0;
-      const rect = el.getBoundingClientRect();
-      const travel = Math.max(1, rect.height - window.innerHeight);
-      // 0 when the row reaches its pinned spot, 1 when the pin releases.
-      const progress = Math.min(1, Math.max(0, -rect.top / travel));
-      const started = rect.top < window.innerHeight * 0.55;
-      const count = started ? Math.min(pairs.length, 1 + Math.floor(progress * pairs.length)) : 0;
-      setShown((prev) => {
-        // Once shown, a card stays shown (no flicker scrolling back up).
-        const next = prev.map((on, i) => on || i < count);
-        return next.every((v, i) => v === prev[i]) ? prev : next;
-      });
-    };
-    const onScroll = () => {
-      if (!frame) frame = requestAnimationFrame(fromScroll);
-    };
-
-    let observer: IntersectionObserver | null = null;
-    const setup = () => {
-      window.removeEventListener("scroll", onScroll);
-      observer?.disconnect();
-      if (wide.matches) {
-        window.addEventListener("scroll", onScroll, { passive: true });
-        fromScroll();
-      } else {
-        observer = new IntersectionObserver(
-          (entries) => {
-            for (const entry of entries) {
-              if (!entry.isIntersecting) continue;
-              const index = Number((entry.target as HTMLElement).dataset.index);
-              setShown((prev) => (prev[index] ? prev : prev.map((on, i) => on || i === index)));
-            }
-          },
-          { threshold: 0.45 },
-        );
-        el.querySelectorAll("[data-index]").forEach((card) => observer!.observe(card));
-      }
-    };
-    queueMicrotask(() => setEnabled(true));
-    setup();
-    wide.addEventListener("change", setup);
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      wide.removeEventListener("change", setup);
-      observer?.disconnect();
-      if (frame) cancelAnimationFrame(frame);
-    };
-  }, [pairs.length]);
+  const { wrap, enabled, shown } = useScrollSteps(pairs.length);
 
   return (
-    <div ref={wrap} className={enabled ? "wl-seq seq-on" : "wl-seq"}>
+    <div ref={wrap} className={enabled ? "wl-seq seq-on" : "wl-seq"} style={seqStyle(pairs.length)}>
       <div className="wl-seq-pin">
         <div className="wl-grid3 wl-pairs">
           {pairs.map((item, index) => (

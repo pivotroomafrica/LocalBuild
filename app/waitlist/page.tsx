@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { CompareSequence } from "@/components/waitlist/CompareSequence";
+import { HowSequence, type HowStep } from "@/components/waitlist/HowSequence";
 import { PairSequence, type Pair } from "@/components/waitlist/PairSequence";
 import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 import type { Metadata } from "next";
@@ -86,21 +88,18 @@ const PIVOT_STEPS = [
   "Act on a plan you can defend",
 ];
 
-const HOW: Ms[] = [
+const HOW: HowStep[] = [
   {
-    icon: "flag",
-    title: "Name the goal",
-    text: "Raising finance, entering a market, fixing operations, deciding on an investment. Start with whatever is in the way.",
+    title: "Describe your problem",
+    text: "Write what you're facing in your own words, word for word. You don't need to know what kind of expert you need.",
   },
   {
-    icon: "person_search",
-    title: "Choose who has done it",
-    text: "Read real profiles: what each expert has built, where, and what they help with. You choose. Nobody is assigned to you.",
+    title: "Our AI finds your expert",
+    text: "No guessing which expert fits. Our AI reads your problem and matches you, in seconds, with an expert who has solved exactly that.",
   },
   {
-    icon: "forum",
-    title: "Talk, then decide",
-    text: "Meet on Google Meet or in person, for the price you saw before booking. Leave knowing your next move.",
+    title: "Book and get your answer",
+    text: "Book your match on Google Meet or in person, for the price you see before booking, and ask for the solution.",
   },
 ];
 
@@ -370,52 +369,18 @@ export default async function WaitlistPage() {
               expensive option on the table, paid for in months, money, staff
               morale and market position you don&apos;t get back.
             </p>
-            <div className="wl-compare">
-              <div className="wl-path wl-path-slow" data-reveal>
-                <p className="wl-tag wl-tag-bad">
-                  <span className="ms" aria-hidden="true">
-                    close
-                  </span>
-                  Without Pivotroom
-                </p>
-                <p className="wl-path-label">Trial and error</p>
-                <ol>
-                  {TRIAL_STEPS.map((step) => (
-                    <li key={step}>{step}</li>
-                  ))}
-                </ol>
-                <div className="wl-bar">
-                  <span className="wl-bar-fill slow" />
-                </div>
-                <p className="wl-path-foot">
-                  Months. Paid for in time, money, morale and market share.
-                </p>
-              </div>
-              <div
-                className="wl-path wl-path-fast"
-                data-reveal
-                style={{ "--d": 1 } as React.CSSProperties}
-              >
-                <p className="wl-tag wl-tag-good">
-                  <span className="ms" aria-hidden="true">
-                    check
-                  </span>
-                  With Pivotroom
-                </p>
-                <p className="wl-path-label">One hour with someone who knows</p>
-                <ol>
-                  {PIVOT_STEPS.map((step) => (
-                    <li key={step}>{step}</li>
-                  ))}
-                </ol>
-                <div className="wl-bar">
-                  <span className="wl-bar-fill fast" />
-                </div>
-                <p className="wl-path-foot">
-                  Days. Your decisions start where their experience ends.
-                </p>
-              </div>
-            </div>
+            <CompareSequence
+              slow={{
+                label: "Trial and error",
+                steps: TRIAL_STEPS,
+                foot: "Months. Paid for in time, money, morale and market share.",
+              }}
+              fast={{
+                label: "One hour with someone who knows",
+                steps: PIVOT_STEPS,
+                foot: "Days. Your decisions start where their experience ends.",
+              }}
+            />
             <p className="wl-quote" data-reveal>
               The real question isn&apos;t whether an hour is worth the fee.
               It&apos;s what the next six months of guessing will cost.
@@ -430,26 +395,10 @@ export default async function WaitlistPage() {
               How it works
             </p>
             <h2 className="h2 wl-h2" data-reveal>
-              From question to decision,{" "}
+              From problem to solution,{" "}
               <span className="wl-acc">in three steps.</span>
             </h2>
-            <div className="wl-grid3 wl-steps">
-              {HOW.map((item, index) => (
-                <div
-                  key={item.title}
-                  className="wl-card"
-                  data-reveal
-                  style={{ "--d": index } as React.CSSProperties}
-                >
-                  <span className="wl-step-num">{index + 1}</span>
-                  <span className="wl-icon ms" aria-hidden="true">
-                    {item.icon}
-                  </span>
-                  <h3>{item.title}</h3>
-                  <p>{item.text}</p>
-                </div>
-              ))}
-            </div>
+            <HowSequence steps={HOW} />
           </div>
         </section>
 

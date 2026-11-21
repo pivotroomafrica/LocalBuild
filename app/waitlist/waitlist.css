@@ -1303,7 +1303,7 @@ html:has(.wl) {
   /* The row pins while you scroll; the extra height is the scroll that
    * plays the three cards. */
   .pr .wl-seq.seq-on {
-    height: calc(100vh + 120vh);
+    height: calc(100vh + var(--seq-steps, 3) * 40vh);
     margin-top: 8px;
   }
   .pr .wl-seq.seq-on .wl-seq-pin {
@@ -1391,4 +1391,357 @@ html:has(.wl) {
     transform: none;
     transition: none;
   }
+}
+
+/* ---------- Comparison, played in sequence ---------- */
+.pr .wl-seq-compare .wl-compare {
+  margin-top: 48px;
+}
+@media (min-width: 901px) {
+  .pr .wl-seq-compare.seq-on .wl-seq-pin {
+    top: max(88px, calc(50vh - 230px));
+  }
+}
+.pr .seq-on .wl-path {
+  opacity: 0.35;
+  transform: translateY(18px);
+  transition:
+    opacity 450ms var(--pr-ease),
+    transform 600ms var(--pr-ease);
+}
+.pr .seq-on .wl-path.is-on {
+  opacity: 1;
+  transform: none;
+}
+.pr .seq-on .wl-path li,
+.pr .seq-on .wl-path .wl-path-foot {
+  opacity: 0;
+  transform: translateX(-10px);
+  transition:
+    opacity 400ms var(--pr-ease),
+    transform 500ms var(--pr-ease);
+}
+.pr .seq-on .wl-path.is-on li {
+  opacity: 1;
+  transform: none;
+  transition-delay: calc(250ms + var(--i, 0) * 260ms);
+}
+/* The slow bar crawls; the fast one snaps short. */
+.pr .seq-on .wl-path .wl-bar-fill {
+  transform: scaleX(0);
+}
+.pr .seq-on .wl-path-slow.is-on .wl-bar-fill {
+  transform: scaleX(1);
+  transition: transform 3.2s cubic-bezier(0.45, 0, 0.55, 1) 1.2s;
+}
+.pr .seq-on .wl-path-fast.is-on .wl-bar-fill {
+  transform: scaleX(1);
+  transition: transform 500ms var(--pr-ease) 1s;
+}
+.pr .seq-on .wl-path-slow.is-on .wl-path-foot {
+  opacity: 1;
+  transform: none;
+  transition-delay: 4.2s;
+}
+.pr .seq-on .wl-path-fast.is-on .wl-path-foot {
+  opacity: 1;
+  transform: none;
+  transition-delay: 1.5s;
+}
+
+/* ---------- How it works, played in sequence ---------- */
+.pr .wl-how {
+  align-items: stretch;
+}
+.pr .wl-how-card {
+  display: flex;
+  flex-direction: column;
+}
+.pr .wl-demo {
+  display: flex;
+  align-items: center;
+  min-height: 132px;
+  margin: 0 0 22px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--pr-mist);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.pr .wl-demo > * {
+  width: 100%;
+}
+.pr .wl-demo .ms {
+  font-size: 18px;
+}
+.pr .wl-demo-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--pr-slate);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.pr .wl-demo-type {
+  align-self: stretch;
+  padding: 12px 14px;
+  border: 1px solid var(--pr-line);
+  border-radius: 10px;
+  background: #ffffff;
+}
+.pr .wl-demo-type p {
+  margin: 0;
+  min-height: 3em;
+  color: var(--pr-ink);
+}
+.pr .wl-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: var(--pr-blue);
+  animation: wl-caret 1s steps(1) infinite;
+}
+.pr .wl-caret.done {
+  animation-duration: 1.2s;
+}
+@keyframes wl-caret {
+  50% {
+    opacity: 0;
+  }
+}
+.pr .wl-demo-match {
+  position: relative;
+  min-height: 64px;
+}
+.pr .wl-demo-scan,
+.pr .wl-demo-expert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pr .wl-demo-scan {
+  position: absolute;
+  inset: 0;
+  justify-content: center;
+  color: var(--pr-blue);
+  font-weight: 600;
+}
+.pr .wl-demo-expert {
+  padding: 12px;
+  border: 1px solid var(--pr-line);
+  border-radius: 10px;
+  background: #ffffff;
+}
+.pr .wl-demo-expert > div {
+  flex: 1;
+  min-width: 0;
+}
+.pr .wl-demo-expert strong {
+  display: block;
+  color: var(--pr-ink);
+  font-size: 14px;
+}
+.pr .wl-demo-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  background: var(--pr-ink);
+  color: #ffffff;
+}
+.pr .wl-demo-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.pr .wl-demo-chips span {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--pr-blue-tint);
+  color: var(--pr-blue);
+  font-size: 11px;
+  font-weight: 600;
+}
+.pr .wl-demo-badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  color: #067647;
+  font-size: 12px;
+  font-weight: 700;
+}
+.pr .wl-demo-book {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pr .wl-demo-slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--pr-line);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--pr-ink);
+  font-weight: 600;
+}
+.pr .wl-demo-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 42px;
+  border-radius: 999px;
+  background: var(--pr-ink);
+  color: #ffffff;
+  font-weight: 700;
+  transition: background-color 300ms var(--pr-ease) 1.4s;
+}
+.pr .wl-demo-btn > span {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pr .wl-demo-btn-done {
+  opacity: 0;
+}
+
+/* Before playing: faint card, demo at rest. */
+.pr .seq-on .wl-how-card {
+  opacity: 0.35;
+  transform: translateY(18px);
+  transition:
+    opacity 450ms var(--pr-ease),
+    transform 600ms var(--pr-ease),
+    box-shadow 400ms var(--pr-ease);
+}
+.pr .seq-on .wl-how-card.is-on {
+  opacity: 1;
+  transform: none;
+  box-shadow: 0 24px 50px -34px rgba(13, 15, 18, 0.45);
+}
+.pr .seq-on .wl-how-card h3,
+.pr .seq-on .wl-how-card > p {
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 450ms var(--pr-ease),
+    transform 550ms var(--pr-ease);
+}
+.pr .seq-on .wl-how-card.is-on h3,
+.pr .seq-on .wl-how-card.is-on > p {
+  opacity: 1;
+  transform: none;
+  transition-delay: 200ms;
+}
+.pr .seq-on .wl-how-card.is-on > p {
+  transition-delay: 320ms;
+}
+/* Step 2: "finding" pulses, then the match drops in. */
+.pr .seq-on .wl-demo-expert {
+  opacity: 0;
+  transform: translateY(10px) scale(0.97);
+}
+.pr .seq-on .wl-demo-scan {
+  opacity: 0;
+}
+.pr .seq-on .is-on .wl-demo-scan {
+  animation: wl-scan 1.6s var(--pr-ease) both;
+}
+.pr .seq-on .is-on .wl-demo-expert {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 450ms var(--pr-ease) 1.5s,
+    transform 550ms cubic-bezier(0.34, 1.56, 0.64, 1) 1.5s;
+}
+@keyframes wl-scan {
+  0% {
+    opacity: 0;
+  }
+  15%,
+  45% {
+    opacity: 1;
+  }
+  30% {
+    opacity: 0.45;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+/* Step 3: a time is picked, then the button turns to "Booked". */
+.pr .seq-on .wl-demo-slot {
+  border-color: var(--pr-line);
+  transition: border-color 300ms var(--pr-ease) 0.6s, color 300ms var(--pr-ease) 0.6s;
+}
+.pr .seq-on .is-on .wl-demo-slot {
+  border-color: var(--pr-blue);
+  color: var(--pr-blue);
+}
+.pr .seq-on .wl-demo-btn {
+  background: var(--pr-ink);
+}
+.pr .seq-on .is-on .wl-demo-btn {
+  background: #067647;
+}
+.pr .seq-on .wl-demo-btn-idle,
+.pr .seq-on .wl-demo-btn-done {
+  transition:
+    opacity 250ms var(--pr-ease) 1.4s,
+    transform 350ms var(--pr-ease) 1.4s;
+}
+.pr .seq-on .is-on .wl-demo-btn-idle {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+.pr .seq-on .is-on .wl-demo-btn-done {
+  opacity: 1;
+}
+@media (max-width: 640px) {
+  .pr .wl-demo {
+    min-height: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pr .wl-caret {
+    animation: none;
+  }
+  .pr .seq-on .wl-path,
+  .pr .seq-on .wl-path li,
+  .pr .seq-on .wl-path .wl-path-foot,
+  .pr .seq-on .wl-how-card,
+  .pr .seq-on .wl-how-card h3,
+  .pr .seq-on .wl-how-card > p {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+/* Not playing (no script, or reduced motion): show the end state. */
+.pr .wl-seq:not(.seq-on) .wl-demo-scan {
+  display: none;
+}
+.pr .wl-seq:not(.seq-on) .wl-bar-fill {
+  transform: scaleX(1);
+}
+.pr .wl-how-num {
+  display: block;
+  margin: 0 0 12px;
+  color: var(--pr-blue);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
