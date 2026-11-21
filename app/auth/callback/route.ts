@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
-import { isAuthRetryableFetchError } from "@supabase/supabase-js";
+import { isAuthRetryableFetchError, type EmailOtpType } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { publicOrigin } from "@/lib/utils/publicOrigin";
 import { homePathFor, safeNext } from "@/lib/auth/home";
@@ -23,16 +23,23 @@ const SESSION_COOKIE = /^sb-[a-z0-9]+-auth-token(\.\d+)?$/;
  * session replaces any old one, and leftover session chunks are cleared.
  * A network drop on the exchange is retried once; any failure is logged
  * with its reason and the visitor sees "didn't finish, please try again".
+ *
+ * Account emails (supabase/templates) link here on pivotroom.africa with a
+ * `token_hash` instead: verified directly, so the link also works when it
+ * is opened on another device or browser than the one that signed up.
+ * `redirect_to` carries the page they were heading for.
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const origin = publicOrigin(request);
   const code = searchParams.get("code");
-  const next = safeNext(searchParams.get("next"));
+  const tokenHash = searchParams.get("token_hash");
+  const otpType = searchParams.get("type");
+  const next = safeNext(searchParams.get("next") ?? nextFromRedirect(searchParams.get("redirect_to")));
   // Set by supabase-js on the redirect: picks this attempt's own verifier.
   const flowId = searchParams.get("sb_flow_id") ?? undefined;
 
-  if (code) {
+  if (code || (tokenHash && isEmailOtpType(otpType))) {
     const cookieStore = await cookies();
     // The cookies as they arrived, minus any old session. Each client starts
     // from this, so a retry still has the code verifier (a failed attempt
@@ -55,14 +62,18 @@ export async function GET(request: Request) {
       });
 
     const options = flowId ? { flowId } : undefined;
+    const attempt = (client: ReturnType<typeof makeClient>) =>
+      code
+        ? client.auth.exchangeCodeForSession(code, options)
+        : client.auth.verifyOtp({ token_hash: tokenHash!, type: otpType as EmailOtpType });
     let supabase = makeClient();
-    let { data, error } = await supabase.auth.exchangeCodeForSession(code, options);
+    let { data, error } = await attempt(supabase);
     // A dropped connection to Supabase (it happens on slow networks): try
     // once more, on a fresh client, before giving up.
     if (error && isAuthRetryableFetchError(error)) {
       await new Promise((resolve) => setTimeout(resolve, 800));
       supabase = makeClient();
-      ({ data, error } = await supabase.auth.exchangeCodeForSession(code, options));
+      ({ data, error } = await attempt(supabase));
     }
     const user = error ? null : data.user;
     if (user) {
@@ -88,7 +99,7 @@ export async function GET(request: Request) {
       }
       return NextResponse.redirect(`${origin}${next ?? (await homePathFor(supabase, user.id))}`);
     }
-    console.error(`auth/callback: code exchange failed: ${error?.name ?? "no user"}: ${error?.message ?? ""}`);
+    console.error(`auth/callback: ${code ? "code exchange" : "email link"} failed: ${error?.name ?? "no user"}: ${error?.message ?? ""}`);
   }
 
   // Cancelled or failed: back to sign-in with a message, keeping where
@@ -96,4 +107,21 @@ export async function GET(request: Request) {
   const params = new URLSearchParams({ error: "oauth" });
   if (next) params.set("next", next);
   return NextResponse.redirect(`${origin}/auth/login?${params.toString()}`);
+}
+
+const EMAIL_OTP_TYPES: EmailOtpType[] = ["signup", "email", "recovery", "email_change", "invite", "magiclink"];
+
+function isEmailOtpType(value: string | null): value is EmailOtpType {
+  return value !== null && (EMAIL_OTP_TYPES as string[]).includes(value);
+}
+
+/** The `next` path inside the redirect URL an account email carries
+ * (`.../auth/callback?next=/expert/...`), or null. */
+function nextFromRedirect(redirectTo: string | null): string | null {
+  if (!redirectTo) return null;
+  try {
+    return new URL(redirectTo).searchParams.get("next");
+  } catch {
+    return null;
+  }
 }

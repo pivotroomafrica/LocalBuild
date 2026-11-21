@@ -3,7 +3,7 @@ import { SESSION_FORMAT_LABELS } from "@/types/booking";
 
 export type EmailContent = { subject: string; html: string; text: string };
 
-const BRAND_COLOR = "#14532d";
+const BRAND_COLOR = "#0d0f12";
 
 /** Shared, minimal, mobile-friendly layout (spec sections 63, 64) --
  * transactional first, no marketing banners. Table-based for email
@@ -23,7 +23,7 @@ function renderShell(params: {
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background-color:#ffffff;border-radius:8px;overflow:hidden;">
             <tr>
               <td style="padding:24px 24px 0 24px;">
-                <p style="margin:0 0 16px 0;font-size:13px;font-weight:700;letter-spacing:0.05em;color:${BRAND_COLOR};">PIVOTROOM</p>
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 20px 0;"><tr><td style="vertical-align:middle;"><img src="https://pivotroom.africa/icons/icon-192.png" width="32" height="32" alt="" style="display:block;border:0;border-radius:8px;" /></td><td style="vertical-align:middle;padding-left:10px;font-size:16px;font-weight:700;color:${BRAND_COLOR};">Pivotroom.Africa</td></tr></table>
                 <h1 style="margin:0 0 16px 0;font-size:20px;line-height:1.3;color:#1c1917;">${heading(params.heading)}</h1>
               </td>
             </tr>
@@ -35,11 +35,11 @@ function renderShell(params: {
             </tr>
             <tr>
               <td style="padding:24px;">
-                <a href="${params.ctaUrl}" style="display:inline-block;background-color:${BRAND_COLOR};color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:10px 20px;border-radius:6px;">${escapeHtml(params.ctaLabel)}</a>
+                <a href="${params.ctaUrl}" style="display:inline-block;background-color:${BRAND_COLOR};color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 24px;border-radius:999px;">${escapeHtml(params.ctaLabel)}</a>
               </td>
             </tr>
             <tr>
-              <td style="padding:0 24px 24px 24px;font-size:12px;color:#a8a29e;">Pivotroom.Africa</td>
+              <td style="padding:0 24px 24px 24px;font-size:12px;line-height:1.6;color:#a8a29e;">Pivotroom.Africa. Questions? Write to <a href="mailto:hello@pivotroom.africa" style="color:#78716c;">hello@pivotroom.africa</a>.</td>
             </tr>
           </table>
         </td>
