@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getDirectoryForRequest } from "@/lib/public/cached";
@@ -287,6 +288,8 @@ export default async function WaitlistPage() {
               </Link>
             </div>
           )}
+
+          <InstallAppButton className="wl-install wl-install-hero" />
 
           {faces.length >= 3 ? (
             <div className="wl-faces">
@@ -608,6 +611,7 @@ export default async function WaitlistPage() {
       {!user ? <WaitlistStickyBar /> : null}
 
       <footer className="wl-foot">
+        <InstallAppButton className="wl-install" />
         <span>© {new Date().getFullYear()} Pivotroom</span>
         <Link href="/terms">Terms</Link>
         <Link href="/privacy">Privacy</Link>

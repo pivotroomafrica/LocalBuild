@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { InstallAppButton } from "@/components/pwa/InstallAppButton";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { BrandLogo } from "@/components/ui/BrandLogo";
@@ -183,7 +184,11 @@ export default async function WaitlistExpertsPage() {
       </div>
 
       <header className="wl-top">
-        <Link href="/waitlist" aria-label="Pivotroom home" className="wl-logo-link">
+        <Link
+          href="/waitlist"
+          aria-label="Pivotroom home"
+          className="wl-logo-link"
+        >
           <BrandLogo size={28} label="" />
         </Link>
         <div className="wl-account">
@@ -398,6 +403,7 @@ export default async function WaitlistExpertsPage() {
       {!user ? <WaitlistStickyBar expertOnly /> : null}
 
       <footer className="wl-foot">
+        <InstallAppButton className="wl-install" />
         <span>© {new Date().getFullYear()} Pivotroom</span>
         <Link href="/waitlist">For clients</Link>
         <Link href="/terms">Terms</Link>

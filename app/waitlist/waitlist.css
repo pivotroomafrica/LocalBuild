@@ -1239,3 +1239,18 @@ html:has(.wl) {
     row-gap: 20px;
   }
 }
+
+/* "Install the app" on the waitlist pages */
+.pr .wl-foot .wl-install {
+  flex-basis: 100%;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.pr .wl-install-hero {
+  align-items: center;
+  margin-top: 20px;
+}
+.pr .wl-install .install-app-steps {
+  color: var(--pr-slate);
+  text-align: center;
+}
