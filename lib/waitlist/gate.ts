@@ -55,7 +55,18 @@ export function isOpenDuringWaitlist(pathname: string): boolean {
 const MODE_TTL_MS = 10_000;
 let cachedMode: { on: boolean; at: number } | null = null;
 
+/**
+ * Local preview only: with LOCAL_SHOW_FULL_SITE=1 in .env.local, `next dev`
+ * shows the full site even while the live waitlist is on. Ignored by the
+ * production build, so it can never open the live site. (The database
+ * still refuses bookings from non-admins while the waitlist is on.)
+ */
+function localFullSitePreview(): boolean {
+  return process.env.NODE_ENV === "development" && process.env.LOCAL_SHOW_FULL_SITE === "1";
+}
+
 export async function waitlistModeOn(supabase: SupabaseClient): Promise<boolean> {
+  if (localFullSitePreview()) return false;
   if (cachedMode && Date.now() - cachedMode.at < MODE_TTL_MS) return cachedMode.on;
   const { data, error } = await supabase.rpc("waitlist_mode");
   // If it can't be read, keep the last known value (or off): the database
