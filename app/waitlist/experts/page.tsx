@@ -14,7 +14,7 @@ import "../waitlist.css";
 export const metadata: Metadata = {
   title: "Become a Pivotroom expert",
   description:
-    "Your experience took years to earn. Let it earn again: paid one-to-one sessions, at your price, on your schedule. Build your profile now and be bookable the day Pivotroom opens.",
+    "Share what you've learned with growing businesses in Ethiopia: paid one-to-one sessions, online or in person, at your price and on your schedule.",
 };
 
 type Item = { icon: string; title: string; text: string };
@@ -43,6 +43,30 @@ const TERMS: Item[] = [
   },
 ];
 
+/** What being a Pivotroom expert gives you (all true of the product today). */
+const GETS: Item[] = [
+  {
+    icon: "payments",
+    title: "Paid for what you know",
+    text: "Each session is income at the price you set, paid before you meet.",
+  },
+  {
+    icon: "trending_up",
+    title: "Work that moves a business",
+    text: "One focused hour on a real problem, with someone ready to act on what you say.",
+  },
+  {
+    icon: "badge",
+    title: "A profile that shows your record",
+    text: "Your experience, the problems you solve and what you have achieved, reviewed and presented properly.",
+  },
+  {
+    icon: "volunteer_activism",
+    title: "Room to give back",
+    text: "Share part of your earnings with an Ethiopian NGO you choose, if you want to.",
+  },
+];
+
 const STEPS: Item[] = [
   {
     icon: "person_add",
@@ -51,8 +75,8 @@ const STEPS: Item[] = [
   },
   {
     icon: "auto_awesome",
-    title: "Let our AI draft your profile",
-    text: "Answer a few quick questions, mostly by tapping. Our AI turns them into a profile in about ten minutes. You approve every word.",
+    title: "Build your profile",
+    text: "Answer a few questions, mostly by tapping, and we draft your profile from them. You edit and approve every word.",
   },
   {
     icon: "fact_check",
@@ -61,8 +85,8 @@ const STEPS: Item[] = [
   },
   {
     icon: "event_available",
-    title: "Be bookable on day one",
-    text: "Set your hours and your price. When Pivotroom opens, clients can book you straight away.",
+    title: "Clients book you",
+    text: "Set your hours and your price. Once Pivotroom opens, clients can find you and book a session.",
   },
 ];
 
@@ -221,14 +245,14 @@ export default async function WaitlistExpertsPage() {
               For experts · Opening soon
             </p>
             <h1 className="h1 wl-xh1">
-              Your experience took years to earn.{" "}
-              <span className="wl-acc">Let it earn again.</span>
+              Your experience can shorten{" "}
+              <span className="wl-acc">someone else&apos;s path.</span>
             </h1>
             <p className="lede wl-xlede">
-              You&apos;ve already solved problems other people are only now
-              running into. On Pivotroom you share that, one paid hour at a
-              time, at your price and on your schedule. Build your profile now,
-              and be bookable the day we open.
+              Pivotroom connects experienced founders, executives and
+              specialists with businesses facing problems they have already
+              solved. Clients book a paid one-to-one session with you, online
+              or in person, at the price you set and the hours you choose.
             </p>
             <ul className="wl-xpoints">
               <li>
@@ -273,36 +297,52 @@ export default async function WaitlistExpertsPage() {
           </div>
         </section>
 
-        {/* ---------------- The terms ---------------- */}
+        {/* ---------------- What you bring ---------------- */}
+        <section className="wl-goal">
+          <div className="wl-wrap wl-goal-inner" data-reveal>
+            <p className="eyebrow wl-eyebrow wl-eyebrow-light">What you bring</p>
+            <h2 className="h1 wl-goal-title">
+              What took you years to learn,{" "}
+              <span className="wl-acc">they need this month.</span>
+            </h2>
+            <p className="wl-goal-text">
+              Growing businesses often meet a problem for the first time:
+              a loan application, a new market, a regulator, a team that
+              stopped working. You have been there. In one focused hour you can
+              tell them what to do first, what to avoid and what it really
+              takes. They arrive with a real problem and leave with a next
+              step.
+            </p>
+          </div>
+        </section>
+
+        {/* ---------------- What you get ---------------- */}
         <section className="wl-section">
+          <div className="wl-wrap">
+            <p className="eyebrow wl-eyebrow" data-reveal>
+              What you get
+            </p>
+            <h2 className="h2 wl-h2" data-reveal>
+              Meaningful work, <span className="wl-acc">on your terms.</span>
+            </h2>
+            <div className="wl-grid4">
+              {GETS.map((entry, index) => item(entry, index, "wl-card-sm"))}
+            </div>
+          </div>
+        </section>
+
+        {/* ---------------- The terms ---------------- */}
+        <section className="wl-section wl-section-alt">
           <div className="wl-wrap">
             <p className="eyebrow wl-eyebrow" data-reveal>
               The money and the hours
             </p>
             <h2 className="h2 wl-h2" data-reveal>
-              Simple terms. <span className="wl-acc">Said once.</span>
+              How the money works, <span className="wl-acc">plainly.</span>
             </h2>
             <div className="wl-grid4">
               {TERMS.map((entry, index) => item(entry, index, "wl-card-sm"))}
             </div>
-          </div>
-        </section>
-
-        {/* ---------------- Why clients value you ---------------- */}
-        <section className="wl-goal">
-          <div className="wl-wrap wl-goal-inner" data-reveal>
-            <p className="eyebrow wl-eyebrow wl-eyebrow-light">Why it works</p>
-            <h2 className="h1 wl-goal-title">
-              Advice is cheap.{" "}
-              <span className="wl-acc">Experience isn&apos;t.</span>
-            </h2>
-            <p className="wl-goal-text">
-              Clients on Pivotroom aren&apos;t shopping for opinions.
-              They&apos;re paying to skip the mistakes you&apos;ve already made.
-              So there&apos;s no pitching and no proposals: they read your
-              profile, choose you, and arrive with a real problem and a paid
-              hour. Your job is the part you&apos;re best at.
-            </p>
           </div>
         </section>
 
@@ -313,7 +353,7 @@ export default async function WaitlistExpertsPage() {
               How you go live
             </p>
             <h2 className="h2 wl-h2" data-reveal>
-              From sign-up to bookable,{" "}
+              From sign-up to your first session,{" "}
               <span className="wl-acc">in four steps.</span>
             </h2>
             <div className="wl-grid4 wl-steps">
@@ -343,12 +383,12 @@ export default async function WaitlistExpertsPage() {
               Who we&apos;re looking for
             </p>
             <h2 className="h2 wl-h2" data-reveal>
-              Every expert is reviewed.{" "}
-              <span className="wl-acc">However senior.</span>
+              Experts with a record{" "}
+              <span className="wl-acc">clients can rely on.</span>
             </h2>
             <p className="wl-text" data-reveal>
-              It&apos;s why clients can trust the names they see, and why being
-              on Pivotroom means something.
+              Our team reviews every profile before it goes live, so clients
+              can trust who they book.
             </p>
             <div className="wl-grid4">
               {LOOK_FOR.map((entry, index) => item(entry, index, "wl-card-sm"))}
@@ -385,10 +425,11 @@ export default async function WaitlistExpertsPage() {
         <section className="wl-section wl-section-alt">
           <div className="wl-wrap wl-final" data-reveal>
             <h2 className="h2 wl-h2">
-              Be bookable <span className="wl-acc">on day one.</span>
+              Ready to share <span className="wl-acc">what you know?</span>
             </h2>
             <p className="wl-text">
-              It takes about ten minutes. Your answers save as you go.
+              Build your profile now. Your answers save as you go, and nothing
+              is public until our team has reviewed it.
             </p>
             <a href="#apply" className="btn btn-ink lg wl-final-btn">
               Apply as an expert

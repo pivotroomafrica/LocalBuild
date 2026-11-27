@@ -83,7 +83,9 @@ const ROLE_IDEAS: Record<WorkType, string[]> = {
 };
 
 export type OnboardingAnswers = {
-  version: 1;
+  /** 2: the shorter card list (role/company/years and problems/who on one
+   * card each, no experience card). Older answers have their card mapped. */
+  version: 2;
   /** Furthest card reached, to resume there. */
   card: number;
   workTypes: WorkType[];
@@ -147,6 +149,30 @@ const text = (value: unknown, max = 200) => (typeof value === "string" ? value.s
  * on the profile (an expert who started on the classic form keeps their
  * work).
  */
+/** Card positions in the first (longer) onboarding, mapped onto the
+ * current one: welcome, work, field, role, company, years, problems, who,
+ * highlights, experience, location, drafts, photo, price, availability,
+ * giving, submit. */
+const V1_CARD_TO_V2 = [0, 1, 2, 3, 3, 3, 4, 4, 5, 6, 6, 7, 8, 9, 10, 11, 12];
+
+function resumeCard(raw: Record<string, unknown>): number {
+  const card = typeof raw.card === "number" && raw.card >= 0 ? Math.floor(raw.card) : 0;
+  if (raw.version === 2) return card;
+  return V1_CARD_TO_V2[Math.min(card, V1_CARD_TO_V2.length - 1)];
+}
+
+/** A highlight still holding a template's [placeholder]. */
+export const hasPlaceholder = (line: string) => /\[[^\]]*\]/.test(line);
+
+/** Career highlights text without lines that still hold a [placeholder]. */
+export function withoutPlaceholderLines(text: string): string {
+  return text
+    .split("\n")
+    .filter((line) => !hasPlaceholder(line))
+    .join("\n")
+    .trim();
+}
+
 export function answersFrom(
   saved: Json | null,
   profile: ExpertProfile,
@@ -179,8 +205,8 @@ export function answersFrom(
   );
 
   return {
-    version: 1,
-    card: typeof raw.card === "number" && raw.card >= 0 ? Math.floor(raw.card) : 0,
+    version: 2,
+    card: resumeCard(raw),
     workTypes: strings(raw.workTypes, 2).filter((w): w is WorkType => WORK_TYPE_KEYS.includes(w)),
     categoryIds: strings(raw.categoryIds).length ? strings(raw.categoryIds, 3) : categoryIds,
     role: text(raw.role, 120) || (profile.current_position ?? ""),
@@ -260,17 +286,6 @@ export const splitRole = (role: string) => (role ? role.split(ROLE_JOIN).filter(
 /** Common languages offered as chips (lib/expert/profileFields.ts). */
 export const LANGUAGE_CHIPS = ["Amharic", "English", "Afaan Oromoo", "Tigrinya", "Somali", "Arabic", "French"];
 
-/** Starting price chips (ETB for 60 minutes) by experience, used when there
- * aren't enough published peers to suggest from. */
-export const FALLBACK_PRICES: Record<ExpertExperienceRange | "", number[]> = {
-  "": [1000, 1500, 2500],
-  lt_5: [800, 1200, 1500],
-  "5_9": [1500, 2000, 2500],
-  "10_14": [2500, 3000, 4000],
-  "15_19": [3500, 4500, 6000],
-  "20_plus": [5000, 7000, 10000],
-};
-
 const joinList = (items: string[]) =>
   items.length <= 1 ? (items[0] ?? "") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 
@@ -301,6 +316,9 @@ export function fallbackDrafts(answers: OnboardingAnswers, categoryNames: string
       : `Practical advice based on hands-on experience${at}.`,
     problems_help_with: problems.map((p) => `• ${p}`).join("\n"),
     who_i_help: who.map((w) => `• ${w}`).join("\n"),
-    career_highlights: answers.highlights.map((h) => `• ${h}`).join("\n"),
+    career_highlights: answers.highlights
+      .filter((h) => h.trim() && !hasPlaceholder(h))
+      .map((h) => `• ${h.trim()}`)
+      .join("\n"),
   };
 }

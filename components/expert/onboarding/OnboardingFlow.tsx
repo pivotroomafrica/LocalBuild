@@ -13,7 +13,6 @@ import { PHOTO_PREVIEW_EVENT } from "@/components/expert/LiveProfilePreview";
 import { CountryCityFields } from "@/components/ui/CountryCityFields";
 import {
   saveOnboardingAction,
-  suggestPricesAction,
   type OnboardingSavePart,
 } from "@/lib/expert/onboarding/actions";
 import { submitApplicationAction, type ExpertActionState } from "@/lib/expert/actions";
@@ -25,10 +24,10 @@ import {
   ROLE_JOIN,
   WORK_TYPES,
   companyLabel,
+  hasPlaceholder,
   splitRole,
   type ChipStep,
   type DraftField,
-  type ExperienceRow,
   type OnboardingAnswers,
 } from "@/lib/expert/onboarding/answers";
 import { RESPONSE_TIME_OPTIONS } from "@/lib/expert/profileDetails";
@@ -46,12 +45,8 @@ type CardId =
   | "work"
   | "field"
   | "role"
-  | "company"
-  | "years"
   | "problems"
-  | "who"
   | "highlights"
-  | "experience"
   | "location"
   | "drafts"
   | "photo"
@@ -68,28 +63,23 @@ const CARDS: CardDef[] = [
   { id: "field", title: "Which areas do you advise on?", hint: "Pick up to 3. Clients browse by these.", save: "basics" },
   {
     id: "role",
-    title: "What's your role?",
-    hint: "Pick one, or two if you hold both (like Founder & CEO).",
+    title: "Your role and experience",
+    hint: "Pick one role, or two if you hold both (like Founder & CEO).",
     save: "basics",
     chips: "role",
   },
   {
-    id: "company",
-    title: "Where do you work?",
-    hint: "Clients see it next to your role.",
-    save: "basics",
+    id: "problems",
+    title: "What do clients bring you, and who are they?",
+    hint: "Tap the ones that are true for you.",
+    chips: "problems",
   },
-  { id: "years", title: "How many years of experience do you have?", save: "basics" },
-  { id: "problems", title: "What problems do clients bring you?", hint: "Tap the ones you're great at. Up to 6.", chips: "problems" },
-  { id: "who", title: "Who do you help most?", hint: "Up to 4.", chips: "who" },
   {
     id: "highlights",
     title: "Anything you're proud of?",
-    hint: "Optional. Tap a template, then fill in the [brackets] with your real numbers.",
-    chips: "highlights",
+    hint: "Optional. A result or two, in your own words. Clients trust specifics.",
     optional: true,
   },
-  { id: "experience", title: "Your recent roles", hint: "Optional, up to 3. Clients like seeing the path.", chips: "titles", optional: true },
   { id: "location", title: "Where are you, and which languages do you speak?", save: "basics" },
   { id: "drafts", title: "Here's your profile, written from your answers", save: "drafts" },
   {
@@ -98,7 +88,7 @@ const CARDS: CardDef[] = [
     hint: "Optional. Profiles with a real photo get booked far more often. You can add one later from your profile.",
     optional: true,
   },
-  { id: "price", title: "Set your price", hint: "What you charge for 60 minutes, in ETB. You can change it any time.", save: "pricing" },
+  { id: "price", title: "Set your price", hint: "What you charge for a 60-minute session, in ETB.", save: "pricing" },
   {
     id: "availability",
     title: "When can clients book you?",
@@ -121,7 +111,7 @@ const indexOf = (id: CardId) => CARDS.findIndex((card) => card.id === id);
 const FIX_CARD: Record<string, CardId> = {
   "Professional headline": "drafts",
   "Current position": "role",
-  "Years of experience": "years",
+  "Years of experience": "role",
   "Short bio": "drafts",
   "Expertise summary": "drafts",
   "Problems you help with": "drafts",
@@ -141,8 +131,6 @@ const TONES = [
 ];
 const PERCENTS = [5, 10, 25, 50];
 const OFFLINE = "We couldn't save that. Please check your connection and try again.";
-const THIS_YEAR = new Date().getFullYear();
-const YEARS = Array.from({ length: THIS_YEAR - 1969 }, (_, i) => String(THIS_YEAR - i));
 
 type ChipState = { key: string; options: string[]; source: "ai" | "fallback"; loading: boolean };
 
@@ -202,7 +190,6 @@ export function OnboardingFlow({
   const [draftSource, setDraftSource] = useState<"ai" | "fallback" | null>(null);
   const draftedFrom = useRef(Object.values(initial.drafts).some(Boolean) ? draftInputsKey(initial) : "");
   const [editing, setEditing] = useState<DraftField | null>(null);
-  const [prices, setPrices] = useState<{ prices: number[]; peers: number } | null>(null);
   const [photoUrl, setPhotoUrl] = useState(initialPhotoUrl);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -267,19 +254,12 @@ export function OnboardingFlow({
   function prepare(index: number) {
     const target = CARDS[index];
     if (target.chips) loadChips(target.chips);
+    if (target.id === "problems") loadChips("who");
     const a = answersRef.current;
-    if (target.id === "experience" && a.experience.length === 0 && a.role) {
-      set({ experience: [{ title: a.role, organization: a.company, start_year: "", end_year: "" }] });
-    }
     if (target.id === "drafts") {
       const empty = !Object.values(a.drafts).some(Boolean);
       const stale = draftedFrom.current !== draftInputsKey(a) && a.approved.length === 0;
       if (empty || stale) void generateDrafts();
-    }
-    if (target.id === "price" && !prices) {
-      suggestPricesAction(a)
-        .then(setPrices)
-        .catch(() => setPrices({ prices: [1000, 1500, 2500], peers: 0 }));
     }
   }
 
@@ -353,7 +333,7 @@ export function OnboardingFlow({
     if (!canContinue() || saving) return;
     if (def.id === "location") set(readLocation());
     if (def.id === "drafts") set({ approved: [...DRAFT_FIELDS] });
-    if (def.id === "experience") set({ experience: answersRef.current.experience.filter((row) => row.title.trim()) });
+    if (def.id === "highlights") set({ highlights: answersRef.current.highlights.map((h) => h.trim()).filter(Boolean) });
     // Go to the next card that still needs an answer: cards already
     // answered on an earlier visit are skipped, up to the furthest card
     // reached. So with 3 unanswered but 4 and 5 done, 3 leads on to 6.
@@ -364,6 +344,7 @@ export function OnboardingFlow({
     // Start fetching the next card's suggestions while this one saves.
     const nextChips = CARDS[nextIndex].chips;
     if (nextChips) loadChips(nextChips);
+    if (CARDS[nextIndex].id === "problems") loadChips("who");
 
     const part = def.save ?? "progress";
     const snapshot = answersRef.current;
@@ -406,21 +387,11 @@ export function OnboardingFlow({
       case "field":
         return a.categoryIds.length > 0;
       case "role":
-        return Boolean(a.role.trim());
-      case "company":
-        return Boolean(a.company.trim());
-      case "years":
-        return Boolean(a.years);
+        return Boolean(a.role.trim() && a.company.trim() && a.years);
       case "problems":
-        return a.problems.length > 0;
-      case "who":
-        return a.who.length > 0;
-      case "experience":
-        return a.experience.every(
-          (row) =>
-            !row.title.trim() ||
-            (row.start_year && (!row.end_year || Number(row.end_year) >= Number(row.start_year))),
-        );
+        return a.problems.length > 0 && a.who.length > 0;
+      case "highlights":
+        return !a.highlights.some(hasPlaceholder);
       case "location":
         return live ? cityFilled : Boolean(a.city.trim() && a.country.trim());
       case "drafts":
@@ -447,8 +418,7 @@ export function OnboardingFlow({
   const percentDone = Math.round((progressItems.filter(Boolean).length / progressItems.length) * 100);
   const isEmptyOptional =
     def.optional &&
-    ((def.id === "highlights" && answers.highlights.length === 0) ||
-      (def.id === "experience" && !answers.experience.some((row) => row.title.trim())) ||
+    ((def.id === "highlights" && !answers.highlights.some((h) => h.trim())) ||
       (def.id === "giving" && !answers.ngoId) ||
       (def.id === "photo" && !photoUrl));
 
@@ -512,7 +482,7 @@ export function OnboardingFlow({
                 ) : null}
               </p>
               <h1 id="ob-title" className="ob-title">
-                {def.id === "company" ? companyLabel(answers.workTypes).label : def.title}
+                {def.title}
               </h1>
               {def.hint ? <p className="ob-sub">{def.hint}</p> : null}
             </header>
@@ -567,76 +537,76 @@ export function OnboardingFlow({
                   </p>
                 ) : null}
                 <MoreButton chip={chips.role} onClick={() => loadChips("role", true)} />
+
+                <label className="label ob-label" htmlFor="ob-company">
+                  {companyLabel(answers.workTypes).label}
+                </label>
+                <div className="field ob-field">
+                  <input
+                    id="ob-company"
+                    className="input"
+                    maxLength={150}
+                    required
+                    autoComplete="organization"
+                    value={answers.company}
+                    onChange={(e) => set({ company: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void next();
+                      }
+                    }}
+                    placeholder={companyLabel(answers.workTypes).placeholder}
+                  />
+                </div>
+
+                <p className="label ob-label">How many years of experience do you have?</p>
+                <ChipGroup
+                  label="Years of experience"
+                  options={EXPERT_EXPERIENCE_RANGES.map((r) => EXPERT_EXPERIENCE_RANGE_LABELS[r])}
+                  selected={answers.years ? [EXPERT_EXPERIENCE_RANGE_LABELS[answers.years]] : []}
+                  allowCustom={false}
+                  onChange={(picked) =>
+                    set({ years: EXPERT_EXPERIENCE_RANGES.find((r) => EXPERT_EXPERIENCE_RANGE_LABELS[r] === picked[0]) ?? "" })
+                  }
+                />
               </>
             ) : null}
 
-            {def.id === "company" ? (
-              <div className="field ob-field">
-                <label className="sr-only" htmlFor="ob-company">
-                  {companyLabel(answers.workTypes).label}
-                </label>
-                <input
-                  id="ob-company"
-                  className="input"
-                  maxLength={150}
-                  required
-                  autoFocus
-                  autoComplete="organization"
-                  value={answers.company}
-                  onChange={(e) => set({ company: e.target.value })}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      void next();
-                    }
-                  }}
-                  placeholder={companyLabel(answers.workTypes).placeholder}
-                />
-              </div>
-            ) : null}
-
-            {def.id === "years" ? (
-              <ChipGroup
-                label="Years of experience"
-                options={EXPERT_EXPERIENCE_RANGES.map((r) => EXPERT_EXPERIENCE_RANGE_LABELS[r])}
-                selected={answers.years ? [EXPERT_EXPERIENCE_RANGE_LABELS[answers.years]] : []}
-                allowCustom={false}
-                onChange={(picked) =>
-                  set({ years: EXPERT_EXPERIENCE_RANGES.find((r) => EXPERT_EXPERIENCE_RANGE_LABELS[r] === picked[0]) ?? "" })
-                }
-              />
-            ) : null}
-
-            {def.id === "problems" || def.id === "who" ? (
+            {def.id === "problems" ? (
               <>
+                <p className="label ob-label ob-label-first">
+                  Problems clients bring you <span className="muted">(up to 6)</span>
+                </p>
                 <ChipGroup
-                  label={def.title}
-                  options={chipState?.options ?? []}
-                  loading={chipState?.loading}
-                  selected={answers[def.id]}
-                  max={def.id === "problems" ? 6 : 4}
-                  customPlaceholder={def.id === "problems" ? "e.g. Getting a bank loan approved" : "e.g. Coffee exporters"}
-                  onChange={(picked) => set(def.id === "problems" ? { problems: picked } : { who: picked })}
+                  label="Problems clients bring you"
+                  options={chips.problems?.options ?? []}
+                  loading={chips.problems?.loading}
+                  selected={answers.problems}
+                  max={6}
+                  customPlaceholder="e.g. Getting a bank loan approved"
+                  onChange={(problems) => set({ problems })}
                 />
-                <MoreButton chip={chipState} onClick={() => loadChips(def.chips!, true)} />
+                <MoreButton chip={chips.problems} onClick={() => loadChips("problems", true)} />
+
+                <p className="label ob-label">
+                  Who you help most <span className="muted">(up to 4)</span>
+                </p>
+                <ChipGroup
+                  label="Who you help most"
+                  options={chips.who?.options ?? []}
+                  loading={chips.who?.loading}
+                  selected={answers.who}
+                  max={4}
+                  customPlaceholder="e.g. Coffee exporters"
+                  onChange={(who) => set({ who })}
+                />
+                <MoreButton chip={chips.who} onClick={() => loadChips("who", true)} />
               </>
             ) : null}
 
             {def.id === "highlights" ? (
-              <Highlights
-                answers={answers}
-                chip={chips.highlights}
-                onChange={(highlights) => set({ highlights })}
-                onMore={() => loadChips("highlights", true)}
-              />
-            ) : null}
-
-            {def.id === "experience" ? (
-              <Experience
-                rows={answers.experience}
-                chip={chips.titles}
-                onChange={(experience) => set({ experience })}
-              />
+              <Highlights list={answers.highlights} onChange={(highlights) => set({ highlights })} />
             ) : null}
 
             {def.id === "location" ? (
@@ -694,7 +664,7 @@ export function OnboardingFlow({
             ) : null}
 
             {def.id === "price" ? (
-              <Price answers={answers} prices={prices} pricing={pricing} onChange={set} />
+              <Price answers={answers} pricing={pricing} onChange={set} />
             ) : null}
 
             {def.id === "availability" ? (
@@ -867,182 +837,59 @@ function MoreButton({ chip, onClick }: { chip?: ChipState; onClick: () => void }
   );
 }
 
-function Highlights({
-  answers,
-  chip,
-  onChange,
-  onMore,
-}: {
-  answers: OnboardingAnswers;
-  chip?: ChipState;
-  onChange: (next: string[]) => void;
-  onMore: () => void;
-}) {
-  const list = answers.highlights;
-  // The line just added from a template: focus it with its first
-  // [bracket] selected, so typing replaces the placeholder.
-  const [fresh, setFresh] = useState<number | null>(null);
-  const selectBracket = (input: HTMLInputElement) => {
-    const match = /\[[^\]]*\]/.exec(input.value);
-    if (match) input.setSelectionRange(match.index, match.index + match[0].length);
+const HIGHLIGHT_EXAMPLES = [
+  "e.g. Grew yearly sales from 2M to 9M ETB in two years",
+  "e.g. Opened 4 branches across Addis Ababa and Hawassa",
+  "e.g. Trained 120 loan officers for a national bank",
+];
+
+/** Up to 3 achievements, written freely: no templates to fill in. */
+function Highlights({ list, onChange }: { list: string[]; onChange: (next: string[]) => void }) {
+  const rows = Array.from({ length: 3 }, (_, i) => list[i] ?? "");
+  const update = (i: number, value: string) => {
+    const next = rows.map((v, j) => (j === i ? value : v));
+    // Keep the order typed, dropping empty boxes at the end only.
+    while (next.length && !next[next.length - 1]) next.pop();
+    onChange(next);
   };
   return (
     <>
-      <ChipGroup
-        label="Achievement templates"
-        options={(chip?.options ?? []).filter((o) => !list.includes(o))}
-        loading={chip?.loading}
-        selected={[]}
-        max={1}
-        customPlaceholder="Write an achievement"
-        customMaxLength={160}
-        onChange={(picked) => {
-          if (picked[0] && list.length < 3) {
-            setFresh(list.length);
-            onChange([...list, picked[0]]);
-          }
-        }}
-      />
-      <MoreButton chip={chip} onClick={onMore} />
-      {list.length ? (
-        <ol className="ob-list">
-          {list.map((item, i) => (
-            <li key={i} className="ob-pop">
-              <input
-                className="input"
-                value={item}
-                maxLength={160}
-                aria-label={`Achievement ${i + 1}`}
-                ref={(input) => {
-                  if (input && i === fresh) {
-                    setFresh(null);
-                    input.focus();
-                    selectBracket(input);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  // Tab from one [bracket] to the next.
-                  if (e.key !== "Tab" || e.shiftKey) return;
-                  const input = e.currentTarget;
-                  const rest = input.value.slice(input.selectionEnd ?? 0);
-                  const match = /\[[^\]]*\]/.exec(rest);
-                  if (!match) return;
-                  e.preventDefault();
-                  const start = (input.selectionEnd ?? 0) + match.index;
-                  input.setSelectionRange(start, start + match[0].length);
-                }}
-                onChange={(e) => onChange(list.map((v, j) => (j === i ? e.target.value : v)))}
-              />
-              <button
-                type="button"
-                className="ob-icon-btn"
-                aria-label={`Remove achievement ${i + 1}`}
-                onClick={() => onChange(list.filter((_, j) => j !== i))}
-              >
-                <span className="ms" aria-hidden="true">
-                  close
-                </span>
-              </button>
-            </li>
-          ))}
-        </ol>
-      ) : null}
-      {list.some((item) => /\[[^\]]*\]/.test(item)) ? (
-        <p className="ob-hint">Replace the [brackets] with your real numbers before you continue.</p>
-      ) : null}
-    </>
-  );
-}
-
-function Experience({
-  rows,
-  chip,
-  onChange,
-}: {
-  rows: ExperienceRow[];
-  chip?: ChipState;
-  onChange: (rows: ExperienceRow[]) => void;
-}) {
-  const update = (i: number, patch: Partial<ExperienceRow>) =>
-    onChange(rows.map((row, j) => (j === i ? { ...row, ...patch } : row)));
-  const blank = { title: "", organization: "", start_year: "", end_year: "" };
-
-  return (
-    <>
-      {rows.map((row, i) => (
-        <div key={i} className="ob-role ob-pop">
-          <div className="ob-role-row">
+      <ul className="ob-tips" aria-label="Ideas">
+        <li>
+          <span className="ms" aria-hidden="true">
+            trending_up
+          </span>
+          A result with a number: how much, how many, how fast
+        </li>
+        <li>
+          <span className="ms" aria-hidden="true">
+            construction
+          </span>
+          Something you built, launched or turned around
+        </li>
+        <li>
+          <span className="ms" aria-hidden="true">
+            workspace_premium
+          </span>
+          An award, a big client, or a team you led
+        </li>
+      </ul>
+      <ol className="ob-list ob-highlights">
+        {rows.map((value, i) => (
+          <li key={i}>
             <input
               className="input"
-              placeholder="Role or title"
-              aria-label={`Role ${i + 1} title`}
-              maxLength={100}
-              value={row.title}
-              onChange={(e) => update(i, { title: e.target.value })}
+              value={value}
+              maxLength={160}
+              aria-label={`Achievement ${i + 1}`}
+              placeholder={HIGHLIGHT_EXAMPLES[i]}
+              onChange={(e) => update(i, e.target.value)}
             />
-            <button
-              type="button"
-              className="ob-icon-btn"
-              aria-label={`Remove role ${i + 1}`}
-              onClick={() => onChange(rows.filter((_, j) => j !== i))}
-            >
-              <span className="ms" aria-hidden="true">
-                close
-              </span>
-            </button>
-          </div>
-          <input
-            className="input"
-            placeholder="Organisation"
-            aria-label={`Role ${i + 1} organisation`}
-            maxLength={120}
-            value={row.organization}
-            onChange={(e) => update(i, { organization: e.target.value })}
-          />
-          <div className="ob-role-years">
-            <select
-              className="input"
-              aria-label={`Role ${i + 1} start year`}
-              value={row.start_year}
-              onChange={(e) => update(i, { start_year: e.target.value })}
-            >
-              <option value="">From…</option>
-              {YEARS.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-            <select
-              className="input"
-              aria-label={`Role ${i + 1} end year`}
-              value={row.end_year}
-              onChange={(e) => update(i, { end_year: e.target.value })}
-            >
-              <option value="">To now</option>
-              {YEARS.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      ))}
-      {rows.length < 3 ? (
-        <>
-          <p className="label ob-label">{rows.length ? "Add another role" : "Add a role"}</p>
-          <ChipGroup
-            label="Suggested titles"
-            options={chip?.options ?? []}
-            loading={chip?.loading}
-            selected={[]}
-            max={1}
-            customPlaceholder="Role or title"
-            customMaxLength={100}
-            onChange={(picked) => picked[0] && onChange([...rows, { ...blank, title: picked[0] }])}
-          />
-        </>
+          </li>
+        ))}
+      </ol>
+      {list.some(hasPlaceholder) ? (
+        <p className="ob-hint">Some lines still have [brackets] from before. Write the real detail in their place.</p>
       ) : null}
     </>
   );
@@ -1217,21 +1064,14 @@ function TickChip({
 
 function Price({
   answers,
-  prices,
   pricing,
   onChange,
 }: {
   answers: OnboardingAnswers;
-  prices: { prices: number[]; peers: number } | null;
   pricing: PlatformPricing;
   onChange: (patch: Partial<OnboardingAnswers>) => void;
 }) {
   const price = Number(answers.price);
-  const suggested = prices?.prices ?? [];
-  // Typing in "Other" keeps its own text: deriving the box from the price
-  // emptied it the moment 1,500 (on the way to 15,000) matched a chip.
-  const [ownText, setOwnText] = useState<string | null>(null);
-  const custom = ownText !== null || (answers.price !== "" && !suggested.includes(price));
   const fee = formatVatRate(pricing.commissionRate);
   const vat = formatVatRate(pricing.vatRate);
   const toggleDuration = (d: SessionDuration) =>
@@ -1239,52 +1079,26 @@ function Price({
       durations: answers.durations.includes(d) ? answers.durations.filter((x) => x !== d) : [...answers.durations, d].sort((a, b) => a - b),
     });
 
+  // No suggested amounts: experts took a suggestion as "the" price. They
+  // write their own, and see what the client pays and what they receive.
   return (
     <>
-      <div className="ob-chips" role="group" aria-label="Price for 60 minutes" aria-busy={!prices || undefined}>
-        {!prices
-          ? Array.from({ length: 3 }, (_, i) => <span key={i} className="ob-chip ob-chip-skel big" aria-hidden="true" />)
-          : suggested.map((p) => (
-              <button
-                key={p}
-                type="button"
-                className={!custom && price === p ? "ob-chip big on" : "ob-chip big"}
-                aria-pressed={!custom && price === p}
-                onClick={() => {
-                  setOwnText(null);
-                  onChange({ price: String(p) });
-                }}
-              >
-                <span className="num">{p.toLocaleString()}</span> ETB
-              </button>
-            ))}
-        <label className={custom ? "ob-chip big on ob-price-own" : "ob-chip big ob-price-own"}>
-          <span className="muted">Other</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={1}
-            step={50}
-            className="num"
-            aria-label="Your own price in ETB"
-            value={ownText ?? (custom ? answers.price : "")}
-            placeholder="0"
-            onFocus={() => setOwnText(ownText ?? (custom ? answers.price : ""))}
-            onChange={(e) => {
-              setOwnText(e.target.value);
-              onChange({ price: e.target.value });
-            }}
-          />
-          <span className="muted">ETB</span>
-        </label>
-      </div>
-      {prices ? (
-        <p className="ob-hint">
-          {prices.peers > 0
-            ? `Based on what ${prices.peers} experts in your areas charge on Pivotroom.`
-            : "Typical starting prices for your experience."}
-        </p>
-      ) : null}
+      <label className="ob-price-field">
+        <span className="sr-only">Your price for 60 minutes, in ETB</span>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          step={50}
+          className="num"
+          autoFocus
+          value={answers.price}
+          placeholder="Your price"
+          onChange={(e) => onChange({ price: e.target.value })}
+        />
+        <span className="ob-price-unit">ETB / 60 min</span>
+      </label>
+      <p className="ob-hint">Set what your hour is worth. There&apos;s no standard price, and you can change it any time.</p>
       {price > 0 ? (
         <dl className="ob-money" aria-live="polite">
           <div>

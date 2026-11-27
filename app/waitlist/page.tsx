@@ -382,8 +382,8 @@ export default async function WaitlistPage() {
               }}
             />
             <p className="wl-quote" data-reveal>
-              The real question isn&apos;t whether an hour is worth the fee.
-              It&apos;s what the next six months of guessing will cost.
+              One hour with someone who has done it can replace months of
+              guessing.
             </p>
           </div>
         </section>
@@ -468,16 +468,15 @@ export default async function WaitlistPage() {
               <div className="wl-expert-copy">
                 <p className="eyebrow wl-eyebrow">For experts</p>
                 <h2 className="h2 wl-h2 wl-h2-left">
-                  Your experience took years to earn.{" "}
-                  <span className="wl-acc">Let it earn again.</span>
+                  Your experience can shorten{" "}
+                  <span className="wl-acc">someone else&apos;s path.</span>
                 </h2>
                 <p className="wl-text wl-text-left">
-                  You&apos;ve already solved problems other people are only now
-                  running into. On Pivotroom you share that, one paid hour at a
-                  time, on your schedule and at your price. No pitching, no
-                  proposals: clients arrive having already chosen you. If you
-                  like, give part of every session to a cause you care about.
-                  Build your profile now, and be bookable from day one.
+                  If you have built, led or fixed something hard, there is a
+                  business here facing it for the first time. On Pivotroom you
+                  help them in paid one-to-one sessions, at your price and on
+                  your schedule. If you like, give part of what you earn to a
+                  cause you care about.
                 </p>
               </div>
               <div className="wl-expert-box">

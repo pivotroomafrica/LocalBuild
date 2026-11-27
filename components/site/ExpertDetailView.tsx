@@ -97,10 +97,11 @@ export function ExpertDetailView({ profile, railAuth, railSnapshot }: Props) {
   const firstName = profile.fullName.split(/\s+/)[0] || profile.fullName;
   // Career highlights, one per line as the expert wrote them; typed bullets
   // or numbers ("•", "-", "1.") are dropped since the list adds its own.
+  // A line still holding a template's [placeholder] is never shown.
   const achievements = (profile.careerHighlights ?? "")
     .split(/\r?\n/)
     .map((line) => line.replace(/^\s*(?:[•\-*–]|\d+[.)])\s*/, "").trim())
-    .filter(Boolean);
+    .filter((line) => line && !/\[[^\]]*\]/.test(line));
   const role = [profile.currentPosition, profile.currentCompany].filter(Boolean).join(", ");
   const location = [profile.city, profile.country].filter(Boolean).join(", ");
   const format = formatLine(profile);
