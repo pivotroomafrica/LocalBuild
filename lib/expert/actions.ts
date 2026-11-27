@@ -318,7 +318,9 @@ export async function submitApplicationAction(
 
   revalidatePath("/expert/application");
   invalidatePublicExperts();
-  return { success: true };
+  // A full-page thank-you (not the application page, which the onboarding
+  // flow would otherwise bounce to as soon as the status changes).
+  redirect("/expert/submitted");
 }
 
 // =========================================================================
