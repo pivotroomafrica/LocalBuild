@@ -164,8 +164,8 @@ export type ChecklistItem = { label: string; complete: boolean; section: Applica
 
 /**
  * Single source of truth for application completeness. Required for
- * submission per spec section 42. Photo + LinkedIn policy: photo
- * required, LinkedIn strongly encouraged but not gating.
+ * submission per spec section 42. Photo and LinkedIn are encouraged but
+ * not gating (cards show initials when there is no photo).
  *
  * Every item is tagged with the /expert/application/* section it belongs
  * to, so the per-field checklist, the per-section summary
@@ -198,7 +198,6 @@ export function getCompletionChecklist(data: ExpertApplicationData): ChecklistIt
     { label: "Who you help", complete: Boolean(expertProfile.who_i_help), section: "expertise" },
     { label: "Country", complete: Boolean(expertProfile.country), section: "profile" },
     { label: "City", complete: Boolean(expertProfile.city), section: "profile" },
-    { label: "Profile photo", complete: Boolean(expertProfile.profile_image_path), section: "profile" },
     {
       label: "At least 1 expertise category",
       complete: categoryIds.length > 0,

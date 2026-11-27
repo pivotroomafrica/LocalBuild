@@ -83,6 +83,11 @@ export default async function ExpertApplicationPage() {
                   Edit
                 </Link>
               </div>
+              {step.section === "profile" && !expertProfile.profile_image_path ? (
+                <p className="muted" style={{ margin: 0 }}>
+                  Optional: add a photo of your face. Profiles with a real photo get booked far more often.
+                </p>
+              ) : null}
               {missing.length === 0 ? (
                 <p className="muted" style={{ margin: 0 }}>
                   {step.section === "expertise"

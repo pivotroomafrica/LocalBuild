@@ -92,7 +92,12 @@ const CARDS: CardDef[] = [
   { id: "experience", title: "Your recent roles", hint: "Optional, up to 3. Clients like seeing the path.", chips: "titles", optional: true },
   { id: "location", title: "Where are you, and which languages do you speak?", save: "basics" },
   { id: "drafts", title: "Here's your profile, written from your answers", save: "drafts" },
-  { id: "photo", title: "Add a clear photo of your face", hint: "Profiles with a real photo get booked far more often." },
+  {
+    id: "photo",
+    title: "Add a clear photo of your face",
+    hint: "Optional. Profiles with a real photo get booked far more often. You can add one later from your profile.",
+    optional: true,
+  },
   { id: "price", title: "Set your price", hint: "What you charge for 60 minutes, in ETB. You can change it any time.", save: "pricing" },
   {
     id: "availability",
@@ -123,7 +128,6 @@ const FIX_CARD: Record<string, CardId> = {
   "Who you help": "drafts",
   Country: "location",
   City: "location",
-  "Profile photo": "photo",
   "At least 1 expertise category": "field",
   "Session pricing": "price",
 };
@@ -421,8 +425,6 @@ export function OnboardingFlow({
         return live ? cityFilled : Boolean(a.city.trim() && a.country.trim());
       case "drafts":
         return (!live || drafting === null) && REQUIRED_DRAFTS.every((field) => a.drafts[field].trim());
-      case "photo":
-        return Boolean(photoUrl);
       case "price":
         return Number(a.price) > 0 && a.durations.length > 0 && (a.online || a.inPerson);
       case "availability":
@@ -440,7 +442,6 @@ export function OnboardingFlow({
     answers.who.length > 0,
     Boolean(answers.city),
     REQUIRED_DRAFTS.every((field) => answers.drafts[field]),
-    Boolean(photoUrl),
     Number(answers.price) > 0,
   ];
   const percentDone = Math.round((progressItems.filter(Boolean).length / progressItems.length) * 100);
@@ -448,7 +449,8 @@ export function OnboardingFlow({
     def.optional &&
     ((def.id === "highlights" && answers.highlights.length === 0) ||
       (def.id === "experience" && !answers.experience.some((row) => row.title.trim())) ||
-      (def.id === "giving" && !answers.ngoId));
+      (def.id === "giving" && !answers.ngoId) ||
+      (def.id === "photo" && !photoUrl));
 
   const chipState = def.chips ? chips[def.chips] : undefined;
 
