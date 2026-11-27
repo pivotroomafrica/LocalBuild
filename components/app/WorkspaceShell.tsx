@@ -90,11 +90,13 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
     subtitle = "Admin";
   } else if (area === "expert" && isApprovedExpert) {
     items = [
-      { href: "/expert/dashboard", label: "Overview", icon: "space_dashboard" },
-      { href: "/expert/sessions", label: "Sessions", icon: "event" },
-      { href: "/expert/availability", label: "Availability", icon: "schedule" },
-      { href: "/expert/earnings", label: "Earnings", icon: "account_balance_wallet" },
-      { href: "/expert/application", label: "Profile", icon: "badge" },
+      { href: "/expert/dashboard", label: "Overview", icon: "space_dashboard", dock: true },
+      { href: "/expert/sessions", label: "Sessions", icon: "event", dock: true },
+      { href: "/expert/availability", label: "Availability", icon: "schedule", dock: true },
+      { href: "/expert/earnings", label: "Earnings", icon: "account_balance_wallet", dock: true },
+      // The profile editor itself (not the application's review page);
+      // stays highlighted on every /expert/application page.
+      { href: "/expert/application/profile", label: "Profile", icon: "badge", dock: true, match: "/expert/application" },
     ];
     subtitle = sinceLabel(expert?.approved_at) ? `Expert since ${sinceLabel(expert?.approved_at)}` : "Expert";
   } else if (area === "expert") {
@@ -102,10 +104,10 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
     subtitle = "Expert applicant";
   } else {
     items = [
-      { href: "/dashboard", label: "Overview", icon: "space_dashboard", exact: true },
-      { href: "/dashboard/sessions", label: "Sessions", icon: "event" },
-      { href: "/dashboard/payments", label: "Payments", icon: "payments" },
-      { href: "/dashboard/profile", label: "Profile", icon: "person" },
+      { href: "/dashboard", label: "Overview", icon: "space_dashboard", exact: true, dock: true },
+      { href: "/dashboard/sessions", label: "Sessions", icon: "event", dock: true },
+      { href: "/dashboard/payments", label: "Payments", icon: "payments", dock: true },
+      { href: "/dashboard/profile", label: "Profile", icon: "person", dock: true },
     ];
     subtitle = sinceLabel(memberSince) ? `Client since ${sinceLabel(memberSince)}` : null;
   }
@@ -125,11 +127,17 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
   ];
 
   const dark = area === "admin";
+  // Phones: a floating bar at the bottom with this area's sections (an
+  // applicant, with one page, keeps the site's own bottom bar).
+  const docked = items.length >= 3;
+  // Clients also get "Find an expert" in the middle of their bar.
+  const dockCenter: SidebarItem | undefined =
+    area === "client" ? { href: "/experts", label: "Find", icon: "search", dock: true } : undefined;
   const publicProfileHref =
     area === "expert" && expert?.profile_status === "published" ? `/experts/${expert.slug}` : null;
 
   return (
-    <div className={`pr ws ${dark ? "ws-dark" : "has-tabbar"}`}>
+    <div className={`pr ws${dark ? " ws-dark" : ""}${docked ? "" : " has-tabbar"}`}>
       <header className="pr-head ws-head">
         <div className="ws-bar">
           <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
@@ -170,7 +178,7 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
               {subtitle ? <span className="ws-sub">{subtitle}</span> : null}
             </span>
           </div>
-          <WorkspaceSidebarNav items={items} switchTo={switchTo} picker={area === "admin"} />
+          <WorkspaceSidebarNav items={items} switchTo={switchTo} picker={docked} dockCenter={dockCenter} />
           <form action={signOutAction} className="ws-signout">
             <button type="submit" className="ws-link">
               <span className="ms" aria-hidden="true">
@@ -182,7 +190,7 @@ export async function WorkspaceShell({ area, children }: { area: WorkspaceArea; 
         </aside>
         <main className="ws-main">{children}</main>
       </div>
-      {area !== "admin" ? <MobileTabBar isLoggedIn isApprovedExpert={isApprovedExpert} isAdmin={isAdmin} /> : null}
+      {!docked ? <MobileTabBar isLoggedIn isApprovedExpert={isApprovedExpert} isAdmin={isAdmin} /> : null}
     </div>
   );
 }

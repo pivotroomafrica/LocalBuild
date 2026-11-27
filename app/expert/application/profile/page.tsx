@@ -39,7 +39,7 @@ export default async function ExpertApplicationProfilePage({ searchParams }: Pag
               </span>
               <span className="oq-label">
                 Add a clear photo of your face
-                <span className="oq-req"> · required</span>
+                <span className="muted"> · optional</span>
               </span>
             </div>
             <p className="oq-hint">Profiles with a real photo get booked far more often.</p>

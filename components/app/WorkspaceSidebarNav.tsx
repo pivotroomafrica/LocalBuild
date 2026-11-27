@@ -11,6 +11,8 @@ export type SidebarItem = {
   exact?: boolean;
   /** Shown on the phone's bottom bar (the rest go under "More"). */
   dock?: boolean;
+  /** Highlight this item for every page under this path (default: href). */
+  match?: string;
 };
 
 /**
@@ -21,16 +23,24 @@ export function WorkspaceSidebarNav({
   items,
   switchTo,
   picker = false,
+  dockCenter,
 }: {
   items: SidebarItem[];
   switchTo: SidebarItem[];
   picker?: boolean;
+  /** An extra link in the middle of the phone bar (e.g. Find an expert). */
+  dockCenter?: SidebarItem;
 }) {
   const pathname = usePathname();
-  const isCurrent = (item: SidebarItem) =>
-    item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
+  const isCurrent = (item: SidebarItem) => {
+    const base = item.match ?? item.href;
+    return item.exact ? pathname === base : pathname === base || pathname.startsWith(`${base}/`);
+  };
   // The bar shows the sections marked `dock`; "More" holds the rest.
-  const dockItems = items.filter((item) => item.dock);
+  const docked = items.filter((item) => item.dock);
+  const dockItems = dockCenter
+    ? [...docked.slice(0, Math.ceil(docked.length / 2)), dockCenter, ...docked.slice(Math.ceil(docked.length / 2))]
+    : docked;
   const moreItems = items.filter((item) => !item.dock);
   const moreOn = moreItems.some(isCurrent);
   const moreWaiting = moreItems.reduce((sum, item) => sum + (item.badge ?? 0), 0);
@@ -41,10 +51,16 @@ export function WorkspaceSidebarNav({
         // Phones: a floating bar at the bottom with the main sections and
         // "More" for the rest. Keyed by the page, so "More" closes again
         // after you pick something.
-        <nav key={pathname} className="ws-dock" aria-label="Admin sections">
+        <nav
+          key={pathname}
+          className="ws-dock"
+          aria-label="Sections"
+          style={{ "--dock-cols": dockItems.length + (moreItems.length > 0 ? 1 : 0) } as React.CSSProperties}
+        >
           {dockItems.map((item) => (
             <DockLink key={item.href} item={item} on={isCurrent(item)} />
           ))}
+          {moreItems.length > 0 ? (
           <details className="ws-dock-more">
             <summary className={moreOn ? "ws-dock-link on" : "ws-dock-link"}>
               <span className="ws-dock-icon">
@@ -94,6 +110,7 @@ export function WorkspaceSidebarNav({
               ) : null}
             </div>
           </details>
+          ) : null}
         </nav>
       ) : null}
       <nav className="ws-nav" aria-label="Sections">
